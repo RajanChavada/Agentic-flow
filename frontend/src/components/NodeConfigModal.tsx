@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useReactFlow } from "@xyflow/react";
+import { BrainCircuit } from "lucide-react";
 import {
   useWorkflowStore,
   useSelectedNodeId,
@@ -36,6 +37,13 @@ export default function NodeConfigModal() {
   // ── Tool node state ──────────────────────────────────────
   const [toolCategory, setToolCategory] = useState(node?.data?.toolCategory ?? "");
   const [toolId, setToolId] = useState(node?.data?.toolId ?? "");
+
+  // ── Context-aware agent fields ───────────────────────────
+  const [taskType, setTaskType] = useState(node?.data?.taskType ?? "");
+  const [expectedOutputSize, setExpectedOutputSize] = useState(node?.data?.expectedOutputSize ?? "");
+  const [expectedCallsPerRun, setExpectedCallsPerRun] = useState<number | null>(
+    (node?.data?.expectedCallsPerRun as number | null | undefined) ?? null
+  );
 
   const [modalPos, setModalPos] = useState<{ top: number; left: number } | null>(null);
 
@@ -159,6 +167,9 @@ export default function NodeConfigModal() {
       setMaxSteps((node.data.maxSteps as number | null | undefined) ?? null);
       setToolCategory(node.data.toolCategory ?? "");
       setToolId(node.data.toolId ?? "");
+      setTaskType(node.data.taskType ?? "");
+      setExpectedOutputSize(node.data.expectedOutputSize ?? "");
+      setExpectedCallsPerRun((node.data.expectedCallsPerRun as number | null | undefined) ?? null);
     }
   }, [node]);
 
@@ -177,6 +188,9 @@ export default function NodeConfigModal() {
         modelName: model,
         context,
         maxSteps: maxSteps,
+        taskType: taskType || undefined,
+        expectedOutputSize: expectedOutputSize || undefined,
+        expectedCallsPerRun: expectedCallsPerRun,
       });
     }
     closeConfigModal();
@@ -528,6 +542,96 @@ export default function NodeConfigModal() {
               />
               <span className={`text-xs ${isDark ? "text-slate-500" : "text-gray-400"}`}>
                 Default: 10 · Max: 100
+              </span>
+            </div>
+
+            {/* ── Context-Aware Estimation ─────────────────── */}
+            <div className={`border-t pt-3 mt-1 mb-3 ${isDark ? "border-slate-600" : "border-gray-200"}`}>
+              <p className={`text-[11px] font-semibold uppercase tracking-wider mb-2 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
+                <BrainCircuit className="inline w-3.5 h-3.5 mr-1" /> Context-Aware Estimation
+              </p>
+            </div>
+
+            {/* Task Type */}
+            <label
+              className={`block text-xs font-medium mb-1 ${
+                isDark ? "text-slate-400" : "text-gray-600"
+              }`}
+            >
+              Task Type
+            </label>
+            <select
+              value={taskType}
+              onChange={(e) => setTaskType(e.target.value)}
+              className={`w-full rounded border px-3 py-2 text-sm mb-3 ${
+                isDark
+                  ? "bg-slate-700 border-slate-500 text-slate-100"
+                  : "bg-white border-gray-300 text-gray-800"
+              }`}
+            >
+              <option value="">— none (generic) —</option>
+              <option value="classification">Classification</option>
+              <option value="summarization">Summarization</option>
+              <option value="code_generation">Code Generation</option>
+              <option value="rag_answer">RAG Answering</option>
+              <option value="tool_orchestration">Tool Orchestration</option>
+              <option value="routing">Routing</option>
+            </select>
+
+            {/* Expected Output Size */}
+            <label
+              className={`block text-xs font-medium mb-1 ${
+                isDark ? "text-slate-400" : "text-gray-600"
+              }`}
+            >
+              Expected Output Size
+            </label>
+            <select
+              value={expectedOutputSize}
+              onChange={(e) => setExpectedOutputSize(e.target.value)}
+              className={`w-full rounded border px-3 py-2 text-sm mb-3 ${
+                isDark
+                  ? "bg-slate-700 border-slate-500 text-slate-100"
+                  : "bg-white border-gray-300 text-gray-800"
+              }`}
+            >
+              <option value="">— auto (1.5× heuristic) —</option>
+              <option value="short">Short (≤ 200 tokens)</option>
+              <option value="medium">Medium (200–600 tokens)</option>
+              <option value="long">Long (600–1500 tokens)</option>
+              <option value="very_long">Very Long (&gt; 1500 tokens)</option>
+            </select>
+
+            {/* Expected Calls per Run */}
+            <label
+              className={`block text-xs font-medium mb-1 ${
+                isDark ? "text-slate-400" : "text-gray-600"
+              }`}
+            >
+              Expected Calls per Run{" "}
+              <span className={isDark ? "text-slate-500" : "text-gray-400"}>
+                (for orchestrators)
+              </span>
+            </label>
+            <div className="flex items-center gap-2 mb-4">
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={expectedCallsPerRun ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setExpectedCallsPerRun(v === "" ? null : Math.max(1, Math.min(50, parseInt(v, 10) || 1)));
+                }}
+                className={`w-24 rounded border px-3 py-2 text-sm ${
+                  isDark
+                    ? "bg-slate-700 border-slate-500 text-slate-100 placeholder-slate-500"
+                    : "bg-white border-gray-300 text-gray-800"
+                }`}
+                placeholder="1"
+              />
+              <span className={`text-xs ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+                Default: 1 · Max: 50
               </span>
             </div>
           </>

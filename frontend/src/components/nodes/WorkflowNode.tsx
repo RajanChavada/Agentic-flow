@@ -4,6 +4,14 @@ import React, { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { WorkflowNodeData } from "@/types/workflow";
 import { useEstimation } from "@/store/useWorkflowStore";
+import {
+  Wrench,
+  Flame,
+  Zap,
+  RefreshCw,
+  AlertTriangle,
+  ShieldAlert,
+} from "lucide-react";
 
 /* ── style map per node type (no emojis — uses CSS shapes) ── */
 const STYLE: Record<
@@ -147,9 +155,19 @@ function WorkflowNode({ id, data, selected }: NodeProps & { data: WorkflowNodeDa
         </p>
       )}
 
+      {/* Context-aware task summary line */}
+      {data.type === "agentNode" && (data.taskType || data.expectedOutputSize) && (
+        <p className={`text-[9px] mt-0.5 truncate italic ${isDark ? "text-indigo-400/70" : "text-indigo-500/80"}`}>
+          {data.taskType ? data.taskType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : ""}
+          {data.taskType && data.expectedOutputSize ? " · " : ""}
+          {data.expectedOutputSize ? data.expectedOutputSize.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : ""}
+          {(data.expectedCallsPerRun as number) > 1 ? ` · ×${data.expectedCallsPerRun} calls` : ""}
+        </p>
+      )}
+
       {data.type === "toolNode" && data.toolId && (
         <p className={`text-[10px] mt-1 truncate ${isDark ? "text-amber-400/70" : "text-orange-500"}`}>
-          🔧 {data.toolId}
+          <Wrench className="inline w-3 h-3 mr-0.5" /> {data.toolId}
         </p>
       )}
 
@@ -194,7 +212,7 @@ function WorkflowNode({ id, data, selected }: NodeProps & { data: WorkflowNodeDa
           {/* Tool latency sub-row for agents with tool connections */}
           {data.type === "agentNode" && nodeEstimation.tool_latency > 0 && (
             <div className="flex items-center justify-between">
-              <span className={isDark ? "text-amber-500/60" : "text-amber-500"}>🔧 Tool</span>
+              <span className={isDark ? "text-amber-500/60" : "text-amber-500"}><Wrench className="inline w-3 h-3 mr-0.5" /> Tool</span>
               <span className={`font-mono font-semibold ${isDark ? "text-amber-400" : "text-amber-600"}`}>
                 +{(nodeEstimation.tool_latency * 1000).toFixed(0)} ms
               </span>
@@ -217,7 +235,7 @@ function WorkflowNode({ id, data, selected }: NodeProps & { data: WorkflowNodeDa
                 : "bg-yellow-100 text-yellow-700"
             }`}
           >
-            {severity === "high" ? "🔥" : "⚡"}{" "}
+            {severity === "high" ? <Flame className="inline w-3 h-3" /> : <Zap className="inline w-3 h-3" />}{" "}
             {Math.round(Math.max(costShare, latencyShare) * 100)}%
           </span>
         </div>
@@ -237,10 +255,10 @@ function WorkflowNode({ id, data, selected }: NodeProps & { data: WorkflowNodeDa
                 : isDark ? "bg-slate-700 text-slate-400" : "bg-gray-100 text-gray-600"
             }`}
           >
-            🔄 Loop ×{nodeCycle.expected_iterations}
+            <RefreshCw className="inline w-3 h-3 mr-0.5" /> Loop ×{nodeCycle.expected_iterations}
             {nodeCycle.risk_level && nodeCycle.risk_level !== "low" && (
               <span className="ml-0.5">
-                {nodeCycle.risk_level === "critical" ? "🚨" : nodeCycle.risk_level === "high" ? "⚠️" : ""}
+                {nodeCycle.risk_level === "critical" ? <ShieldAlert className="inline w-3 h-3" /> : nodeCycle.risk_level === "high" ? <AlertTriangle className="inline w-3 h-3" /> : ""}
               </span>
             )}
           </span>

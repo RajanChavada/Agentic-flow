@@ -13,6 +13,10 @@ export type WorkflowNodeData = {
   toolId?: string;
   toolCategory?: string;
   maxSteps?: number | null;
+  /** Context-aware estimation fields (agent nodes). */
+  taskType?: string;
+  expectedOutputSize?: string;
+  expectedCallsPerRun?: number | null;
   [key: string]: unknown;    // satisfies Record<string, unknown> for React Flow
 };
 
@@ -27,6 +31,10 @@ export interface NodeConfigPayload {
   tool_id?: string;
   tool_category?: string;
   max_steps?: number | null;
+  /** Context-aware estimation fields. */
+  task_type?: string | null;
+  expected_output_size?: string | null;
+  expected_calls_per_run?: number | null;
 }
 
 /** Shape of an edge sent to the backend. */
@@ -268,4 +276,22 @@ export interface BatchEstimateResult {
 /** Response from POST /api/estimate/batch. */
 export interface BatchEstimateResponse {
   results: BatchEstimateResult[];
+}
+
+// ── Import workflow types (from POST /api/import-workflow) ──────
+
+/** Supported import source formats. */
+export type ImportSource = "generic" | "langgraph" | "custom";
+
+/** Request body for POST /api/import-workflow. */
+export interface ImportWorkflowRequest {
+  source: ImportSource;
+  payload: Record<string, unknown>;
+}
+
+/** Response from POST /api/import-workflow. */
+export interface ImportedWorkflow {
+  nodes: NodeConfigPayload[];
+  edges: EdgeConfigPayload[];
+  metadata: Record<string, unknown>;
 }

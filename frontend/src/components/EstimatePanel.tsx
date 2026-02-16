@@ -2,6 +2,23 @@
 
 import React, { useCallback, useRef, useState, useEffect } from "react";
 import {
+  BarChart3,
+  Wrench,
+  AlertTriangle,
+  CheckCircle2,
+  RefreshCw,
+  ShieldAlert,
+  OctagonAlert,
+  BrainCircuit,
+  Crosshair,
+  Rocket,
+  Route,
+  Zap,
+  Flame,
+  Info,
+  Radio,
+} from "lucide-react";
+import {
   useEstimation,
   useUIState,
   useWorkflowStore,
@@ -91,6 +108,9 @@ export default function EstimatePanel() {
             tool_id: n.data.toolId,
             tool_category: n.data.toolCategory,
             max_steps: n.data.maxSteps ?? null,
+            task_type: n.data.taskType ?? null,
+            expected_output_size: n.data.expectedOutputSize ?? null,
+            expected_calls_per_run: n.data.expectedCallsPerRun ?? null,
           })),
           edges: edges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
           recursion_limit: 25,
@@ -224,7 +244,7 @@ export default function EstimatePanel() {
           >
             <div>
               <h2 className={`font-bold ${isFullscreen ? "text-lg" : "text-base"}`}>
-                {isFullscreen ? "📊 Workflow Dashboard" : "Estimate Report"}
+                {isFullscreen ? <><BarChart3 className="inline w-4 h-4 mr-1.5 -mt-0.5" /> Workflow Dashboard</> : "Estimate Report"}
               </h2>
               <p className={`text-xs mt-0.5 ${isDark ? "text-slate-400" : "text-gray-400"}`}>
                 Graph type: <span className="font-semibold">{estimation.graph_type}</span>
@@ -271,7 +291,10 @@ export default function EstimatePanel() {
           </div>
 
           {/* ── Scrollable body ───────────────────────────── */}
-          <div className={`flex-1 overflow-y-auto px-5 py-5 ${isFullscreen ? "max-w-7xl mx-auto w-full" : ""}`}>
+          <div
+            id="estimate-dashboard-capture"
+            className={`flex-1 overflow-y-auto px-5 py-5 ${isFullscreen ? "max-w-7xl mx-auto w-full" : ""}`}
+          >
            <div className={isFullscreen ? "grid grid-cols-2 gap-6" : "space-y-6"}>
             {/* ── LEFT COLUMN (in fullscreen) / sequential (in sidebar) ── */}
             <div className="space-y-6">
@@ -361,7 +384,7 @@ export default function EstimatePanel() {
                 )}
                 {estimation.total_tool_latency > 0 && (
                   <p className={`text-xs mt-1 ${isDark ? "text-amber-400" : "text-amber-600"}`}>
-                    🔧 Tool latency: {(estimation.total_tool_latency * 1000).toFixed(0)} ms
+                    <Wrench className="inline w-3 h-3 mr-0.5" /> Tool latency: {(estimation.total_tool_latency * 1000).toFixed(0)} ms
                   </p>
                 )}
                 <p className={`text-xs mt-0.5 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
@@ -438,7 +461,7 @@ export default function EstimatePanel() {
                                   : isDark ? "bg-red-900/40 text-red-300 border border-red-700" : "bg-red-100 text-red-700 border border-red-200"
                               }`}
                             >
-                              {isGood ? "✓" : "⚠"} {badge}
+                              {isGood ? <CheckCircle2 className="inline w-3 h-3 mr-0.5" /> : <AlertTriangle className="inline w-3 h-3 mr-0.5" />} {badge}
                             </span>
                           );
                         })}
@@ -497,8 +520,8 @@ export default function EstimatePanel() {
                     ${isDark ? "bg-red-900/10 border-red-900/40" : "bg-red-50/60 border-red-100"}
                   `}
                 >
-                  <h3 className={`text-sm font-semibold mb-2 ${isDark ? "text-red-300" : "text-red-700"}`}>
-                    🔥 Top Bottlenecks
+                  <h3 className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${isDark ? "text-red-300" : "text-red-700"}`}>
+                    <Flame className="w-4 h-4" /> Top Bottlenecks
                   </h3>
                   <div className="space-y-2">
                     {bottlenecks.map((b, rank) => {
@@ -530,7 +553,7 @@ export default function EstimatePanel() {
                             </div>
                             <div className={`text-[10px] ${isDark ? "text-slate-400" : "text-gray-500"}`}>
                               {b.model_provider && `${b.model_provider} / ${b.model_name}`}
-                              {b.nodeType === "toolNode" && b.tool_id && `🔧 ${b.tool_id}`}
+                              {b.nodeType === "toolNode" && b.tool_id && `Tool: ${b.tool_id}`}
                             </div>
                           </div>
                           <div className="text-right shrink-0">
@@ -578,7 +601,7 @@ export default function EstimatePanel() {
                 `}
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-base">🔄</span>
+                  <span className="text-base"><RefreshCw className="w-4 h-4" /></span>
                   <h3 className={`text-sm font-semibold ${isDark ? "text-purple-300" : "text-purple-700"}`}>
                     {estimation.detected_cycles.length} Cycle{estimation.detected_cycles.length > 1 ? "s" : ""} Detected
                   </h3>
@@ -598,7 +621,7 @@ export default function EstimatePanel() {
                       : risk === "medium"
                       ? isDark ? "bg-yellow-900/40 text-yellow-300 border-yellow-700" : "bg-yellow-100 text-yellow-700 border-yellow-300"
                       : isDark ? "bg-slate-800 text-slate-400 border-slate-600" : "bg-gray-100 text-gray-600 border-gray-300";
-                  const riskIcon = risk === "critical" ? "🚨" : risk === "high" ? "⚠️" : risk === "medium" ? "🔶" : "✅";
+                  const riskIcon = risk === "critical" ? <ShieldAlert className="inline w-3.5 h-3.5" /> : risk === "high" ? <AlertTriangle className="inline w-3.5 h-3.5" /> : risk === "medium" ? <OctagonAlert className="inline w-3.5 h-3.5" /> : <CheckCircle2 className="inline w-3.5 h-3.5" />;
 
                   return (
                     <div
@@ -704,8 +727,9 @@ export default function EstimatePanel() {
 
                       {/* Risk reason (tooltip-like) */}
                       {cycle.risk_reason && (
-                        <div className={`text-[9px] mt-1.5 italic ${isDark ? "text-slate-500" : "text-gray-400"}`}>
-                          💡 {cycle.risk_reason}
+                        <div className={`text-[9px] mt-1.5 italic flex items-center gap-1 ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+                          <Info className="w-3 h-3 shrink-0" />
+                          {cycle.risk_reason}
                         </div>
                       )}
                     </div>
@@ -783,7 +807,7 @@ export default function EstimatePanel() {
                   {modelData.length > 0 && (
                     <div>
                       <h3 className={`text-sm font-semibold mb-3 ${isDark ? "text-slate-200" : "text-gray-700"}`}>
-                        🧠 Model Mix — Cost
+                        <BrainCircuit className="inline w-4 h-4 mr-1 -mt-0.5" /> Model Mix — Cost
                       </h3>
                       <div className="flex items-start gap-4">
                         {/* Pie chart */}
@@ -872,7 +896,7 @@ export default function EstimatePanel() {
                   {toolData.length > 0 && (
                     <div>
                       <h3 className={`text-sm font-semibold mb-2 ${isDark ? "text-slate-200" : "text-gray-700"}`}>
-                        🔧 Tool Impact
+                        <Wrench className="inline w-4 h-4 mr-1 -mt-0.5" /> Tool Impact
                       </h3>
                       <div className="space-y-1.5">
                         {toolData.map((t) => (
@@ -883,7 +907,7 @@ export default function EstimatePanel() {
                               ${isDark ? "bg-amber-900/10 border-amber-900/30" : "bg-amber-50/60 border-amber-100"}
                             `}
                           >
-                            <span className={`text-[10px] ${isDark ? "text-amber-400" : "text-amber-600"}`}>🔧</span>
+                            <span className={`text-[10px] ${isDark ? "text-amber-400" : "text-amber-600"}`}><Wrench className="w-3 h-3" /></span>
                             <div className="flex-1 min-w-0">
                               <div className={`text-[10px] font-medium truncate ${isDark ? "text-slate-200" : "text-gray-700"}`}>
                                 {t.name}
@@ -913,11 +937,11 @@ export default function EstimatePanel() {
               );
             })()}
 
-            {/* ── 📊 What-If Scaling ──────────────────────── */}
+            {/* ── What-If Scaling ──────────────────────── */}
             <div className={`rounded-lg border p-4 ${isDark ? "border-slate-700 bg-slate-800/50" : "border-purple-200 bg-purple-50/30"}`}>
               <div className="flex items-center justify-between mb-3">
                 <h3 className={`text-sm font-semibold ${isDark ? "text-purple-300" : "text-purple-700"}`}>
-                  📊 What-If Scaling
+                  <BarChart3 className="inline w-4 h-4 mr-1 -mt-0.5" /> What-If Scaling
                 </h3>
                 {scalingLoading && (
                   <span className={`text-[10px] px-2 py-0.5 rounded-full animate-pulse ${isDark ? "bg-purple-900/50 text-purple-300" : "bg-purple-100 text-purple-600"}`}>
@@ -991,7 +1015,7 @@ export default function EstimatePanel() {
               {estimation.sensitivity && (
                 <div className={`rounded-md border p-3 mb-3 ${isDark ? "border-slate-600 bg-slate-800" : "border-gray-200 bg-white"}`}>
                   <div className={`text-xs font-semibold mb-2 ${isDark ? "text-slate-300" : "text-gray-600"}`}>
-                    🎯 Sensitivity (min → avg → max)
+                    <Crosshair className="inline w-3.5 h-3.5 mr-1" /> Sensitivity (min → avg → max)
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -1025,7 +1049,7 @@ export default function EstimatePanel() {
               {estimation.scaling_projection && (
                 <div className={`rounded-md border p-3 ${isDark ? "border-slate-600 bg-slate-800" : "border-gray-200 bg-white"}`}>
                   <div className={`text-xs font-semibold mb-2 ${isDark ? "text-slate-300" : "text-gray-600"}`}>
-                    🚀 Monthly Projection ({estimation.scaling_projection.runs_per_day.toLocaleString()} runs/day)
+                    <Rocket className="inline w-3.5 h-3.5 mr-1" /> Monthly Projection ({estimation.scaling_projection.runs_per_day.toLocaleString()} runs/day)
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className={`rounded-md p-2 text-center ${isDark ? "bg-green-900/30 border border-green-800" : "bg-green-50 border border-green-200"}`}>
@@ -1079,7 +1103,7 @@ export default function EstimatePanel() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <h3 className={`text-sm font-semibold ${isDark ? "text-slate-200" : "text-gray-700"}`}>
-                  📡 Actual vs Estimated
+                  <Radio className="inline w-4 h-4 mr-1 -mt-0.5" /> Actual vs Estimated
                 </h3>
                 {actualStats.length > 0 ? (
                   <button
@@ -1277,12 +1301,12 @@ export default function EstimatePanel() {
                                 )}
                                 {b.nodeType === "toolNode" && b.tool_id && (
                                   <div className={`text-[10px] ${isDark ? "text-amber-500" : "text-amber-600"}`}>
-                                    🔧 {b.tool_id}
+                                    <Wrench className="inline w-3 h-3 mr-0.5" /> {b.tool_id}
                                   </div>
                                 )}
                                 {b.in_cycle && (
                                   <div className={`text-[10px] ${isDark ? "text-purple-400" : "text-purple-600"}`}>
-                                    🔄 in cycle
+                                    <RefreshCw className="inline w-3 h-3 mr-0.5" /> in cycle
                                   </div>
                                 )}
                               </div>
@@ -1324,7 +1348,7 @@ export default function EstimatePanel() {
                                 <div>{(b.latency * 1000).toFixed(1)} ms</div>
                                 {b.tool_latency > 0 && b.nodeType === "agentNode" && (
                                   <div className={`text-[10px] ${isDark ? "text-amber-500" : "text-amber-600"}`}>
-                                    🔧 {(b.tool_latency * 1000).toFixed(0)} ms
+                                    <Wrench className="inline w-3 h-3 mr-0.5" /> {(b.tool_latency * 1000).toFixed(0)} ms
                                   </div>
                                 )}
                               </>
@@ -1411,7 +1435,7 @@ export default function EstimatePanel() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <h3 className={`text-sm font-semibold ${isDark ? "text-slate-200" : "text-gray-700"}`}>
-                      🛤️ Critical Path
+                      <Route className="inline w-4 h-4 mr-1 -mt-0.5" /> Critical Path
                     </h3>
                     {estimation.critical_path_latency > 0 && (
                       <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
@@ -1457,7 +1481,7 @@ export default function EstimatePanel() {
                 {estimation.parallel_steps && estimation.parallel_steps.length > 1 && (
                   <div>
                     <h3 className={`text-sm font-semibold mb-2 ${isDark ? "text-slate-200" : "text-gray-700"}`}>
-                      ⚡ Parallelism Overview
+                      <Zap className="inline w-4 h-4 mr-1 -mt-0.5" /> Parallelism Overview
                     </h3>
                     <div className="space-y-1.5">
                       {estimation.parallel_steps.map((step) => (
@@ -1502,7 +1526,7 @@ export default function EstimatePanel() {
                                   `}
                                 >
                                   {label}
-                                  {onCritical && " 🛤️"}
+                                  {onCritical && <Route className="inline w-3 h-3 ml-1" />}
                                 </span>
                               );
                             })}

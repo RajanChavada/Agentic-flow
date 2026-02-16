@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { Copy, Trash2, BarChart3, Save } from "lucide-react";
 import type { WorkflowNodeType, BatchEstimateResponse } from "@/types/workflow";
 import {
   useUIState,
@@ -204,7 +205,7 @@ export default function Sidebar() {
               isDark ? "text-slate-500" : "text-gray-400"
             }`}
           >
-            No saved scenarios yet. Use 💾 Save in the header.
+            No saved scenarios yet. Use <Save className="inline w-3 h-3 mx-0.5" /> Save in the header.
           </p>
         )}
 
@@ -273,14 +274,14 @@ export default function Sidebar() {
                       title="Duplicate"
                       className="opacity-50 hover:opacity-100 text-[10px]"
                     >
-                      📋
+                      <Copy className="w-3 h-3" />
                     </button>
                     <button
                       onClick={() => deleteScenario(sc.id)}
                       title="Delete"
                       className="opacity-50 hover:opacity-100 text-[10px]"
                     >
-                      🗑
+                      <Trash2 className="w-3 h-3" />
                     </button>
                   </div>
                 </div>
@@ -302,7 +303,7 @@ export default function Sidebar() {
           >
             {comparing
               ? "Comparing…"
-              : `📊 Compare Selected (${selectedIds.length})`}
+              : <><BarChart3 className="inline w-3.5 h-3.5 mr-1" /> Compare Selected ({selectedIds.length})</>}
           </button>
         )}
       </div>

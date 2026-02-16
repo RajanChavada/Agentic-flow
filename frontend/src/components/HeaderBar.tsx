@@ -2,6 +2,13 @@
 
 import React, { useState } from "react";
 import {
+  Sun,
+  MoonStar,
+  Save,
+  Download,
+  LayoutDashboard,
+} from "lucide-react";
+import {
   useWorkflowStore,
   useWorkflowNodes,
   useWorkflowEdges,
@@ -13,6 +20,9 @@ import type {
   WorkflowEstimation,
   EstimateRequestPayload,
 } from "@/types/workflow";
+import ImportWorkflowModal from "./ImportWorkflowModal";
+import ExportDropdown from "./ExportDropdown";
+import { useAutoLayout } from "@/hooks/useAutoLayout";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -22,7 +32,9 @@ export default function HeaderBar() {
   const { theme } = useUIState();
   const { setEstimation, setErrorBanner, toggleTheme } = useWorkflowStore();
   const [loading, setLoading] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const isDark = theme === "dark";
+  const autoLayout = useAutoLayout();
 
   // ── Save scenario ────────────────────────────────────────
   const scenarioCount = Object.keys(useWorkflowStore.getState().scenarios).length;
@@ -56,6 +68,9 @@ export default function HeaderBar() {
         tool_id: n.data.toolId,
         tool_category: n.data.toolCategory,
         max_steps: n.data.maxSteps ?? null,
+        task_type: n.data.taskType ?? null,
+        expected_output_size: n.data.expectedOutputSize ?? null,
+        expected_calls_per_run: n.data.expectedCallsPerRun ?? null,
       })),
       edges: edges.map<EdgeConfigPayload>((e) => ({
         id: e.id,
@@ -120,7 +135,7 @@ export default function HeaderBar() {
           }`}
           title={isDark ? "Switch to light mode" : "Switch to dark mode"}
         >
-          {isDark ? "☀ Light" : "◑ Dark"}
+          {isDark ? <><Sun className="inline w-3.5 h-3.5 mr-1" /> Light</> : <><MoonStar className="inline w-3.5 h-3.5 mr-1" /> Dark</>}
         </button>
 
         {/* Save current workflow as scenario */}
@@ -134,8 +149,38 @@ export default function HeaderBar() {
           }`}
           title="Save current workflow as a scenario"
         >
-          💾 Save
+          <Save className="inline w-3.5 h-3.5 mr-1" /> Save
         </button>
+
+        {/* Import workflow from JSON */}
+        <button
+          onClick={() => setIsImportOpen(true)}
+          className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
+            isDark
+              ? "border-violet-700 text-violet-300 hover:bg-violet-800/40"
+              : "border-violet-300 text-violet-700 hover:bg-violet-50"
+          }`}
+          title="Import a workflow from JSON (Generic / LangGraph)"
+        >
+          <Download className="inline w-3.5 h-3.5 mr-1" /> Import
+        </button>
+
+        {/* Auto-layout (dagre) */}
+        <button
+          onClick={autoLayout}
+          disabled={nodes.length === 0}
+          className={`rounded-md border px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 ${
+            isDark
+              ? "border-cyan-700 text-cyan-300 hover:bg-cyan-800/40"
+              : "border-cyan-300 text-cyan-700 hover:bg-cyan-50"
+          }`}
+          title="Auto-arrange nodes using dagre layout"
+        >
+          <LayoutDashboard className="inline w-3.5 h-3.5 mr-1" /> Layout
+        </button>
+
+        {/* Export dropdown */}
+        <ExportDropdown isDark={isDark} />
 
         <button
           onClick={handleEstimate}
@@ -145,6 +190,9 @@ export default function HeaderBar() {
           {loading ? "Running…" : "Run Workflow & Gen Estimate"}
         </button>
       </div>
+
+      {/* Import modal */}
+      <ImportWorkflowModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} />
     </header>
   );
 }

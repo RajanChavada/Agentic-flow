@@ -100,7 +100,7 @@ export default function Canvas() {
       if (breakdown && breakdown.length > 0) {
         const parts: string[] = [];
         if (toolLatMs) {
-          parts.push(`🔧 ${toolLatMs}ms`);
+          parts.push(`Tool ${toolLatMs}ms`);
         } else if (latMs) {
           parts.push(`${latMs}ms`);
         }

@@ -23,6 +23,7 @@ import type {
   EdgeConfigPayload,
   BatchEstimateResult,
   ActualNodeStats,
+  ImportedWorkflow,
 } from "@/types/workflow";
 
 // ── UI slice ──────────────────────────────────────────────────
@@ -82,6 +83,9 @@ interface WorkflowStore {
   setComparisonResults: (results: BatchEstimateResult[]) => void;
   clearComparisonResults: () => void;
 
+  // Import
+  importWorkflow: (imported: ImportedWorkflow, mode: "replace" | "scenario") => void;
+
   // UI
   openConfigModal: () => void;
   closeConfigModal: () => void;
@@ -111,6 +115,9 @@ function nodesToPayload(nodes: Node<WorkflowNodeData>[]): NodeConfigPayload[] {
     tool_id: n.data.toolId,
     tool_category: n.data.toolCategory,
     max_steps: (n.data.maxSteps as number | null | undefined) ?? null,
+    task_type: (n.data.taskType as string | undefined) ?? null,
+    expected_output_size: (n.data.expectedOutputSize as string | undefined) ?? null,
+    expected_calls_per_run: (n.data.expectedCallsPerRun as number | null | undefined) ?? null,
   }));
 }
 
@@ -222,6 +229,9 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         toolId: n.tool_id,
         toolCategory: n.tool_category,
         maxSteps: n.max_steps,
+        taskType: n.task_type ?? undefined,
+        expectedOutputSize: n.expected_output_size ?? undefined,
+        expectedCallsPerRun: n.expected_calls_per_run ?? undefined,
       },
     }));
 
@@ -277,6 +287,62 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
 
   setComparisonResults: (results) => set({ comparisonResults: results }),
   clearComparisonResults: () => set({ comparisonResults: [] }),
+
+  // ── Import ─────────────────────────────────────────────────
+  importWorkflow: (imported, mode) => {
+    const rfNodes: Node<WorkflowNodeData>[] = imported.nodes.map((n, i) => ({
+      id: n.id,
+      type: n.type,
+      position: { x: 200 + (i % 4) * 250, y: 100 + Math.floor(i / 4) * 180 },
+      data: {
+        label: n.label ?? n.type,
+        type: n.type,
+        modelProvider: n.model_provider,
+        modelName: n.model_name,
+        context: n.context,
+        toolId: n.tool_id,
+        toolCategory: n.tool_category,
+        maxSteps: n.max_steps,
+        taskType: n.task_type ?? undefined,
+        expectedOutputSize: n.expected_output_size ?? undefined,
+        expectedCallsPerRun: n.expected_calls_per_run ?? undefined,
+      },
+    }));
+
+    const rfEdges: Edge[] = imported.edges.map((e) => ({
+      id: e.id ?? `ie-${uuid()}`,
+      source: e.source,
+      target: e.target,
+    }));
+
+    if (mode === "replace") {
+      set({
+        nodes: rfNodes,
+        edges: rfEdges,
+        estimation: null,
+        currentScenarioId: null,
+      });
+    } else {
+      // mode === "scenario" — save as a comparison scenario
+      const id = uuid();
+      const now = new Date().toISOString();
+      const name = (imported.metadata?.name as string) || `Imported (${imported.metadata?.source ?? "external"})`;
+      const scenario: WorkflowScenario = {
+        id,
+        name,
+        createdAt: now,
+        updatedAt: now,
+        graph: {
+          nodes: imported.nodes,
+          edges: imported.edges,
+          recursionLimit: (imported.metadata?.recursion_limit as number) ?? 25,
+        },
+      };
+      set((prev) => ({
+        scenarios: { ...prev.scenarios, [id]: scenario },
+      }));
+    }
+  },
 
   // ── UI ─────────────────────────────────────────────────────
   openConfigModal: () =>

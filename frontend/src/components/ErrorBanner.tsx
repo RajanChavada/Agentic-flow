@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { X } from "lucide-react";
 import { useUIState, useWorkflowStore } from "@/store/useWorkflowStore";
 
 /** Thin banner shown at the top when there's an error. */
@@ -24,7 +25,7 @@ export default function ErrorBanner() {
         onClick={() => setErrorBanner(undefined)}
         className={`ml-4 text-xs ${isDark ? "text-red-400 hover:text-red-200" : "text-red-500 hover:text-red-700"}`}
       >
-        ✕
+        <X className="w-3.5 h-3.5" />
       </button>
     </div>
   );

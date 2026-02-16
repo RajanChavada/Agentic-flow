@@ -11,6 +11,7 @@ import {
   CartesianGrid,
   Legend,
 } from "recharts";
+import { BarChart3, X, Trophy } from "lucide-react";
 import {
   useWorkflowStore,
   useComparisonResults,
@@ -90,7 +91,7 @@ export default function ComparisonDrawer() {
         {/* ── Header ──────────────────────────────────────── */}
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-bold">
-            📊 Scenario Comparison{" "}
+            <BarChart3 className="inline w-5 h-5 mr-1.5 -mt-0.5" /> Scenario Comparison{" "}
             <span className="text-sm font-normal opacity-60">
               ({results.length} workflows)
             </span>
@@ -103,7 +104,7 @@ export default function ComparisonDrawer() {
                 : "border-gray-300 hover:bg-gray-100"
             }`}
           >
-            ✕ Close
+            <X className="inline w-3.5 h-3.5 mr-1" /> Close
           </button>
         </div>
 
@@ -173,7 +174,7 @@ export default function ComparisonDrawer() {
                           }`}
                         >
                           {m.format(val)}
-                          {isBest && " 🏆"}
+                          {isBest && <Trophy className="inline w-3.5 h-3.5 ml-1 text-amber-500" />}
                         </td>
                       );
                     })}
