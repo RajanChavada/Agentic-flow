@@ -1,0 +1,224 @@
+{
+  "version": "2026-02-15",
+  "tool_categories": [
+    {
+      "id": "database",
+      "name": "Database",
+      "tools": [
+        {
+          "id": "postgres",
+          "display_name": "PostgreSQL",
+          "description": "SQL database query tool",
+          "schema_tokens": 180,
+          "avg_response_tokens": 800,
+          "latency_ms": 30,
+          "latency_type": "local"
+        },
+        {
+          "id": "mysql",
+          "display_name": "MySQL",
+          "description": "SQL database query tool",
+          "schema_tokens": 170,
+          "avg_response_tokens": 750,
+          "latency_ms": 30,
+          "latency_type": "local"
+        },
+        {
+          "id": "mongodb",
+          "display_name": "MongoDB",
+          "description": "NoSQL document query tool",
+          "schema_tokens": 200,
+          "avg_response_tokens": 1000,
+          "latency_ms": 35,
+          "latency_type": "local"
+        },
+        {
+          "id": "redis",
+          "display_name": "Redis",
+          "description": "In-memory key-value store",
+          "schema_tokens": 120,
+          "avg_response_tokens": 200,
+          "latency_ms": 5,
+          "latency_type": "local"
+        },
+        {
+          "id": "pinecone",
+          "display_name": "Pinecone",
+          "description": "Vector database for similarity search",
+          "schema_tokens": 220,
+          "avg_response_tokens": 1500,
+          "latency_ms": 80,
+          "latency_type": "hosted"
+        },
+        {
+          "id": "chromadb",
+          "display_name": "ChromaDB",
+          "description": "Open-source vector database",
+          "schema_tokens": 200,
+          "avg_response_tokens": 1200,
+          "latency_ms": 40,
+          "latency_type": "local"
+        }
+      ]
+    },
+    {
+      "id": "mcp_server",
+      "name": "MCP Server",
+      "tools": [
+        {
+          "id": "mcp_web_search",
+          "display_name": "MCP Web Search",
+          "description": "Web search via hosted MCP server",
+          "schema_tokens": 350,
+          "avg_response_tokens": 3000,
+          "latency_ms": 400,
+          "latency_type": "hosted"
+        },
+        {
+          "id": "mcp_filesystem",
+          "display_name": "MCP Filesystem",
+          "description": "File read/write via MCP server",
+          "schema_tokens": 400,
+          "avg_response_tokens": 1500,
+          "latency_ms": 100,
+          "latency_type": "local"
+        },
+        {
+          "id": "mcp_github",
+          "display_name": "MCP GitHub",
+          "description": "GitHub API integration via MCP",
+          "schema_tokens": 500,
+          "avg_response_tokens": 2000,
+          "latency_ms": 300,
+          "latency_type": "hosted"
+        },
+        {
+          "id": "mcp_slack",
+          "display_name": "MCP Slack",
+          "description": "Slack messaging via MCP server",
+          "schema_tokens": 350,
+          "avg_response_tokens": 500,
+          "latency_ms": 250,
+          "latency_type": "hosted"
+        },
+        {
+          "id": "mcp_browser",
+          "display_name": "MCP Browser",
+          "description": "Browser automation via MCP server",
+          "schema_tokens": 600,
+          "avg_response_tokens": 5000,
+          "latency_ms": 2000,
+          "latency_type": "hosted"
+        },
+        {
+          "id": "mcp_memory",
+          "display_name": "MCP Memory",
+          "description": "Persistent memory/knowledge graph via MCP",
+          "schema_tokens": 300,
+          "avg_response_tokens": 800,
+          "latency_ms": 50,
+          "latency_type": "local"
+        },
+        {
+          "id": "mcp_custom",
+          "display_name": "Custom MCP Server",
+          "description": "User-defined MCP server",
+          "schema_tokens": 400,
+          "avg_response_tokens": 1500,
+          "latency_ms": 300,
+          "latency_type": "hosted"
+        }
+      ]
+    },
+    {
+      "id": "api",
+      "name": "API Integration",
+      "tools": [
+        {
+          "id": "rest_api",
+          "display_name": "REST API Call",
+          "description": "Generic HTTP REST API call",
+          "schema_tokens": 250,
+          "avg_response_tokens": 1000,
+          "latency_ms": 200,
+          "latency_type": "hosted"
+        },
+        {
+          "id": "graphql",
+          "display_name": "GraphQL API",
+          "description": "GraphQL query endpoint",
+          "schema_tokens": 300,
+          "avg_response_tokens": 1200,
+          "latency_ms": 200,
+          "latency_type": "hosted"
+        },
+        {
+          "id": "webhook",
+          "display_name": "Webhook",
+          "description": "Outbound webhook trigger",
+          "schema_tokens": 150,
+          "avg_response_tokens": 300,
+          "latency_ms": 150,
+          "latency_type": "hosted"
+        }
+      ]
+    },
+    {
+      "id": "code_execution",
+      "name": "Code Execution",
+      "tools": [
+        {
+          "id": "python_repl",
+          "display_name": "Python REPL",
+          "description": "Execute Python code in sandboxed environment",
+          "schema_tokens": 200,
+          "avg_response_tokens": 500,
+          "latency_ms": 50,
+          "latency_type": "local"
+        },
+        {
+          "id": "shell_exec",
+          "display_name": "Shell Command",
+          "description": "Execute shell commands",
+          "schema_tokens": 150,
+          "avg_response_tokens": 400,
+          "latency_ms": 100,
+          "latency_type": "local"
+        }
+      ]
+    },
+    {
+      "id": "retrieval",
+      "name": "Retrieval / RAG",
+      "tools": [
+        {
+          "id": "rag_retriever",
+          "display_name": "RAG Retriever",
+          "description": "Retrieval-augmented generation document fetch",
+          "schema_tokens": 250,
+          "avg_response_tokens": 2000,
+          "latency_ms": 120,
+          "latency_type": "local"
+        },
+        {
+          "id": "web_scraper",
+          "display_name": "Web Scraper",
+          "description": "Scrape and parse web pages",
+          "schema_tokens": 200,
+          "avg_response_tokens": 4000,
+          "latency_ms": 1500,
+          "latency_type": "hosted"
+        },
+        {
+          "id": "pdf_reader",
+          "display_name": "PDF Reader",
+          "description": "Parse and extract text from PDF documents",
+          "schema_tokens": 180,
+          "avg_response_tokens": 3000,
+          "latency_ms": 200,
+          "latency_type": "local"
+        }
+      ]
+    }
+  ]
+}

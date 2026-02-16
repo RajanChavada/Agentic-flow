@@ -1,0 +1,389 @@
+{
+  "version": "2026-02-15",
+  "providers": [
+    {
+      "id": "OpenAI",
+      "name": "OpenAI",
+      "models": [
+        {
+          "id": "GPT-4",
+          "display_name": "GPT-4",
+          "family": "gpt-4",
+          "input_per_million": 30.00,
+          "output_per_million": 60.00,
+          "tokens_per_sec": 40,
+          "context_window": 8192
+        },
+        {
+          "id": "GPT-4-Turbo",
+          "display_name": "GPT-4 Turbo",
+          "family": "gpt-4",
+          "input_per_million": 10.00,
+          "output_per_million": 30.00,
+          "tokens_per_sec": 60,
+          "context_window": 128000
+        },
+        {
+          "id": "GPT-4o",
+          "display_name": "GPT-4o",
+          "family": "gpt-4o",
+          "input_per_million": 2.50,
+          "output_per_million": 10.00,
+          "tokens_per_sec": 80,
+          "context_window": 128000
+        },
+        {
+          "id": "GPT-4o-mini",
+          "display_name": "GPT-4o mini",
+          "family": "gpt-4o",
+          "input_per_million": 0.15,
+          "output_per_million": 0.60,
+          "tokens_per_sec": 110,
+          "context_window": 128000
+        },
+        {
+          "id": "GPT-4.1",
+          "display_name": "GPT-4.1",
+          "family": "gpt-4.1",
+          "input_per_million": 2.00,
+          "output_per_million": 8.00,
+          "tokens_per_sec": 85,
+          "context_window": 1047576
+        },
+        {
+          "id": "GPT-4.1-mini",
+          "display_name": "GPT-4.1 mini",
+          "family": "gpt-4.1",
+          "input_per_million": 0.40,
+          "output_per_million": 1.60,
+          "tokens_per_sec": 120,
+          "context_window": 1047576
+        },
+        {
+          "id": "GPT-4.1-nano",
+          "display_name": "GPT-4.1 nano",
+          "family": "gpt-4.1",
+          "input_per_million": 0.10,
+          "output_per_million": 0.40,
+          "tokens_per_sec": 160,
+          "context_window": 1047576
+        },
+        {
+          "id": "o3",
+          "display_name": "o3",
+          "family": "reasoning",
+          "input_per_million": 10.00,
+          "output_per_million": 40.00,
+          "tokens_per_sec": 30,
+          "context_window": 200000
+        },
+        {
+          "id": "o3-mini",
+          "display_name": "o3 mini",
+          "family": "reasoning",
+          "input_per_million": 1.10,
+          "output_per_million": 4.40,
+          "tokens_per_sec": 120,
+          "context_window": 200000
+        },
+        {
+          "id": "o4-mini",
+          "display_name": "o4 mini",
+          "family": "reasoning",
+          "input_per_million": 1.10,
+          "output_per_million": 4.40,
+          "tokens_per_sec": 130,
+          "context_window": 200000
+        },
+        {
+          "id": "GPT-5.1",
+          "display_name": "GPT-5.1",
+          "family": "gpt-5",
+          "input_per_million": 1.25,
+          "output_per_million": 10.00,
+          "tokens_per_sec": 80,
+          "context_window": 200000
+        }
+      ]
+    },
+    {
+      "id": "Anthropic",
+      "name": "Anthropic",
+      "models": [
+        {
+          "id": "Claude-3-Opus",
+          "display_name": "Claude 3 Opus",
+          "family": "claude-3",
+          "input_per_million": 15.00,
+          "output_per_million": 75.00,
+          "tokens_per_sec": 35,
+          "context_window": 200000
+        },
+        {
+          "id": "Claude-3-Sonnet",
+          "display_name": "Claude 3 Sonnet",
+          "family": "claude-3",
+          "input_per_million": 3.00,
+          "output_per_million": 15.00,
+          "tokens_per_sec": 60,
+          "context_window": 200000
+        },
+        {
+          "id": "Claude-3-Haiku",
+          "display_name": "Claude 3 Haiku",
+          "family": "claude-3",
+          "input_per_million": 0.25,
+          "output_per_million": 1.25,
+          "tokens_per_sec": 120,
+          "context_window": 200000
+        },
+        {
+          "id": "Claude-3.5-Sonnet",
+          "display_name": "Claude 3.5 Sonnet",
+          "family": "claude-3.5",
+          "input_per_million": 3.00,
+          "output_per_million": 15.00,
+          "tokens_per_sec": 70,
+          "context_window": 200000
+        },
+        {
+          "id": "Claude-3.5-Haiku",
+          "display_name": "Claude 3.5 Haiku",
+          "family": "claude-3.5",
+          "input_per_million": 0.80,
+          "output_per_million": 4.00,
+          "tokens_per_sec": 100,
+          "context_window": 200000
+        },
+        {
+          "id": "Claude-4-Sonnet",
+          "display_name": "Claude 4 Sonnet",
+          "family": "claude-4",
+          "input_per_million": 3.00,
+          "output_per_million": 15.00,
+          "tokens_per_sec": 80,
+          "context_window": 200000
+        },
+        {
+          "id": "Claude-4-Opus",
+          "display_name": "Claude 4 Opus",
+          "family": "claude-4",
+          "input_per_million": 15.00,
+          "output_per_million": 75.00,
+          "tokens_per_sec": 40,
+          "context_window": 200000
+        },
+        {
+          "id": "Claude-Opus-4.6",
+          "display_name": "Claude Opus 4.6",
+          "family": "claude-4.6",
+          "input_per_million": 5.00,
+          "output_per_million": 25.00,
+          "tokens_per_sec": 50,
+          "context_window": 1000000
+        }
+      ]
+    },
+    {
+      "id": "Google",
+      "name": "Google",
+      "models": [
+        {
+          "id": "Gemini-1.5-Pro",
+          "display_name": "Gemini 1.5 Pro",
+          "family": "gemini-1.5",
+          "input_per_million": 3.50,
+          "output_per_million": 10.50,
+          "tokens_per_sec": 70,
+          "context_window": 2097152
+        },
+        {
+          "id": "Gemini-1.5-Flash",
+          "display_name": "Gemini 1.5 Flash",
+          "family": "gemini-1.5",
+          "input_per_million": 0.075,
+          "output_per_million": 0.30,
+          "tokens_per_sec": 150,
+          "context_window": 1048576
+        },
+        {
+          "id": "Gemini-2.0-Flash",
+          "display_name": "Gemini 2.0 Flash",
+          "family": "gemini-2.0",
+          "input_per_million": 0.10,
+          "output_per_million": 0.40,
+          "tokens_per_sec": 150,
+          "context_window": 1048576
+        },
+        {
+          "id": "Gemini-2.5-Pro",
+          "display_name": "Gemini 2.5 Pro",
+          "family": "gemini-2.5",
+          "input_per_million": 1.25,
+          "output_per_million": 10.00,
+          "tokens_per_sec": 100,
+          "context_window": 1048576
+        },
+        {
+          "id": "Gemini-2.5-Flash",
+          "display_name": "Gemini 2.5 Flash",
+          "family": "gemini-2.5",
+          "input_per_million": 0.15,
+          "output_per_million": 0.60,
+          "tokens_per_sec": 180,
+          "context_window": 1048576
+        },
+        {
+          "id": "Gemini-2.5-Flash-Lite",
+          "display_name": "Gemini 2.5 Flash Lite",
+          "family": "gemini-2.5",
+          "input_per_million": 0.075,
+          "output_per_million": 0.30,
+          "tokens_per_sec": 200,
+          "context_window": 1048576
+        }
+      ]
+    },
+    {
+      "id": "Meta",
+      "name": "Meta",
+      "models": [
+        {
+          "id": "Llama-3.1-8B",
+          "display_name": "Llama 3.1 8B",
+          "family": "llama-3.1",
+          "input_per_million": 0.05,
+          "output_per_million": 0.08,
+          "tokens_per_sec": 180,
+          "context_window": 131072
+        },
+        {
+          "id": "Llama-3.1-70B",
+          "display_name": "Llama 3.1 70B",
+          "family": "llama-3.1",
+          "input_per_million": 0.35,
+          "output_per_million": 0.40,
+          "tokens_per_sec": 60,
+          "context_window": 131072
+        },
+        {
+          "id": "Llama-3.1-405B",
+          "display_name": "Llama 3.1 405B",
+          "family": "llama-3.1",
+          "input_per_million": 3.00,
+          "output_per_million": 3.00,
+          "tokens_per_sec": 25,
+          "context_window": 131072
+        },
+        {
+          "id": "Llama-4-Scout",
+          "display_name": "Llama 4 Scout",
+          "family": "llama-4",
+          "input_per_million": 0.15,
+          "output_per_million": 0.60,
+          "tokens_per_sec": 140,
+          "context_window": 524288
+        },
+        {
+          "id": "Llama-4-Maverick",
+          "display_name": "Llama 4 Maverick",
+          "family": "llama-4",
+          "input_per_million": 0.25,
+          "output_per_million": 1.00,
+          "tokens_per_sec": 90,
+          "context_window": 1048576
+        }
+      ]
+    },
+    {
+      "id": "Mistral",
+      "name": "Mistral",
+      "models": [
+        {
+          "id": "Mistral-Small",
+          "display_name": "Mistral Small",
+          "family": "mistral",
+          "input_per_million": 0.10,
+          "output_per_million": 0.30,
+          "tokens_per_sec": 150,
+          "context_window": 32000
+        },
+        {
+          "id": "Mistral-Medium",
+          "display_name": "Mistral Medium",
+          "family": "mistral",
+          "input_per_million": 0.40,
+          "output_per_million": 1.20,
+          "tokens_per_sec": 90,
+          "context_window": 32000
+        },
+        {
+          "id": "Mistral-Large",
+          "display_name": "Mistral Large",
+          "family": "mistral",
+          "input_per_million": 2.00,
+          "output_per_million": 6.00,
+          "tokens_per_sec": 50,
+          "context_window": 131072
+        },
+        {
+          "id": "Codestral",
+          "display_name": "Codestral",
+          "family": "codestral",
+          "input_per_million": 0.30,
+          "output_per_million": 0.90,
+          "tokens_per_sec": 120,
+          "context_window": 256000
+        }
+      ]
+    },
+    {
+      "id": "DeepSeek",
+      "name": "DeepSeek",
+      "models": [
+        {
+          "id": "DeepSeek-V3",
+          "display_name": "DeepSeek V3",
+          "family": "deepseek",
+          "input_per_million": 0.27,
+          "output_per_million": 1.10,
+          "tokens_per_sec": 60,
+          "context_window": 131072
+        },
+        {
+          "id": "DeepSeek-R1",
+          "display_name": "DeepSeek R1",
+          "family": "deepseek-reasoning",
+          "input_per_million": 0.55,
+          "output_per_million": 2.19,
+          "tokens_per_sec": 30,
+          "context_window": 131072
+        }
+      ]
+    },
+    {
+      "id": "Cohere",
+      "name": "Cohere",
+      "models": [
+        {
+          "id": "Command-R",
+          "display_name": "Command R",
+          "family": "command",
+          "input_per_million": 0.15,
+          "output_per_million": 0.60,
+          "tokens_per_sec": 80,
+          "context_window": 131072
+        },
+        {
+          "id": "Command-R-Plus",
+          "display_name": "Command R+",
+          "family": "command",
+          "input_per_million": 2.50,
+          "output_per_million": 10.00,
+          "tokens_per_sec": 40,
+          "context_window": 131072
+        }
+      ]
+    }
+  ]
+}
