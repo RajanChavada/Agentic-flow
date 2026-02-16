@@ -39,6 +39,10 @@ export default function NodeConfigModal() {
 
   const [modalPos, setModalPos] = useState<{ top: number; left: number } | null>(null);
 
+  // ── Dragging state ───────────────────────────────────────
+  const isDragging = useRef(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
+
   // ── Dynamic registries from backend ──────────────────────
   const [providers, setProviders] = useState<ProviderDetailed[]>([]);
   const [toolCategories, setToolCategories] = useState<ToolCategoryDetailed[]>([]);
@@ -46,6 +50,34 @@ export default function NodeConfigModal() {
 
   const isDark = theme === "dark";
   const isToolNode = node?.type === "toolNode";
+
+  // ── Drag-to-move handlers ────────────────────────────────
+  const onDragStart = useCallback((e: React.MouseEvent) => {
+    // Only allow dragging from the header area (not inputs/buttons)
+    e.preventDefault();
+    isDragging.current = true;
+    const currentTop = modalPos?.top ?? 100;
+    const currentLeft = modalPos?.left ?? 100;
+    dragOffset.current = { x: e.clientX - currentLeft, y: e.clientY - currentTop };
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!isDragging.current) return;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const newLeft = Math.max(0, Math.min(vw - 80, ev.clientX - dragOffset.current.x));
+      const newTop = Math.max(0, Math.min(vh - 80, ev.clientY - dragOffset.current.y));
+      setModalPos({ top: newTop, left: newLeft });
+    };
+
+    const onMouseUp = () => {
+      isDragging.current = false;
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }, [modalPos]);
 
   // Fetch registries on first open
   const fetchRegistries = useCallback(async () => {
@@ -161,7 +193,7 @@ export default function NodeConfigModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50" onClick={closeConfigModal}>
+    <div className="fixed inset-0 z-50 pointer-events-none">
       <div
         ref={modalRef}
         onClick={(e) => e.stopPropagation()}
@@ -171,19 +203,56 @@ export default function NodeConfigModal() {
           left: modalPos?.left ?? window.innerWidth - MODAL_WIDTH - 40,
           width: MODAL_WIDTH,
         }}
-        className={`rounded-lg p-5 shadow-2xl border transition-colors ${
+        className={`rounded-lg shadow-2xl border transition-colors pointer-events-auto ${
           isDark
             ? "bg-slate-800 border-slate-600"
             : "bg-white border-gray-200"
         }`}
       >
-        <h2
-          className={`text-base font-bold mb-4 ${
-            isDark ? "text-slate-100" : "text-gray-800"
+        {/* ── Draggable header bar ─────────────────────── */}
+        <div
+          onMouseDown={onDragStart}
+          className={`flex items-center justify-between px-5 py-3 rounded-t-lg cursor-grab active:cursor-grabbing select-none border-b ${
+            isDark
+              ? "bg-slate-750 border-slate-600"
+              : "bg-gray-50 border-gray-200"
           }`}
         >
-          Configure: {node.data.label}
-        </h2>
+          <div className="flex items-center gap-2">
+            {/* Drag grip icon */}
+            <svg
+              width="12" height="12" viewBox="0 0 12 12" fill="none"
+              className={isDark ? "text-slate-500" : "text-gray-400"}
+            >
+              <circle cx="3" cy="3" r="1.2" fill="currentColor" />
+              <circle cx="9" cy="3" r="1.2" fill="currentColor" />
+              <circle cx="3" cy="9" r="1.2" fill="currentColor" />
+              <circle cx="9" cy="9" r="1.2" fill="currentColor" />
+              <circle cx="3" cy="6" r="1.2" fill="currentColor" />
+              <circle cx="9" cy="6" r="1.2" fill="currentColor" />
+            </svg>
+            <h2
+              className={`text-sm font-bold ${
+                isDark ? "text-slate-100" : "text-gray-800"
+              }`}
+            >
+              Configure: {node.data.label}
+            </h2>
+          </div>
+          <button
+            onClick={closeConfigModal}
+            className={`rounded-md p-1 transition-colors ${
+              isDark ? "hover:bg-slate-700 text-slate-400" : "hover:bg-gray-200 text-gray-400"
+            }`}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+
+        {/* ── Scrollable body ──────────────────────────── */}
+        <div className="px-5 pt-4 pb-5 max-h-[70vh] overflow-y-auto">
 
         {isToolNode ? (
           /* ═══════════════ TOOL NODE CONFIG ═══════════════ */
@@ -483,7 +552,10 @@ export default function NodeConfigModal() {
             Save
           </button>
         </div>
+        </div>
+        {/* end scrollable body */}
       </div>
+      {/* end modal card */}
     </div>
   );
 }
