@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 import Sidebar from "@/components/Sidebar";
 import Canvas from "@/components/Canvas";
@@ -8,8 +9,16 @@ import EstimatePanel from "@/components/EstimatePanel";
 import NodeConfigModal from "@/components/NodeConfigModal";
 import ErrorBanner from "@/components/ErrorBanner";
 import ComparisonDrawer from "@/components/ComparisonDrawer";
+import AuthModal from "@/components/AuthModal";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function Home() {
+  // Hydrate Supabase session on mount and listen for auth changes
+  useEffect(() => {
+    const unsubscribe = useAuthStore.getState().init();
+    return unsubscribe;
+  }, []);
+
   return (
     <ReactFlowProvider>
       <div className="flex flex-col h-screen w-screen overflow-hidden">
@@ -25,6 +34,7 @@ export default function Home() {
         <EstimatePanel />
         <NodeConfigModal />
         <ComparisonDrawer />
+        <AuthModal />
       </div>
     </ReactFlowProvider>
   );

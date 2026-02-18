@@ -17,6 +17,7 @@ import {
   useWorkflowEdges,
   useEstimation,
 } from "@/store/useWorkflowStore";
+import { useUser, useAuthStore } from "@/store/useAuthStore";
 import type {
   WorkflowEstimation,
   NodeEstimation,
@@ -696,6 +697,21 @@ export default function ExportDropdown({ isDark }: Props) {
   const nodes = useWorkflowNodes();
   const edges = useWorkflowEdges();
 
+  // Auth gate
+  const user = useUser();
+  const { openAuthModal } = useAuthStore();
+
+  const handleToggle = () => {
+    if (!user) {
+      openAuthModal({
+        reason: "Sign in to export workflows and reports.",
+        onSuccess: () => setOpen(true),
+      });
+      return;
+    }
+    setOpen(!open);
+  };
+
   // Close dropdown on outside click
   useEffect(() => {
     if (!open) return;
@@ -832,7 +848,7 @@ export default function ExportDropdown({ isDark }: Props) {
   return (
     <div ref={dropdownRef} className="relative">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={handleToggle}
         className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
           isDark
             ? "border-amber-700 text-amber-300 hover:bg-amber-800/40"

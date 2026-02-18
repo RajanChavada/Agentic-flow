@@ -7,6 +7,9 @@ import {
   Save,
   Download,
   LayoutDashboard,
+  LogIn,
+  LogOut,
+  User,
 } from "lucide-react";
 import {
   useWorkflowStore,
@@ -14,6 +17,7 @@ import {
   useWorkflowEdges,
   useUIState,
 } from "@/store/useWorkflowStore";
+import { useAuthStore, useUser } from "@/store/useAuthStore";
 import type {
   NodeConfigPayload,
   EdgeConfigPayload,
@@ -36,13 +40,40 @@ export default function HeaderBar() {
   const isDark = theme === "dark";
   const autoLayout = useAutoLayout();
 
+  // Auth state
+  const user = useUser();
+  const { openAuthModal, signOut } = useAuthStore();
+
   // ── Save scenario ────────────────────────────────────────
   const scenarioCount = Object.keys(useWorkflowStore.getState().scenarios).length;
 
   const handleSave = () => {
+    if (!user) {
+      openAuthModal({
+        reason: "Sign in to save your workflow.",
+        onSuccess: () => {
+          // After sign-in, re-trigger save
+          const name = prompt("Scenario name:", `Scenario-${scenarioCount + 1}`);
+          if (!name) return;
+          useWorkflowStore.getState().saveWorkflowToSupabase(name);
+        },
+      });
+      return;
+    }
     const name = prompt("Scenario name:", `Scenario-${scenarioCount + 1}`);
     if (!name) return;
-    useWorkflowStore.getState().saveCurrentScenario(name);
+    useWorkflowStore.getState().saveWorkflowToSupabase(name);
+  };
+
+  const handleImport = () => {
+    if (!user) {
+      openAuthModal({
+        reason: "Sign in to import workflows.",
+        onSuccess: () => setIsImportOpen(true),
+      });
+      return;
+    }
+    setIsImportOpen(true);
   };
 
   const handleEstimate = async () => {
@@ -154,7 +185,7 @@ export default function HeaderBar() {
 
         {/* Import workflow from JSON */}
         <button
-          onClick={() => setIsImportOpen(true)}
+          onClick={handleImport}
           className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
             isDark
               ? "border-violet-700 text-violet-300 hover:bg-violet-800/40"
@@ -189,6 +220,50 @@ export default function HeaderBar() {
         >
           {loading ? "Running…" : "Run Workflow & Gen Estimate"}
         </button>
+
+        {/* ── Auth controls ─────────────────────────────── */}
+        <div
+          className={`ml-2 pl-2 border-l flex items-center gap-2 ${
+            isDark ? "border-slate-700" : "border-gray-200"
+          }`}
+        >
+          {user ? (
+            <>
+              <span
+                className={`flex items-center gap-1 text-xs truncate max-w-30 ${
+                  isDark ? "text-slate-300" : "text-gray-600"
+                }`}
+                title={user.email ?? "Signed in"}
+              >
+                <User className="w-3.5 h-3.5 shrink-0" />
+                {user.email?.split("@")[0]}
+              </span>
+              <button
+                onClick={signOut}
+                className={`rounded-md border px-2 py-1 text-xs font-medium transition ${
+                  isDark
+                    ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                    : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                }`}
+                title="Sign out"
+              >
+                <LogOut className="inline w-3 h-3 mr-0.5" /> Out
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => openAuthModal()}
+              className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
+                isDark
+                  ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                  : "border-gray-300 text-gray-600 hover:bg-gray-100"
+              }`}
+              title="Sign in"
+            >
+              <LogIn className="inline w-3.5 h-3.5 mr-1" /> Sign In
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Import modal */}

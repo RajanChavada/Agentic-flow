@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Copy, Trash2, BarChart3, Save } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Copy, Trash2, BarChart3, Save, Cloud } from "lucide-react";
 import type { WorkflowNodeType, BatchEstimateResponse } from "@/types/workflow";
 import {
   useUIState,
@@ -9,6 +9,7 @@ import {
   useSelectedForComparison,
   useWorkflowStore,
 } from "@/store/useWorkflowStore";
+import { useUser } from "@/store/useAuthStore";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -88,9 +89,20 @@ export default function Sidebar() {
     setComparisonResults,
     toggleComparisonDrawer,
     setErrorBanner,
+    loadWorkflowsFromSupabase,
+    deleteWorkflowFromSupabase,
   } = useWorkflowStore();
   const isDark = theme === "dark";
   const [comparing, setComparing] = useState(false);
+  const user = useUser();
+  const supabaseLoading = useWorkflowStore((s) => s.supabaseLoading);
+
+  // Load workflows from Supabase when the user signs in
+  useEffect(() => {
+    if (user) {
+      loadWorkflowsFromSupabase();
+    }
+  }, [user, loadWorkflowsFromSupabase]);
 
   const scenarioList = Object.values(scenarios).sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -197,15 +209,26 @@ export default function Sidebar() {
               ({scenarioList.length})
             </span>
           )}
+          {user && (
+            <span title="Synced with Supabase">
+              <Cloud className="inline w-3 h-3 ml-1 text-blue-400" />
+            </span>
+          )}
         </h2>
 
-        {scenarioList.length === 0 && (
+        {scenarioList.length === 0 && !supabaseLoading && (
           <p
             className={`text-[10px] italic ${
               isDark ? "text-slate-500" : "text-gray-400"
             }`}
           >
             No saved scenarios yet. Use <Save className="inline w-3 h-3 mx-0.5" /> Save in the header.
+          </p>
+        )}
+
+        {supabaseLoading && (
+          <p className={`text-[10px] italic ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+            Loading workflows...
           </p>
         )}
 
@@ -277,7 +300,13 @@ export default function Sidebar() {
                       <Copy className="w-3 h-3" />
                     </button>
                     <button
-                      onClick={() => deleteScenario(sc.id)}
+                      onClick={() => {
+                        if (user) {
+                          deleteWorkflowFromSupabase(sc.id);
+                        } else {
+                          deleteScenario(sc.id);
+                        }
+                      }}
                       title="Delete"
                       className="opacity-50 hover:opacity-100 text-[10px]"
                     >

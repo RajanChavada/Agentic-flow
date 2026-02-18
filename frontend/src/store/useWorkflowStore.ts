@@ -25,6 +25,7 @@ import type {
   ActualNodeStats,
   ImportedWorkflow,
 } from "@/types/workflow";
+import { supabase } from "@/lib/supabase";
 
 // ── UI slice ──────────────────────────────────────────────────
 interface UIState {
@@ -101,6 +102,16 @@ interface WorkflowStore {
   // Observability
   setActualStats: (stats: ActualNodeStats[]) => void;
   clearActualStats: () => void;
+
+  // Supabase persistence
+  /** Save/update the current canvas to Supabase. Returns the workflow id. */
+  saveWorkflowToSupabase: (name: string, description?: string) => Promise<string | null>;
+  /** Fetch all workflows for the current user from Supabase. */
+  loadWorkflowsFromSupabase: () => Promise<void>;
+  /** Delete a workflow from Supabase by id. */
+  deleteWorkflowFromSupabase: (id: string) => Promise<void>;
+  /** Track whether Supabase workflows are loading. */
+  supabaseLoading: boolean;
 }
 
 /** Convert current canvas nodes to backend payload format. */
@@ -377,6 +388,128 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   // ── Observability ──────────────────────────────────────────
   setActualStats: (stats) => set({ actualStats: stats }),
   clearActualStats: () => set({ actualStats: [] }),
+
+  // ── Supabase persistence ─────────────────────────────────
+  supabaseLoading: false,
+
+  saveWorkflowToSupabase: async (name, description) => {
+    const s = get();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const graph = {
+      nodes: nodesToPayload(s.nodes),
+      edges: edgesToPayload(s.edges),
+      recursionLimit: 25,
+    };
+
+    // If we have a current scenario that already came from Supabase, update it
+    const currentId = s.currentScenarioId;
+    const existing = currentId ? s.scenarios[currentId] : null;
+
+    if (existing) {
+      // Update existing row
+      const { error } = await supabase
+        .from("workflows")
+        .update({ name, description: description ?? null, graph, last_estimate: s.estimation })
+        .eq("id", existing.id)
+        .eq("user_id", user.id);
+      if (error) {
+        console.error("Supabase update error:", error);
+        return null;
+      }
+      // Sync local store
+      const now = new Date().toISOString();
+      set((prev) => ({
+        scenarios: {
+          ...prev.scenarios,
+          [existing.id]: { ...existing, name, updatedAt: now, graph, estimate: s.estimation ?? undefined },
+        },
+      }));
+      return existing.id;
+    } else {
+      // Insert new row
+      const id = uuid();
+      const now = new Date().toISOString();
+      const { error } = await supabase.from("workflows").insert({
+        id,
+        user_id: user.id,
+        name,
+        description: description ?? null,
+        graph,
+        last_estimate: s.estimation,
+      });
+      if (error) {
+        console.error("Supabase insert error:", error);
+        return null;
+      }
+      const scenario: WorkflowScenario = {
+        id,
+        name,
+        createdAt: now,
+        updatedAt: now,
+        graph,
+        estimate: s.estimation ?? undefined,
+      };
+      set((prev) => ({
+        scenarios: { ...prev.scenarios, [id]: scenario },
+        currentScenarioId: id,
+      }));
+      return id;
+    }
+  },
+
+  loadWorkflowsFromSupabase: async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    set({ supabaseLoading: true });
+    const { data, error } = await supabase
+      .from("workflows")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      console.error("Supabase load error:", error);
+      set({ supabaseLoading: false });
+      return;
+    }
+
+    const loaded: Record<string, WorkflowScenario> = {};
+    for (const row of data ?? []) {
+      loaded[row.id] = {
+        id: row.id,
+        name: row.name,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        graph: row.graph as WorkflowScenario["graph"],
+        estimate: (row.last_estimate as WorkflowEstimation) ?? undefined,
+      };
+    }
+
+    // Merge with any local-only scenarios (keep both)
+    set((prev) => ({
+      scenarios: { ...prev.scenarios, ...loaded },
+      supabaseLoading: false,
+    }));
+  },
+
+  deleteWorkflowFromSupabase: async (id) => {
+    const { error } = await supabase.from("workflows").delete().eq("id", id);
+    if (error) {
+      console.error("Supabase delete error:", error);
+    }
+    // Also remove from local store
+    set((s) => {
+      const { [id]: _, ...rest } = s.scenarios;
+      return {
+        scenarios: rest,
+        selectedForComparison: s.selectedForComparison.filter((sid) => sid !== id),
+        currentScenarioId: s.currentScenarioId === id ? null : s.currentScenarioId,
+      };
+    });
+  },
 }));
 
 // ── Selector hooks (fine‑grained subscriptions) ──────────────

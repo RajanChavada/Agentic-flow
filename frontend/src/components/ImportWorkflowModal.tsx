@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Download, AlertTriangle } from "lucide-react";
 import { useWorkflowStore, useUIState } from "@/store/useWorkflowStore";
 import type { ImportSource, ImportedWorkflow } from "@/types/workflow";
@@ -42,13 +42,21 @@ export default function ImportWorkflowModal({ isOpen, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Drag state
-  const [pos, setPos] = useState<{ top: number; left: number }>(() => ({
-    top: typeof window !== "undefined" ? Math.max(60, window.innerHeight / 2 - 300) : 200,
-    left: typeof window !== "undefined" ? Math.max(20, window.innerWidth / 2 - 250) : 200,
-  }));
+  // Drag state — initialise with safe defaults, then centre on mount
+  const [pos, setPos] = useState<{ top: number; left: number }>({
+    top: 200,
+    left: 200,
+  });
   const dragging = useRef(false);
   const dragOff = useRef({ x: 0, y: 0 });
+
+  // Centre the modal once we're in the browser
+  useEffect(() => {
+    setPos({
+      top: Math.max(60, window.innerHeight / 2 - 300),
+      left: Math.max(20, window.innerWidth / 2 - 250),
+    });
+  }, []);
 
   const onDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -107,6 +115,13 @@ export default function ImportWorkflowModal({ isOpen, onClose }: Props) {
 
       const imported: ImportedWorkflow = await res.json();
       importWorkflow(imported, mode);
+
+      // Always save imported workflow as a separate scenario (user requirement)
+      if (mode === "replace") {
+        // "replace" mode puts it on canvas — also save a copy as a named scenario
+        importWorkflow(imported, "scenario");
+      }
+
       setErrorBanner(undefined);
       onClose();
       setJsonText("");
