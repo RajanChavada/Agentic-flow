@@ -18,10 +18,13 @@ from models import (
     ToolInfo,
     ToolCategoryInfo,
     ToolCategoryDetailedInfo,
+    ExternalWorkflowImportRequest,
+    ImportedWorkflow,
 )
 from estimator import estimate_workflow
 from pricing_registry import registry
 from tool_registry import tool_registry
+from import_adapters import get_adapter
 
 app = FastAPI(
     title="Agentic Workflow Analyzer",
@@ -55,6 +58,8 @@ async def estimate(request: WorkflowRequest):
         request.nodes,
         request.edges,
         recursion_limit=request.recursion_limit or 25,
+        runs_per_day=request.runs_per_day,
+        loop_intensity=request.loop_intensity,
     )
 
 
@@ -84,6 +89,28 @@ async def estimate_batch(request: BatchEstimateRequest):
             detected_cycles=len(est.detected_cycles),
         ))
     return BatchEstimateResponse(results=results)
+
+
+# ── Import Workflow ─────────────────────────────────────────────
+
+@app.post("/api/import-workflow", response_model=ImportedWorkflow)
+async def import_workflow(request: ExternalWorkflowImportRequest):
+    """Import an external workflow definition (generic, LangGraph, custom).
+
+    Returns normalized internal nodes + edges that the frontend can
+    render on the canvas or load as a comparison scenario.
+    """
+    try:
+        adapter = get_adapter(request.source)
+        result = adapter(request.payload)
+        return result
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to import workflow: {exc}",
+        )
 
 
 # ── Provider & Model Registry ──────────────────────────────────

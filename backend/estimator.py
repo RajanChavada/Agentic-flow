@@ -41,6 +41,10 @@ from models import (
     ToolImpact,
     CycleInfo,
     EstimationRange,
+    ParallelStep,
+    ScalingProjection,
+    SensitivityReadout,
+    HealthScore,
     WorkflowEstimation,
     EdgeConfig,
 )
@@ -56,6 +60,50 @@ _BASE_SYSTEM_TOKENS = 200
 
 # Output/input ratio heuristic  (configurable per‑node type later)
 _OUTPUT_RATIO = 1.5
+
+# ── Task-aware output multipliers ───────────────────────────────
+# Keys: (task_type, expected_output_size) → multiplier applied to
+# base_context_tokens to estimate output_tokens.  Falls back to
+# _OUTPUT_RATIO when the combination is not in the table.
+_TASK_OUTPUT_MULTIPLIERS: dict[tuple[str, str], float] = {
+    # Classification – typically short boolean/label outputs
+    ("classification", "short"):   0.3,
+    ("classification", "medium"):  0.5,
+    ("classification", "long"):    0.8,
+    ("classification", "very_long"): 1.0,
+    # Summarization – moderate compression
+    ("summarization", "short"):    0.8,
+    ("summarization", "medium"):   1.2,
+    ("summarization", "long"):     1.8,
+    ("summarization", "very_long"): 2.5,
+    # Code generation – tends to be verbose
+    ("code_generation", "short"):  1.0,
+    ("code_generation", "medium"): 2.0,
+    ("code_generation", "long"):   3.0,
+    ("code_generation", "very_long"): 4.5,
+    # RAG answers – concise to moderate
+    ("rag_answer", "short"):       0.6,
+    ("rag_answer", "medium"):      1.2,
+    ("rag_answer", "long"):        2.0,
+    ("rag_answer", "very_long"):   3.0,
+    # Tool orchestration – mostly function-call JSON, short
+    ("tool_orchestration", "short"):  0.5,
+    ("tool_orchestration", "medium"): 1.0,
+    ("tool_orchestration", "long"):   1.5,
+    ("tool_orchestration", "very_long"): 2.0,
+    # Routing – very short decision outputs
+    ("routing", "short"):          0.2,
+    ("routing", "medium"):         0.4,
+    ("routing", "long"):           0.6,
+    ("routing", "very_long"):      0.8,
+}
+
+
+def _get_output_multiplier(task_type: str | None, output_size: str | None) -> float:
+    """Look up the task-aware output multiplier, falling back to _OUTPUT_RATIO."""
+    if task_type and output_size:
+        return _TASK_OUTPUT_MULTIPLIERS.get((task_type, output_size), _OUTPUT_RATIO)
+    return _OUTPUT_RATIO
 
 # Default tokens‑per‑second if model entry is missing throughput data
 _DEFAULT_TPS = 50
@@ -191,7 +239,16 @@ def estimate_agent_node(
     # ── Token calculation ───────────────────────────────────────
     base_context_tokens = count_tokens(node.context or "") + _BASE_SYSTEM_TOKENS
     input_tokens = base_context_tokens + total_schema_tokens + total_response_tokens
-    output_tokens = int(base_context_tokens * _OUTPUT_RATIO)  # output based on base, not inflated by tool data
+
+    # Task-aware output estimation: use multiplier table if task_type + output_size set
+    output_multiplier = _get_output_multiplier(node.task_type, node.expected_output_size)
+    output_tokens = int(base_context_tokens * output_multiplier)  # output based on base, not inflated by tool data
+
+    # expected_calls_per_run: multiply tokens/cost/latency for orchestrator agents
+    calls_multiplier = max(1, node.expected_calls_per_run or 1)
+    input_tokens *= calls_multiplier
+    output_tokens *= calls_multiplier
+
     total_tokens = input_tokens + output_tokens
 
     provider = node.model_provider or ""
@@ -201,6 +258,7 @@ def estimate_agent_node(
     pricing = registry.get(provider, model)
 
     if pricing is None:
+        scaled_tool_latency = total_tool_latency * calls_multiplier
         return NodeEstimation(
             node_id=node.id,
             node_name=node.label or node.type,
@@ -210,14 +268,14 @@ def estimate_agent_node(
             cost=0.0,
             input_cost=0.0,
             output_cost=0.0,
-            latency=total_tool_latency,
+            latency=scaled_tool_latency,
             model_provider=provider or None,
             model_name=model or None,
             tool_id=None,
             tool_impacts=tool_impacts if tool_impacts else None,
             tool_schema_tokens=total_schema_tokens,
             tool_response_tokens=total_response_tokens,
-            tool_latency=round(total_tool_latency, 3),
+            tool_latency=round(scaled_tool_latency, 3),
             in_cycle=in_cycle,
         )
 
@@ -229,7 +287,8 @@ def estimate_agent_node(
     # ── Latency calculation ─────────────────────────────────────
     tps = pricing.tokens_per_sec or _DEFAULT_TPS
     llm_latency = output_tokens / tps
-    total_latency = llm_latency + total_tool_latency
+    scaled_tool_latency = total_tool_latency * calls_multiplier
+    total_latency = llm_latency + scaled_tool_latency
 
     return NodeEstimation(
         node_id=node.id,
@@ -247,7 +306,7 @@ def estimate_agent_node(
         tool_impacts=tool_impacts if tool_impacts else None,
         tool_schema_tokens=total_schema_tokens,
         tool_response_tokens=total_response_tokens,
-        tool_latency=round(total_tool_latency, 3),
+        tool_latency=round(scaled_tool_latency, 3),
         in_cycle=in_cycle,
     )
 
@@ -275,10 +334,256 @@ def estimate_node(node: NodeConfig, in_cycle: bool = False) -> NodeEstimation:
     )
 
 
+_HIGH_COST_MODEL_THRESHOLD = 10.0  # $/M input tokens — models above this are "expensive"
+
+
+def _compute_cycle_contributions(
+    detected_cycles: List[CycleInfo],
+    breakdown: List[NodeEstimation],
+    total_cost: float,
+    total_latency: float,
+) -> None:
+    """Mutate CycleInfo objects in-place to add per-lap metrics, contribution, and risk level.
+
+    Risk classification:
+      - "critical" → expensive model(s) AND max_iterations ≥ 20
+      - "high"     → expensive model(s) OR max_iterations ≥ 15 OR cost_contribution > 0.5
+      - "medium"   → max_iterations ≥ 5 OR cost_contribution > 0.2
+      - "low"      → everything else
+    """
+    from pricing_registry import registry as _reg
+
+    for ci in detected_cycles:
+        cycle_node_set = set(ci.node_ids)
+
+        # Sum single-lap cost for nodes in this cycle
+        lap_tokens = sum(b.tokens for b in breakdown if b.node_id in cycle_node_set)
+        lap_cost = sum(b.cost for b in breakdown if b.node_id in cycle_node_set)
+        lap_latency = sum(b.latency for b in breakdown if b.node_id in cycle_node_set)
+
+        ci.tokens_per_lap = lap_tokens
+        ci.cost_per_lap = round(lap_cost, 8)
+        ci.latency_per_lap = round(lap_latency, 4)
+
+        # Contribution: avg-case (expected_iterations × lap) / total
+        avg_cost = lap_cost * ci.expected_iterations
+        avg_latency = lap_latency * ci.expected_iterations
+
+        ci.cost_contribution = round(avg_cost / total_cost, 4) if total_cost > 0 else 0.0
+        ci.latency_contribution = round(avg_latency / total_latency, 4) if total_latency > 0 else 0.0
+
+        # Determine if any cycle node uses an expensive model
+        has_expensive_model = False
+        expensive_model_name = ""
+        for b in breakdown:
+            if b.node_id in cycle_node_set and b.model_provider and b.model_name:
+                pricing = _reg.get(b.model_provider, b.model_name)
+                if pricing and pricing.input_per_million >= _HIGH_COST_MODEL_THRESHOLD:
+                    has_expensive_model = True
+                    expensive_model_name = f"{b.model_provider}/{b.model_name}"
+                    break
+
+        # Risk classification
+        reasons: List[str] = []
+
+        if has_expensive_model and ci.max_iterations >= 20:
+            ci.risk_level = "critical"
+            reasons.append(f"Expensive model ({expensive_model_name})")
+            reasons.append(f"High max iterations ({ci.max_iterations})")
+        elif has_expensive_model or ci.max_iterations >= 15 or ci.cost_contribution > 0.5:
+            ci.risk_level = "high"
+            if has_expensive_model:
+                reasons.append(f"Expensive model ({expensive_model_name})")
+            if ci.max_iterations >= 15:
+                reasons.append(f"High max iterations ({ci.max_iterations})")
+            if ci.cost_contribution > 0.5:
+                reasons.append(f"Loop dominates cost ({round(ci.cost_contribution * 100)}%)")
+        elif ci.max_iterations >= 5 or ci.cost_contribution > 0.2:
+            ci.risk_level = "medium"
+            if ci.max_iterations >= 5:
+                reasons.append(f"Moderate iterations ({ci.max_iterations})")
+            if ci.cost_contribution > 0.2:
+                reasons.append(f"Significant cost share ({round(ci.cost_contribution * 100)}%)")
+        else:
+            ci.risk_level = "low"
+            reasons.append("Bounded loop with low cost impact")
+
+        ci.risk_reason = "; ".join(reasons)
+
+
+def _compute_bottleneck_shares(
+    breakdown: List[NodeEstimation],
+    total_cost: float,
+    total_latency: float,
+) -> None:
+    """Mutate breakdown nodes in-place to add cost_share, latency_share, and bottleneck_severity.
+
+    Severity classification:
+      - "high"   → node is in the top 20% of either cost or latency share
+      - "medium" → node is in the top 20-50% range
+      - "low"    → everything else
+    """
+    for b in breakdown:
+        b.cost_share = round(b.cost / total_cost, 4) if total_cost > 0 else 0.0
+        b.latency_share = round(b.latency / total_latency, 4) if total_latency > 0 else 0.0
+
+    # Compute severity based on max(cost_share, latency_share)
+    impacts = [(max(b.cost_share, b.latency_share), i) for i, b in enumerate(breakdown)]
+    impacts.sort(key=lambda x: x[0], reverse=True)
+
+    n = len(impacts)
+    for rank, (_, idx) in enumerate(impacts):
+        pct = (rank + 1) / n if n > 0 else 1.0
+        if pct <= 0.2 and (breakdown[idx].cost > 0 or breakdown[idx].latency > 0):
+            breakdown[idx].bottleneck_severity = "high"
+        elif pct <= 0.5 and (breakdown[idx].cost > 0 or breakdown[idx].latency > 0):
+            breakdown[idx].bottleneck_severity = "medium"
+        else:
+            breakdown[idx].bottleneck_severity = "low"
+
+
+# ── Health scoring ──────────────────────────────────────────────
+
+def _compute_health_score(
+    breakdown: List[NodeEstimation],
+    detected_cycles: List[CycleInfo],
+    nodes: List[NodeConfig],
+    total_cost: float,
+    total_latency: float,
+    critical_path_latency: float,
+) -> HealthScore:
+    """Compute an opinionated health grade (A–F) and badge list.
+
+    Factors (each 0–25 pts, higher = better):
+      1. cost_concentration  — penalise if top 1-2 nodes hold >60% of cost
+      2. loop_risk           — penalise cycles, especially high/critical risk
+      3. model_cost_tier     — penalise heavy use of premium models (>$10/M)
+      4. latency_balance     — penalise if critical path >> parallelisable latency
+    """
+    badges: list[str] = []
+    details: dict = {}
+
+    # ── Factor 1: Cost concentration (0-25) ─────────────────
+    cost_shares = sorted(
+        [b.cost_share for b in breakdown if b.cost > 0], reverse=True
+    )
+    top2_share = sum(cost_shares[:2]) if cost_shares else 0.0
+    if top2_share <= 0.4:
+        cost_score = 25
+        badges.append("Cost-efficient")
+    elif top2_share <= 0.6:
+        cost_score = 18
+    elif top2_share <= 0.8:
+        cost_score = 10
+        badges.append("Cost-concentrated")
+    else:
+        cost_score = 3
+        badges.append("Cost-concentrated")
+    details["cost_concentration"] = {
+        "score": cost_score,
+        "top2_share": round(top2_share, 3),
+    }
+
+    # ── Factor 2: Loop risk (0-25) ──────────────────────────
+    if not detected_cycles:
+        loop_score = 25
+        badges.append("Loop-free")
+    else:
+        risk_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+        for c in detected_cycles:
+            risk_counts[c.risk_level or "low"] += 1
+
+        if risk_counts["critical"] > 0:
+            loop_score = 3
+            badges.append("Loop-heavy")
+        elif risk_counts["high"] > 0:
+            loop_score = 10
+            badges.append("Loop-heavy")
+        elif risk_counts["medium"] > 0:
+            loop_score = 18
+        else:
+            loop_score = 22
+    details["loop_risk"] = {
+        "score": loop_score,
+        "cycle_count": len(detected_cycles),
+    }
+
+    # ── Factor 3: Premium model usage (0-25) ────────────────
+    agent_nodes = [n for n in nodes if n.type == "agentNode"]
+    premium_count = 0
+    for n in agent_nodes:
+        if n.model_provider and n.model_name:
+            entry = registry.get(n.model_provider, n.model_name)
+            if entry and entry.input_per_million > _HIGH_COST_MODEL_THRESHOLD:
+                premium_count += 1
+
+    premium_ratio = premium_count / len(agent_nodes) if agent_nodes else 0.0
+    if premium_ratio <= 0.2:
+        model_score = 25
+        if agent_nodes:
+            badges.append("Budget-friendly")
+    elif premium_ratio <= 0.5:
+        model_score = 18
+    elif premium_ratio <= 0.8:
+        model_score = 10
+        badges.append("High premium-model usage")
+    else:
+        model_score = 3
+        badges.append("High premium-model usage")
+    details["premium_models"] = {
+        "score": model_score,
+        "premium_ratio": round(premium_ratio, 3),
+    }
+
+    # ── Factor 4: Latency balance (0-25) ────────────────────
+    if total_latency > 0 and critical_path_latency > 0:
+        parallelism_benefit = 1.0 - (critical_path_latency / total_latency)
+        # Higher benefit = better parallelism = better score
+        if parallelism_benefit >= 0.3:
+            latency_score = 25
+        elif parallelism_benefit >= 0.15:
+            latency_score = 20
+        elif parallelism_benefit >= 0.05:
+            latency_score = 15
+        else:
+            latency_score = 8
+            badges.append("Latency-sensitive")
+    else:
+        latency_score = 15  # can't assess
+    details["latency_balance"] = {
+        "score": latency_score,
+        "critical_vs_total": round(
+            critical_path_latency / max(total_latency, 0.001), 3
+        ),
+    }
+
+    # ── Composite score and grade ───────────────────────────
+    composite = cost_score + loop_score + model_score + latency_score  # 0-100
+    if composite >= 85:
+        grade = "A"
+    elif composite >= 70:
+        grade = "B"
+    elif composite >= 55:
+        grade = "C"
+    elif composite >= 40:
+        grade = "D"
+    else:
+        grade = "F"
+
+    return HealthScore(
+        grade=grade,
+        score=composite,
+        badges=badges,
+        details=details,
+    )
+
+
 def estimate_workflow(
     nodes: List[NodeConfig],
     edges: List[EdgeConfig],
     recursion_limit: int = 25,
+    runs_per_day: Optional[int] = None,
+    loop_intensity: Optional[float] = None,
 ) -> WorkflowEstimation:
     """Estimate the full workflow: per‑node breakdown + graph analysis.
 
@@ -321,6 +626,7 @@ def estimate_workflow(
     node_cycle_iterations: Dict[str, int] = {}
 
     if is_cyclic:
+        li = loop_intensity if loop_intensity is not None else 1.0
         for idx, cg in enumerate(analyzer.get_cycle_groups()):
             # Max iterations: use the minimum max_steps among cycle's agent nodes,
             # falling back to default, then cap at recursion_limit
@@ -332,6 +638,8 @@ def estimate_workflow(
 
             max_iter = min(agent_max_steps) if agent_max_steps else _DEFAULT_MAX_STEPS
             max_iter = min(max_iter, recursion_limit)
+            # Apply loop intensity multiplier
+            max_iter = max(1, min(recursion_limit, round(max_iter * li)))
             expected_iter = max(1, math.ceil(max_iter / 2))
 
             for nid in cg.node_ids:
@@ -431,6 +739,80 @@ def estimate_workflow(
         total_cost = round(cost_range.avg, 8)
         total_latency = round(latency_range.avg, 3)
 
+    # ── Bottleneck analysis: cost_share, latency_share, severity ──
+    _compute_bottleneck_shares(breakdown, total_cost, total_latency)
+
+    # ── Cycle contribution analysis: per-lap costs, risk levels ──
+    if detected_cycles:
+        _compute_cycle_contributions(detected_cycles, breakdown, total_cost, total_latency)
+
+    # ── Latency-weighted critical path ──────────────────────────
+    latency_map: Dict[str, float] = {b.node_id: b.latency for b in breakdown}
+    critical_path = analyzer.weighted_critical_path(latency_map)
+    critical_path_latency = round(sum(latency_map.get(nid, 0.0) for nid in critical_path), 4)
+
+    # ── Parallelism analysis ────────────────────────────────────
+    breakdown_map: Dict[str, NodeEstimation] = {b.node_id: b for b in breakdown}
+    raw_steps = analyzer.compute_parallel_steps()
+    parallel_steps: List[ParallelStep] = []
+    for step_idx, step_node_ids in enumerate(raw_steps):
+        step_latencies = [latency_map.get(nid, 0.0) for nid in step_node_ids]
+        step_costs = [breakdown_map[nid].cost for nid in step_node_ids if nid in breakdown_map]
+        step_labels = [
+            (node_map[nid].label or nid) for nid in step_node_ids if nid in node_map
+        ]
+        parallel_steps.append(ParallelStep(
+            step=step_idx,
+            node_ids=step_node_ids,
+            node_labels=step_labels,
+            total_latency=round(max(step_latencies) if step_latencies else 0.0, 4),
+            total_cost=round(sum(step_costs), 8),
+            parallelism=len(step_node_ids),
+        ))
+
+    # ── Scaling projection (what-if analysis) ─────────────────────
+    scaling_projection: Optional[ScalingProjection] = None
+    if runs_per_day is not None:
+        rpd = max(1, runs_per_day)
+        rpm = rpd * 30
+        li_val = loop_intensity if loop_intensity is not None else 1.0
+        scaling_projection = ScalingProjection(
+            runs_per_day=rpd,
+            runs_per_month=rpm,
+            loop_intensity=li_val,
+            monthly_cost=round(total_cost * rpm, 4),
+            monthly_tokens=total_tokens * rpm,
+            monthly_compute_seconds=round(total_latency * rpm, 2),
+            cost_per_1k_runs=round(total_cost * 1000, 6),
+        )
+
+    # ── Sensitivity readout (cost / latency across min/avg/max) ──
+    sensitivity: Optional[SensitivityReadout] = None
+    if is_cyclic and cost_range and latency_range:
+        sensitivity = SensitivityReadout(
+            cost_min=cost_range.min,
+            cost_avg=cost_range.avg,
+            cost_max=cost_range.max,
+            latency_min=latency_range.min,
+            latency_avg=latency_range.avg,
+            latency_max=latency_range.max,
+        )
+    else:
+        # DAG: no variance — min = avg = max
+        sensitivity = SensitivityReadout(
+            cost_min=total_cost,
+            cost_avg=total_cost,
+            cost_max=total_cost,
+            latency_min=total_latency,
+            latency_avg=total_latency,
+            latency_max=total_latency,
+        )
+
+    # ── Health scoring ────────────────────────────────────────────
+    health = _compute_health_score(
+        breakdown, detected_cycles, nodes, total_cost, total_latency, critical_path_latency
+    )
+
     return WorkflowEstimation(
         total_tokens=total_tokens,
         total_input_tokens=total_input,
@@ -440,10 +822,15 @@ def estimate_workflow(
         total_tool_latency=total_tool_latency,
         graph_type=analyzer.classify(),
         breakdown=breakdown,
-        critical_path=analyzer.critical_path(),
+        critical_path=critical_path,
         detected_cycles=detected_cycles,
         token_range=token_range,
         cost_range=cost_range,
         latency_range=latency_range,
         recursion_limit=recursion_limit,
+        parallel_steps=parallel_steps,
+        critical_path_latency=critical_path_latency,
+        scaling_projection=scaling_projection,
+        sensitivity=sensitivity,
+        health=health,
     )

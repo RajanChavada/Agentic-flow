@@ -4,6 +4,23 @@ from typing import List, Optional, Literal
 from pydantic import BaseModel, Field
 
 
+class EstimationRange(BaseModel):
+    """Min / avg / max estimation range for a single metric."""
+    min: float
+    avg: float
+    max: float
+
+
+class ParallelStep(BaseModel):
+    """A set of nodes that can execute in parallel (same BFS depth)."""
+    step: int
+    node_ids: List[str]
+    node_labels: List[str]
+    total_latency: float = 0.0      # max latency in this step (parallel = max, not sum)
+    total_cost: float = 0.0         # sum of costs in this step
+    parallelism: int = 0            # number of nodes that run in parallel
+
+
 # ── Request models ──────────────────────────────────────────────
 
 class NodeConfig(BaseModel):
@@ -31,6 +48,20 @@ class NodeConfig(BaseModel):
         le=100,
         description="Maximum loop iterations this agent will perform when in a cycle (default: 10)",
     )
+    # ── Context-aware estimation fields ─────────────────────────
+    task_type: Optional[Literal[
+        "classification", "summarization", "code_generation",
+        "rag_answer", "tool_orchestration", "routing"
+    ]] = Field(default=None, description="Semantic task type for smarter output estimation")
+    expected_output_size: Optional[Literal[
+        "short", "medium", "long", "very_long"
+    ]] = Field(default=None, description="Expected output token range: short ≤200, medium 200-600, long 600-1500, very_long >1500")
+    expected_calls_per_run: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=50,
+        description="Expected number of LLM calls this agent makes per workflow run (for orchestrators)",
+    )
 
 
 class EdgeConfig(BaseModel):
@@ -47,6 +78,19 @@ class WorkflowRequest(BaseModel):
         ge=1,
         le=200,
         description="Graph-wide recursion limit (caps total cycle iterations; default 25)",
+    )
+    # ── Scaling / what-if parameters ────────────────────────────
+    runs_per_day: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=1_000_000,
+        description="Expected workflow invocations per day (for projection)",
+    )
+    loop_intensity: Optional[float] = Field(
+        default=None,
+        ge=0.1,
+        le=5.0,
+        description="Multiplier for expected_iterations of all cycles (1.0 = baseline)",
     )
 
 
@@ -82,6 +126,11 @@ class NodeEstimation(BaseModel):
     tool_latency: float = 0.0       # total tool execution latency in seconds
     # Cycle membership
     in_cycle: bool = False
+    # Bottleneck analysis (share of total cost/latency for this node, 0.0–1.0)
+    cost_share: float = 0.0
+    latency_share: float = 0.0
+    # Bottleneck severity: "low" | "medium" | "high" (top X% of cost or latency)
+    bottleneck_severity: Optional[str] = None
 
 
 class CycleInfo(BaseModel):
@@ -92,6 +141,16 @@ class CycleInfo(BaseModel):
     back_edges: List[List[str]]       # [[source, target], ...]
     max_iterations: int               # per-node max_steps or graph recursion_limit
     expected_iterations: int           # heuristic average (ceil of max / 2)
+    # Per-lap estimation (single pass through all cycle nodes)
+    tokens_per_lap: int = 0
+    cost_per_lap: float = 0.0
+    latency_per_lap: float = 0.0
+    # Contribution to total workflow (0.0–1.0, based on avg-case iterations)
+    cost_contribution: float = 0.0
+    latency_contribution: float = 0.0
+    # Risk level: "low" | "medium" | "high" | "critical"
+    risk_level: Optional[str] = None
+    risk_reason: Optional[str] = None
 
 
 class EstimationRange(BaseModel):
@@ -99,6 +158,27 @@ class EstimationRange(BaseModel):
     min: float
     avg: float
     max: float
+
+
+class ScalingProjection(BaseModel):
+    """Projected cost / latency at user-defined scale."""
+    runs_per_day: int
+    runs_per_month: int                 # runs_per_day * 30
+    loop_intensity: float               # multiplier applied to cycle iterations
+    monthly_cost: float                 # total_cost * runs_per_month
+    monthly_tokens: int                 # total_tokens * runs_per_month
+    monthly_compute_seconds: float      # total_latency * runs_per_month
+    cost_per_1k_runs: float             # total_cost * 1000
+
+
+class SensitivityReadout(BaseModel):
+    """Cost/latency range across min/avg/max loop assumptions."""
+    cost_min: float
+    cost_avg: float
+    cost_max: float
+    latency_min: float
+    latency_avg: float
+    latency_max: float
 
 
 class WorkflowEstimation(BaseModel):
@@ -117,6 +197,22 @@ class WorkflowEstimation(BaseModel):
     cost_range: Optional[EstimationRange] = None
     latency_range: Optional[EstimationRange] = None
     recursion_limit: int = 25
+    # Concurrency / parallelism analysis
+    parallel_steps: List[ParallelStep] = []
+    critical_path_latency: float = 0.0   # total latency along the critical path
+    # Scaling / what-if analysis
+    scaling_projection: Optional[ScalingProjection] = None
+    sensitivity: Optional[SensitivityReadout] = None
+    # Workflow health scoring
+    health: Optional["HealthScore"] = None
+
+
+class HealthScore(BaseModel):
+    """Quick, opinionated summary of a workflow's robustness."""
+    grade: Literal["A", "B", "C", "D", "F"]  # overall grade
+    score: int                                  # 0–100
+    badges: List[str]                           # e.g. ["Cost-efficient", "Loop-heavy"]
+    details: dict                               # per-factor scores for transparency
 
 
 # ── Provider / model registry response models ──────────────────
@@ -210,3 +306,22 @@ class BatchEstimateResult(BaseModel):
 class BatchEstimateResponse(BaseModel):
     """Response from POST /api/estimate/batch."""
     results: List[BatchEstimateResult]
+
+
+# ── Import / export models ─────────────────────────────────────
+
+class ExternalWorkflowImportRequest(BaseModel):
+    """POST /api/import-workflow – import a workflow from an external format."""
+    source: Literal["generic", "langgraph", "custom"] = Field(
+        ..., description="Adapter to use for converting the payload"
+    )
+    payload: dict = Field(
+        ..., description="Raw JSON workflow definition in the chosen source format"
+    )
+
+
+class ImportedWorkflow(BaseModel):
+    """Normalized internal representation returned after import."""
+    nodes: List[NodeConfig]
+    edges: List[EdgeConfig]
+    metadata: dict = Field(default_factory=dict, description="Source-specific extra info")

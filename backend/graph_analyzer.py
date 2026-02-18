@@ -95,6 +95,74 @@ class GraphAnalyzer:
         order = self.topological_order()
         return order if order else self.node_ids  # fallback for cyclic graphs
 
+    def weighted_critical_path(self, latency_map: Dict[str, float]) -> List[str]:
+        """Latency-weighted critical path using longest-path through the DAG.
+
+        Uses dynamic programming on the topological order:
+          dist[v] = max(dist[u] + latency[u]) for all u with edge u→v
+        Then backtracks from the sink node with maximum distance.
+
+        Falls back to topological order for cyclic graphs.
+        """
+        order = self.topological_order()
+        if not order:
+            return self.node_ids  # cyclic — fallback
+
+        dist: Dict[str, float] = {nid: 0.0 for nid in self.node_ids}
+        parent: Dict[str, str | None] = {nid: None for nid in self.node_ids}
+
+        for u in order:
+            for v in self.adj.get(u, []):
+                new_dist = dist[u] + latency_map.get(u, 0.0)
+                if new_dist >= dist[v] and parent[v] is None and u != v:
+                    # Use >= so that zero-latency source nodes still
+                    # establish a parent link on the first visit.
+                    dist[v] = new_dist
+                    parent[v] = u
+                elif new_dist > dist[v]:
+                    dist[v] = new_dist
+                    parent[v] = u
+
+        # Prefer sink nodes (no outgoing edges) as the endpoint
+        sink_nodes = [nid for nid in order if not self.adj.get(nid)]
+        candidates = sink_nodes if sink_nodes else order
+        end_node = max(candidates, key=lambda n: dist[n] + latency_map.get(n, 0.0))
+
+        # Backtrack to build the path
+        path: List[str] = [end_node]
+        current = end_node
+        while parent[current] is not None:
+            current = parent[current]  # type: ignore[assignment]
+            path.append(current)
+        path.reverse()
+        return path
+
+    def compute_parallel_steps(self) -> List[List[str]]:
+        """Compute parallelism levels using BFS level-order traversal.
+
+        Each "step" contains nodes that can execute in parallel (same BFS depth).
+        Only works cleanly for DAGs; for cyclic graphs, returns a best-effort
+        approximation using the topo-order fallback.
+        """
+        order = self.topological_order()
+        if not order:
+            # Cyclic: just return all nodes as a single step
+            return [self.node_ids]
+
+        # Compute depth for each node (longest path from any source)
+        depth: Dict[str, int] = {nid: 0 for nid in self.node_ids}
+        for u in order:
+            for v in self.adj.get(u, []):
+                depth[v] = max(depth[v], depth[u] + 1)
+
+        # Group nodes by depth
+        max_depth = max(depth.values()) if depth else 0
+        steps: List[List[str]] = [[] for _ in range(max_depth + 1)]
+        for nid in order:
+            steps[depth[nid]].append(nid)
+
+        return steps
+
     # ── Tarjan's SCC ────────────────────────────────────────────
 
     def _compute_sccs(self) -> List[List[str]]:
