@@ -200,8 +200,18 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   setNodes: (nodes) => set({ nodes }),
   setEdges: (edges) => set({ edges }),
 
-  onNodesChange: (changes) =>
-    set({ nodes: applyNodeChanges(changes, get().nodes) as Node<WorkflowNodeData>[] }),
+  onNodesChange: (changes) => {
+    const updated = applyNodeChanges(changes, get().nodes) as Node<WorkflowNodeData>[];
+    let dirty = false;
+    for (const n of updated) {
+      if (n.type === "blankBoxNode" && n.zIndex !== -1) { dirty = true; break; }
+    }
+    set({
+      nodes: dirty
+        ? updated.map((n) => n.type === "blankBoxNode" && n.zIndex !== -1 ? { ...n, zIndex: -1 } : n)
+        : updated,
+    });
+  },
 
   onEdgesChange: (changes) =>
     set({ edges: applyEdgeChanges(changes, get().edges) }),

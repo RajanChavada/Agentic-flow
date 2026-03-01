@@ -259,6 +259,7 @@ export default function Canvas() {
         data: baseData,
         ...(type === "blankBoxNode" && {
           style: { width: 320, height: 220 },
+          zIndex: -1,
         }),
       };
 
