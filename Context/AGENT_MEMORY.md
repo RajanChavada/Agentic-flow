@@ -1410,3 +1410,224 @@ The modal was `position: fixed` and placed next to the selected node via `flowTo
 2. **Mobile testing** — Verify feature grid layout on small screens (currently `grid-cols-1` fallback should work).
 3. **Testimonials / social proof** — Could add a section below features.
 4. **SEO metadata** — Still pending Open Graph / Twitter card tags.
+
+---
+
+### Update 27 — Guest Canvas State Persistence (OAuth Fix)
+
+**Agent**: Frontend bugfix agent — local storage persistence during auth redirects
+
+**Task Description**: Fix a bug where unauthenticated users lose their canvas state (nodes/edges) when signing in with OAuth (Google, GitHub) due to the full-page redirect wiping React's in-memory Zustand store.
+
+**Approach**:
+1. **Local Storage Utility** — Created `src/lib/guestWorkflow.ts` to serialize/deserialize the canvas state into `localStorage` under the `guest_workflow` key.
+2. **Zustand Actions** — Added `snapshotToLocalStorage()` and `restoreFromLocalStorage()` actions to `useWorkflowStore.ts`.
+3. **Pre-flight Save** — Modified `handleOAuth` in `AuthModal.tsx` to call `snapshotToLocalStorage()` immediately before invoking `supabase.auth.signInWithOAuth()`, saving the state right before the browser leaves the page.
+4. **Hydration Guard** — Added a `useEffect` to `Canvas.tsx` that calls `restoreFromLocalStorage()` on mount, safely rehydrating the Zustand store with any pending guest snapshot and clearing it from `localStorage`.
+
+**Results**: 
+- Users no longer lose their work if they decide to sign in or create an account via OAuth after building a complex workflow.
+- Implementation handles standard email/password login automatically since those don't trigger full-page unmounts.
+
+**Files Created**:
+| File | Purpose |
+|------|---------|
+| `frontend/src/lib/guestWorkflow.ts` | Local storage utilities for guest snapshotting |
+
+**Files Modified**:
+| File | Changes |
+|------|---------|
+| `frontend/src/store/useWorkflowStore.ts` | Added `snapshotToLocalStorage` and `restoreFromLocalStorage` |
+| `frontend/src/components/AuthModal.tsx` | Added pre-flight snapshot call before OAuth redirect |
+| `frontend/src/components/Canvas.tsx` | Added hydration guard to restore snapshot on mount |
+
+---
+
+### Update 28 — Supabase Schema Extension + Annotation Node Estimator Support
+
+**Agent**: Backend agent — Supabase migration + estimator annotation pass-through
+
+**Task Description**: Two parallel backend changes to support the Canvas Authoring Enhancements milestone:
+1. Create Supabase SQL migration 002 adding `scenarios` and `user_preferences` tables (with RLS, triggers, and indexes) so the frontend persistence layer can save scenario snapshots and per-user preferences.
+2. Update the estimation system to gracefully handle two new annotation node types (`blankBoxNode`, `textNode`) that carry zero cost/tokens and must be excluded from all scoring.
+
+**Approach and Methodology**:
+
+1. **SQL Migration (002_scenarios_and_preferences.sql)**:
+   - Created `scenarios` table: UUID PK, user_id FK to auth.users, optional workflow_id FK to workflows, JSONB columns for nodes/edges/estimate, recursion_limit integer, timestamps.
+   - Created `user_preferences` table: user_id as PK (1:1 with auth.users), theme, drawer_width, active_workflow_id FK, updated_at.
+   - Enabled RLS on both tables BEFORE writing any policies (Supabase requirement).
+   - Added 4 CRUD policies on scenarios (select/insert/update/delete) and 3 on user_preferences (select/insert/update) for the `authenticated` role.
+   - Reused `set_updated_at()` trigger function from migration 001 for both tables.
+   - Added indexes on `scenarios(user_id)`, `scenarios(workflow_id)`, and `workflows(updated_at DESC)`.
+
+2. **models.py changes**:
+   - Extended `NodeConfig.type` Literal to accept `"blankBoxNode"` and `"textNode"`.
+   - Added `is_annotation: bool = False` field to `NodeEstimation` so downstream consumers can filter annotations.
+
+3. **estimator.py changes**:
+   - `estimate_node()` now detects annotation types and sets `is_annotation=True` on the returned zero-cost `NodeEstimation`.
+   - `_compute_bottleneck_shares()` skips annotation nodes when computing cost_share, latency_share, and severity rankings.
+   - `_compute_health_score()` excludes annotation nodes from the cost-concentration factor (factor 1) via a filtered `scoreable` list.
+   - Factor 3 (premium model usage) already safe since it filters on `n.type == "agentNode"`.
+   - Graph analysis (`graph_analyzer.py`) unaffected because annotation nodes have no edges.
+
+**Results and Outcomes**:
+- `python -c "import models; import estimator"` passes cleanly, confirming no syntax/import errors.
+- Migration file ready to run in Supabase SQL Editor.
+- Existing DAG estimation logic fully unaffected (annotation types fall through the `else` branch with zero cost).
+- `is_annotation` flag available for frontend to conditionally hide annotation nodes from analytics panels.
+
+**Files Created**:
+| File | Purpose |
+|------|---------|
+| `supabase/migrations/002_scenarios_and_preferences.sql` | scenarios + user_preferences tables, RLS, triggers, indexes |
+
+**Files Modified**:
+| File | Changes |
+|------|---------|
+| `backend/models.py` | Added `blankBoxNode`, `textNode` to `NodeConfig.type`; added `is_annotation` to `NodeEstimation` |
+| `backend/estimator.py` | Annotation pass-through in `estimate_node()`; excluded annotations from bottleneck + health scoring |
+
+**Next Steps**:
+1. **Run migration 002** in the Supabase SQL Editor to create the tables in the live project.
+2. **Frontend persistence layer** (`workflowPersistence.ts`, `useAutoSave.ts`) can now target the `scenarios` table for scenario CRUD.
+3. **Frontend node components** (`BlankBoxNode.tsx`, `TextNode.tsx`) can be built independently since the backend now accepts the new types.
+4. **Regression testing** — Run existing workflow estimates to verify no change in output for DAG/cyclic graphs without annotation nodes.
+
+---
+
+### Update 29 — Canvas Authoring Enhancements (BlankBoxNode + TextNode + Auto-Save)
+
+**Agent**: Frontend agent — Canvas Authoring Enhancements
+
+**Task Description**: Implement two new canvas annotation node types (BlankBoxNode and TextNode) for Figma-style annotation of workflows, and add debounced Supabase auto-save with load-on-mount for authenticated users.
+
+**Approach and Methodology**:
+
+1. **Type system** — Extended `WorkflowNodeType` to include `"blankBoxNode" | "textNode"`. Added `blankBoxStyle` and `textNodeStyle` optional fields to `WorkflowNodeData` in `workflow.ts`.
+
+2. **BlankBoxNode** (`src/components/nodes/BlankBoxNode.tsx`):
+   - Uses React Flow's `<NodeResizer>` for drag-resize handles
+   - Configurable border style (dashed/solid/none), border color, background fill
+   - Optional top-left label text
+   - Togglable connection handles (off by default — pure annotation)
+   - Renders at `zIndex: -1` to stay behind workflow nodes
+   - Default size 250×150 on drop
+
+3. **TextNode** (`src/components/nodes/TextNode.tsx`):
+   - Inline-editable text via double-click (controlled textarea with Enter to commit, Escape to cancel)
+   - Configurable font size (sm/md/lg/heading), text color, background style (none/pill/badge)
+   - Auto-sizes to content width
+   - Commits edits to Zustand store via `updateNodeData`
+
+4. **Canvas.tsx** — Registered both node types in `nodeTypes` map. Updated `onDrop` to set correct default data/styles when dropping new annotation nodes. Updated `onNodeDoubleClick` to open config modal for new types. Added minimap colors (gray for box, purple for text).
+
+5. **Sidebar.tsx** — Added "Canvas Authoring" section between the node palette and Saved Workflows, with draggable BlankBox (Lucide `Square` icon) and Text Label (Lucide `Type` icon) items.
+
+6. **NodeConfigModal.tsx** — Extended the config body with two new branches:
+   - BlankBoxNode: border style select, border color picker, fill color picker, label input, connectable toggle
+   - TextNode: content textarea, font size select, text color picker, background style select, background color picker (conditional on non-"none" background)
+
+7. **Zustand store** — Added `activeWorkflowId`, `isSaving`, `lastSavedAt`, `setActiveWorkflowId` to the store. Updated `saveWorkflowToSupabase` to track saving state and auto-set `activeWorkflowId` on successful save.
+
+8. **useAutoSave hook** (`src/hooks/useAutoSave.ts`):
+   - Watches `nodes` and `edges` via Zustand selectors
+   - Debounces 3000ms on any change
+   - Only saves when: user is authenticated, `activeWorkflowId` is set, and canvas has nodes
+   - Skips initial mount to avoid saving empty/hydrated state
+
+9. **Editor page** — Added `useAutoSave()` hook. Added load-on-mount effect that fetches the user's workflows from Supabase and loads the most recent one onto an empty canvas, setting `activeWorkflowId`.
+
+10. **HeaderBar** — Added "Saving..." (amber spinner) / "Saved" (green check) status pill next to the title, visible when user is authenticated and has an active workflow.
+
+**Results and Outcomes**:
+- `npx tsc --noEmit` — zero type errors
+- Zero linter errors across all modified files
+- Both new node types drag-and-drop onto canvas, open config modal on double-click
+- BlankBoxNode is resizable and renders behind other nodes
+- TextNode supports inline double-click editing
+- Auto-save triggers 3s after any node/edge change (auth-gated)
+- Editor loads user's last saved workflow on mount
+
+**Files Created**:
+| File | Purpose |
+|------|---------|
+| `frontend/src/components/nodes/BlankBoxNode.tsx` | Resizable annotation container node with configurable border/fill |
+| `frontend/src/components/nodes/TextNode.tsx` | Inline-editable text label/annotation node |
+| `frontend/src/hooks/useAutoSave.ts` | Debounced (3s) Supabase auto-save hook |
+
+**Files Modified**:
+| File | Changes |
+|------|---------|
+| `frontend/src/types/workflow.ts` | Added `blankBoxNode`, `textNode` to `WorkflowNodeType`; added `blankBoxStyle`, `textNodeStyle` to `WorkflowNodeData` |
+| `frontend/src/components/Canvas.tsx` | Registered new node types, updated drop/double-click/minimap handlers |
+| `frontend/src/components/Sidebar.tsx` | Added "Canvas Authoring" section with BlankBox and Text Label palette items |
+| `frontend/src/components/NodeConfigModal.tsx` | Added config panels for blankBoxNode (border/fill/label) and textNode (content/font/color/bg) |
+| `frontend/src/store/useWorkflowStore.ts` | Added `activeWorkflowId`, `isSaving`, `lastSavedAt`, `setActiveWorkflowId`; updated save tracking |
+| `frontend/src/app/editor/page.tsx` | Added auto-save hook, load-on-mount for authenticated users |
+| `frontend/src/components/HeaderBar.tsx` | Added "Saving..." / "Saved" status indicator |
+
+**Next Steps**:
+1. **workflowPersistence.ts abstraction** — Optional: extract Supabase CRUD from the store into a standalone utility layer.
+2. **Supabase migration 002** — Must be run in Supabase SQL Editor before scenarios/preferences tables are available.
+3. **Dark mode polish** — Some BlankBoxNode fill colors may not contrast well in dark mode; could add dark-mode-aware presets.
+4. **Mobile/responsive testing** — Verify the new sidebar section and modal panels on small screens.
+5. **Node grouping** — BlankBoxNode could leverage React Flow's `parentId` subflow pattern to auto-group child nodes when they're inside the box.
+
+---
+
+### Update 29 — Deployment Infrastructure + Production Auth Routing
+
+**Agent**: Full-stack agent — deployment architecture and production auth config
+
+**Task Description**: Set up the deployment pipeline and production OAuth routing for the Agentic Flow Designer. The app previously ran entirely on localhost with no deployment configuration. The goal was to make the full stack deployable to Vercel (frontend) + Railway/Render (backend) + Supabase (auth/DB), and to ensure OAuth SSO redirects work correctly in production.
+
+**Approach and Methodology**:
+
+1. **Architecture assessment**: Supabase cannot host Python backends (Edge Functions are Deno-only). The FastAPI backend with tiktoken, Pydantic, and graph analysis requires a proper Python hosting platform. Chose Railway (or Render as alternative) for the backend, Vercel for the frontend, and Supabase continues handling auth + Postgres.
+
+2. **Backend deployment prep**:
+   - Created `backend/Dockerfile` — Python 3.11-slim base, installs requirements, runs uvicorn on port 8000.
+   - Updated `backend/config.py` — replaced single `FRONTEND_ORIGIN` with `FRONTEND_ORIGINS` (comma-separated list) to support both `http://localhost:3000` and the production Vercel URL simultaneously.
+   - Updated `backend/main.py` — CORS middleware now uses `FRONTEND_ORIGINS` list instead of a single origin.
+   - Created `backend/.env.example` documenting all required env vars.
+
+3. **Frontend deployment prep**:
+   - Created `frontend/.env.example` documenting `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+   - Verified that all 5 files using `NEXT_PUBLIC_API_URL` already fall back to `http://localhost:8000`, so only Vercel's env var needs to be set.
+   - No `next.config.ts` changes needed — the current setup is clean.
+
+4. **OAuth/SSO production routing**:
+   - OAuth redirects already use `window.location.origin` dynamically, so they automatically point to the production domain once deployed.
+   - The key action item is **Supabase Dashboard configuration**: add the production Vercel URL to the allowed Redirect URLs list and update the Site URL.
+   - Google/GitHub OAuth provider redirect URIs in their respective developer consoles always point to Supabase's own callback (`https://<project>.supabase.co/auth/v1/callback`) — no change needed there.
+
+5. **Deployment guide**: Wrote `Context/DEPLOYMENT.md` with complete step-by-step instructions covering Railway backend setup, Vercel frontend setup, Supabase auth configuration, env var tables, troubleshooting, and the full OAuth flow diagram.
+
+**Results and Outcomes**:
+- Backend imports and config verified: `python -c "from config import FRONTEND_ORIGINS"` and `python -c "import main"` pass cleanly.
+- Backward compatible: local dev workflow unchanged (defaults still point to localhost).
+- `FRONTEND_ORIGINS` supports comma-separated values, so adding production origin requires only a Railway env var update.
+- Complete deployment guide written with troubleshooting table for common issues.
+
+**Files Created**:
+| File | Purpose |
+|------|---------|
+| `backend/Dockerfile` | Docker image for Railway/Render deployment |
+| `backend/.env.example` | Documents all backend env vars |
+| `frontend/.env.example` | Documents all frontend env vars |
+| `Context/DEPLOYMENT.md` | Full deployment + auth routing guide |
+
+**Files Modified**:
+| File | Changes |
+|------|---------|
+| `backend/config.py` | `FRONTEND_ORIGIN` (single) replaced with `FRONTEND_ORIGINS` (comma-separated list) |
+| `backend/main.py` | CORS middleware uses `FRONTEND_ORIGINS` list |
+
+**Next Steps**:
+1. **Deploy backend** — Push to GitHub, connect Railway, set `FRONTEND_ORIGINS` env var.
+2. **Deploy frontend** — Connect Vercel, set `NEXT_PUBLIC_API_URL` to Railway URL.
+3. **Configure Supabase** — Add production Vercel URL to Redirect URLs + Site URL in dashboard.
+4. **Test OAuth end-to-end** — Sign in with Google/GitHub from the production URL.
+5. **Custom domain** (optional) — Add domain to Vercel, update Supabase redirect URLs.

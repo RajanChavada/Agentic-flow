@@ -1,7 +1,33 @@
 /* ── Shared TypeScript types for the Agentic‑Flow frontend ─── */
 
-/** The four node kinds supported on the canvas. */
-export type WorkflowNodeType = "startNode" | "agentNode" | "toolNode" | "finishNode";
+/** The node kinds supported on the canvas. */
+export type WorkflowNodeType =
+  | "startNode"
+  | "agentNode"
+  | "toolNode"
+  | "finishNode"
+  | "blankBoxNode"
+  | "textNode";
+
+/** 9 anchor points for label placement inside a BlankBoxNode. */
+export type LabelPosition =
+  | "top-left"    | "top-center"    | "top-right"
+  | "middle-left" | "middle-center" | "middle-right"
+  | "bottom-left" | "bottom-center" | "bottom-right";
+
+/** Full styling for BlankBoxNode containers. */
+export type BlankBoxStyle = {
+  label: string;
+  labelPosition: LabelPosition;
+  labelColor: string;
+  labelBackground: "none" | "pill";
+  borderStyle: "solid" | "dashed" | "none";
+  borderColor: string;
+  borderWidth: 1 | 2 | 3;
+  backgroundColor: string;
+  backgroundOpacity: number;
+  connectable: boolean;
+};
 
 /** Data payload attached to every custom React Flow node. */
 export type WorkflowNodeData = {
@@ -17,6 +43,16 @@ export type WorkflowNodeData = {
   taskType?: string;
   expectedOutputSize?: string;
   expectedCallsPerRun?: number | null;
+  /** BlankBoxNode styling. */
+  blankBoxStyle?: BlankBoxStyle;
+  /** TextNode styling. */
+  textNodeStyle?: {
+    content: string;
+    fontSize: "sm" | "md" | "lg" | "heading";
+    color: string;
+    background: "none" | "pill" | "badge";
+    backgroundColor?: string;
+  };
   [key: string]: unknown;    // satisfies Record<string, unknown> for React Flow
 };
 

@@ -560,9 +560,10 @@ Install:
 
 ```bash
 npm install framer-motion @radix-ui/react-slot class-variance-authority
+```
 Ensure @/lib/utils exports cn (shadcn init does this by default).[web:208][web:211]
 
-4. Button Primitive (Design-System)
+## 4. Button Primitive (Design-System)
 Path: src/components/ui/button.tsx
 
 ```tsx
@@ -725,3 +726,221 @@ CTAs should link to:
 /app → main canvas/playground.
 
 /signup or auth modal trigger.
+
+--- 
+
+## Feature integration -> Creating the ability to add text and boxes to the frontend UI
+
+This UI Feature does the following for a user when they are on the screen 
+- after they are in the canvas they can add things like boxes and text to annotate the canvas similar to figma 
+
+> Feature: Blank Box Nodes + Text Nodes + Supabase Workflow Persistence
+> Milestone: Canvas Authoring Enhancements
+
+---
+
+## Overview
+
+Add two new freeform canvas elements — blank box nodes and text/label nodes — that let
+users annotate and group their workflow diagrams. Wire all canvas state (nodes, edges,
+scenarios) to Supabase so workflows persist per authenticated user across sessions.
+
+---
+
+## Section 1 — New Node Types
+
+### 1.1 BlankBoxNode (`blankBoxNode`)
+
+A resizable, borderless container node. Used for grouping/highlighting regions of the canvas.
+
+**Visual spec:**
+- Dashed or solid border (user-configurable)
+- Transparent or lightly tinted background fill (colour picker: 8 presets + custom)
+- No handles by default (non-connectable unless user opts in)
+- Resizable via React Flow's `NodeResizer` component
+- Label: optional short title at the top-left corner
+
+**State shape extension (`WorkflowNodeData`):**
+```ts
+// Add to existing WorkflowNodeData union/type
+blankBoxStyle?: {
+  borderStyle: 'dashed' | 'solid' | 'none'
+  borderColor: string      // hex
+  backgroundColor: string  // hex with opacity
+  label?: string
+  connectable: boolean
+}
+```
+
+**Files to touch:**
+- `src/types/workflow.ts` — add `blankBoxStyle` to `WorkflowNodeData`
+- `src/components/nodes/BlankBoxNode.tsx` — NEW file (register in nodeTypes map)
+- `src/components/Canvas.tsx` — add `blankBoxNode` to `nodeTypes`
+- `src/components/Sidebar.tsx` — add BlankBox to node palette
+- `src/store/useWorkflowStore.ts` — no changes needed (generic node add logic handles it)
+
+**React Flow specifics:**
+- Use `<NodeResizer>` from `@xyflow/react` for resize handles
+- Set `style={{ width, height }}` on the node element driven by `node.width`/`node.height`
+- Set `zIndex: -1` so it renders behind other nodes (use as background layer)
+- Use `parentId` if you want it to group child nodes (React Flow subflow pattern)
+
+---
+
+### 1.2 TextNode (`textNode`)
+
+An inline text label/annotation. No connection handles. Pure canvas decoration.
+
+**Visual spec:**
+- Double-click to edit (contentEditable or controlled textarea)
+- Font size select: Small / Medium / Large / Heading
+- Text colour picker (8 presets)
+- Optional background pill/badge behind text
+- Auto-sizes to content width
+
+**State shape extension:**
+```ts
+textNodeStyle?: {
+  content: string
+  fontSize: 'sm' | 'md' | 'lg' | 'heading'
+  color: string
+  background: 'none' | 'pill' | 'badge'
+  backgroundColor?: string
+}
+```
+
+**Files to touch:**
+- `src/types/workflow.ts` — add `textNodeStyle`
+- `src/components/nodes/TextNode.tsx` — NEW file
+- `src/components/Canvas.tsx` — add `textNode` to `nodeTypes`
+- `src/components/Sidebar.tsx` — add Text to node palette
+
+---
+
+### 1.3 Node Config Modal — Extend for New Types
+
+`NodeConfigModal.tsx` needs a third branch for `blankBoxNode` and `textNode`:
+
+```
+if agentNode → show model/task/context config (existing)
+if toolNode  → show tool category/type config (existing)
+if blankBoxNode → show border style, fill colour, label, connectable toggle
+if textNode  → show content textarea, font size, text colour, background style
+```
+
+No new modal files — extend the existing switch/if block in `NodeConfigModal.tsx`.
+
+---
+
+### 1.4 Sidebar Palette Updates
+
+Add two new draggable items to `Sidebar.tsx` below the existing four nodes:
+
+```
+── Workflow Nodes ──
+  [Start]  [Agent]  [Tool]  [Finish]
+
+── Canvas Authoring ──
+  [Blank Box]   [Text Label]
+```
+
+Use a section divider with a small heading. Blank Box uses a dashed square icon
+(Lucide `Square` with dashed style), Text uses Lucide `Type`.
+
+---
+
+### 1.5 Zustand Store Updates
+
+`useWorkflowStore.ts` already has generic `addNode` / `updateNode` / `deleteNode` actions.
+No structural changes needed — the new node types slot into the existing `nodes: Node[]` array.
+
+**Do add:**
+- `updateNodeStyle(id: string, styleUpdate: Partial<WorkflowNodeData>)` action if not already present
+  — needed for the inline colour/font pickers to update node data without re-opening the modal
+
+---
+
+## Section 2 — Supabase Workflow Persistence
+
+### 2.1 What Gets Persisted
+
+| Data | Supabase Table | Trigger |
+|------|---------------|---------|
+| Full workflow (nodes + edges) | `workflows` | Save button, auto-save (debounced 3s) |
+| Named scenarios | `scenarios` | Save Scenario button |
+| User preferences (theme, drawer width) | `user_preferences` | On change, debounced |
+
+### 2.2 Frontend Persistence Layer
+
+Create `src/lib/workflowPersistence.ts`:
+
+```ts
+// Wraps all Supabase workflow CRUD — never call supabase directly from components
+export async function saveWorkflow(userId: string, workflowId: string, payload: WorkflowSavePayload): Promise<void>
+export async function loadWorkflow(userId: string, workflowId: string): Promise<WorkflowSavePayload | null>
+export async function listWorkflows(userId: string): Promise<WorkflowMeta[]>
+export async function deleteWorkflow(userId: string, workflowId: string): Promise<void>
+export async function saveScenario(userId: string, scenario: WorkflowScenario): Promise<void>
+export async function listScenarios(userId: string): Promise<WorkflowScenario[]>
+```
+
+All functions use `src/lib/supabase.ts` (existing browser client).
+
+### 2.3 Auto-Save Hook
+
+Create `src/hooks/useAutoSave.ts`:
+- Watches `nodes`, `edges` in Zustand via `useWorkflowStore`
+- Debounces 3000ms on any change
+- Calls `saveWorkflow()` if user is authenticated (`useAuthStore`)
+- Shows a subtle "Saving…" / "Saved ✓" status in HeaderBar
+
+### 2.4 Load on Mount
+
+In `src/app/editor/page.tsx`:
+- On mount, if user is authenticated, call `loadWorkflow(userId, activeWorkflowId)`
+- Hydrate Zustand store with loaded nodes/edges
+- If no saved workflow exists, start with the current blank canvas default
+
+### 2.5 Zustand Auth Integration
+
+`useWorkflowStore.ts` already has `useAuthStore` wired.
+Add to `useWorkflowStore`:
+```ts
+activeWorkflowId: string | null
+setActiveWorkflowId: (id: string) => void
+isSaving: boolean
+lastSavedAt: Date | null
+```
+
+### 2.6 Workflow List in Sidebar
+
+Extend `Sidebar.tsx` "Saved Workflows" section:
+- On mount (when authenticated), fetch `listWorkflows(userId)` and show cloud-saved workflows
+- Each item: workflow name, last saved timestamp, load button, delete button
+- Show a cloud icon badge to distinguish Supabase-saved from localStorage-only scenarios
+
+---
+
+## Acceptance Criteria — Frontend
+
+- [ ] BlankBoxNode renders on canvas, is resizable, and stays behind other nodes
+- [ ] TextNode renders on canvas, is editable on double-click, auto-sizes
+- [ ] Both new node types appear in Sidebar palette under "Canvas Authoring" section
+- [ ] NodeConfigModal shows correct config panel for each node type
+- [ ] `WorkflowNodeData` in `workflow.ts` updated with both new style shapes
+- [ ] `Canvas.tsx` `nodeTypes` map includes `blankBoxNode` and `textNode`
+- [ ] Authenticated users' workflows auto-save to Supabase on change (debounced 3s)
+- [ ] Editor page loads the user's last workflow on mount
+- [ ] Sidebar shows cloud-saved workflows fetched from Supabase
+- [ ] `npx tsc --noEmit` passes with zero errors
+
+---
+
+## Do Not Touch (Frontend)
+
+- `EstimatePanel.tsx` — no changes needed for these features
+- `graph_analyzer.py` — backend-only, not a frontend concern
+- `ExportDropdown.tsx` — existing export logic handles new node types automatically (they're just nodes)
+- `SOUL.md` hard rules still apply: no emojis, Tailwind v4 syntax, Lucide icons only
+
+

@@ -10,6 +10,8 @@ import {
   LogIn,
   LogOut,
   User,
+  Check,
+  Loader2,
 } from "lucide-react";
 import {
   useWorkflowStore,
@@ -43,6 +45,11 @@ export default function HeaderBar() {
   // Auth state
   const user = useUser();
   const { openAuthModal, signOut } = useAuthStore();
+
+  // Auto-save status
+  const isSaving = useWorkflowStore((s) => s.isSaving);
+  const lastSavedAt = useWorkflowStore((s) => s.lastSavedAt);
+  const activeWorkflowId = useWorkflowStore((s) => s.activeWorkflowId);
 
   // ── Save scenario ────────────────────────────────────────
   const scenarioCount = Object.keys(useWorkflowStore.getState().scenarios).length;
@@ -147,13 +154,33 @@ export default function HeaderBar() {
           : "border-gray-200 bg-white"
       }`}
     >
-      <h1
-        className={`text-lg font-bold tracking-tight ${
-          isDark ? "text-slate-100" : "text-gray-800"
-        }`}
-      >
-        Agentic Flow Designer
-      </h1>
+      <div className="flex items-center gap-3">
+        <h1
+          className={`text-lg font-bold tracking-tight ${
+            isDark ? "text-slate-100" : "text-gray-800"
+          }`}
+        >
+          Agentic Flow Designer
+        </h1>
+
+        {user && activeWorkflowId && (
+          <span
+            className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${
+              isSaving
+                ? isDark ? "bg-amber-900/30 text-amber-400" : "bg-amber-50 text-amber-600"
+                : lastSavedAt
+                ? isDark ? "bg-green-900/30 text-green-400" : "bg-green-50 text-green-700"
+                : ""
+            }`}
+          >
+            {isSaving ? (
+              <><Loader2 className="w-3 h-3 animate-spin" /> Saving...</>
+            ) : lastSavedAt ? (
+              <><Check className="w-3 h-3" /> Saved</>
+            ) : null}
+          </span>
+        )}
+      </div>
 
       <div className="flex items-center gap-3">
         {/* Theme toggle */}

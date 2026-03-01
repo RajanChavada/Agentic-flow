@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from config import FRONTEND_ORIGIN
+from config import FRONTEND_ORIGINS
 from models import (
     WorkflowRequest,
     WorkflowEstimation,
@@ -35,7 +35,7 @@ app = FastAPI(
 # ── CORS ────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_ORIGIN],
+    allow_origins=FRONTEND_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

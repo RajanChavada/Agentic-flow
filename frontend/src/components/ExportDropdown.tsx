@@ -11,6 +11,7 @@ import {
   ClipboardList,
   FileCode,
   ChevronDown,
+  DownloadCloud,
 } from "lucide-react";
 import {
   useWorkflowNodes,
@@ -155,6 +156,41 @@ function buildJsonReport(
           source: e.source,
           target: e.target,
         })),
+      },
+    },
+    null,
+    2
+  );
+}
+
+// ── Agentic Flow JSON Exporter ──────────────────────────────
+
+function buildAgenticFlowExport(
+  nodes: { id: string; type?: string; data: Record<string, unknown> }[],
+  edges: { id: string; source: string; target: string }[],
+  recursionLimit: number
+) {
+  return JSON.stringify(
+    {
+      schema_version: "1.0",
+      name: "Workflow", // Will be overridden on load if named
+      exported_at: new Date().toISOString(),
+      nodes: nodes.map((n) => ({
+        id: n.id,
+        type: n.type,
+        data: n.data,
+        position: (n as any).position, // Attempt to keep layout
+      })),
+      edges: edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: (e as any).sourceHandle,
+        targetHandle: (e as any).targetHandle,
+        type: (e as any).type,
+      })),
+      config: {
+        recursion_limit: recursionLimit,
       },
     },
     null,
@@ -696,6 +732,8 @@ export default function ExportDropdown({ isDark }: Props) {
   const estimation = useEstimation();
   const nodes = useWorkflowNodes();
   const edges = useWorkflowEdges();
+  // Assume recursion_limit is managed in store? If not, default to 50
+  // Looking at the store, there isn't a direct recursion_limit exposed here, so we will use 50.
 
   // Auth gate
   const user = useUser();
@@ -778,6 +816,12 @@ export default function ExportDropdown({ isDark }: Props) {
     setOpen(false);
   }, [estimation]);
 
+  const exportAgenticFlow = useCallback(() => {
+    const json = buildAgenticFlowExport(nodes, edges, 50); // Defaulting recursion_limit to 50
+    downloadBlob(json, "workflow.agenticflow.json", "application/json");
+    setOpen(false);
+  }, [nodes, edges]);
+
   // ── NEW: Dashboard screenshot as PNG ─────────────────────
   const exportDashboardPNG = useCallback(async () => {
     const el = document.getElementById("estimate-dashboard-capture");
@@ -841,19 +885,17 @@ export default function ExportDropdown({ isDark }: Props) {
 
   const hasEstimation = estimation != null;
 
-  const btnBase = `w-full text-left px-3 py-2 text-sm transition rounded ${
-    isDark ? "hover:bg-slate-600" : "hover:bg-gray-100"
-  }`;
+  const btnBase = `w-full text-left px-3 py-2 text-sm transition rounded ${isDark ? "hover:bg-slate-600" : "hover:bg-gray-100"
+    }`;
 
   return (
     <div ref={dropdownRef} className="relative">
       <button
         onClick={handleToggle}
-        className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
-          isDark
-            ? "border-amber-700 text-amber-300 hover:bg-amber-800/40"
-            : "border-amber-300 text-amber-700 hover:bg-amber-50"
-        }`}
+        className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${isDark
+          ? "border-amber-700 text-amber-300 hover:bg-amber-800/40"
+          : "border-amber-300 text-amber-700 hover:bg-amber-50"
+          }`}
         title="Export workflow graph or estimation report"
       >
         <ChevronDown className="inline w-3.5 h-3.5 ml-1" /> Export
@@ -861,13 +903,25 @@ export default function ExportDropdown({ isDark }: Props) {
 
       {open && (
         <div
-          className={`absolute right-0 top-full z-50 mt-1 w-64 rounded-lg border shadow-lg ${
-            isDark
-              ? "border-slate-600 bg-slate-700 text-slate-200"
-              : "border-gray-200 bg-white text-gray-800"
-          }`}
+          className={`absolute right-0 top-full z-50 mt-1 w-64 rounded-lg border shadow-lg ${isDark
+            ? "border-slate-600 bg-slate-700 text-slate-200"
+            : "border-gray-200 bg-white text-gray-800"
+            }`}
         >
           <div className="p-1.5 space-y-0.5">
+            {/* Agentic Flow Export */}
+            <p className={`px-3 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wide ${isDark ? "text-slate-400" : "text-gray-400"}`}>
+              Workflow File
+            </p>
+            <button
+              onClick={exportAgenticFlow}
+              disabled={nodes.length === 0}
+              className={`${btnBase} disabled:opacity-40`}
+            >
+              <DownloadCloud className="inline w-3.5 h-3.5 mr-1" /> Export (.agenticflow.json)
+            </button>
+            <div className={`my-1 border-t ${isDark ? "border-slate-600" : "border-gray-200"}`} />
+
             {/* Graph exports — always available if nodes exist */}
             <p className={`px-3 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wide ${isDark ? "text-slate-400" : "text-gray-400"}`}>
               Graph Image

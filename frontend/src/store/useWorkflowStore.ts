@@ -17,6 +17,7 @@ import {
 } from "@xyflow/react";
 import type {
   WorkflowNodeData,
+  WorkflowNodeType,
   WorkflowEstimation,
   WorkflowScenario,
   NodeConfigPayload,
@@ -26,6 +27,7 @@ import type {
   ImportedWorkflow,
 } from "@/types/workflow";
 import { supabase } from "@/lib/supabase";
+import { saveGuestWorkflow, loadGuestWorkflow, clearGuestWorkflow } from "@/lib/guestWorkflow";
 
 // ── UI slice ──────────────────────────────────────────────────
 interface UIState {
@@ -86,6 +88,11 @@ interface WorkflowStore {
 
   // Import
   importWorkflow: (imported: ImportedWorkflow, mode: "replace" | "scenario") => void;
+  loadAgenticFlow: (payload: {
+    schema_version?: string;
+    nodes: { id: string; type: WorkflowNodeType; position?: { x: number; y: number }; data?: Record<string, unknown> }[];
+    edges: Edge[];
+  }) => void;
 
   // UI
   openConfigModal: () => void;
@@ -112,6 +119,17 @@ interface WorkflowStore {
   deleteWorkflowFromSupabase: (id: string) => Promise<void>;
   /** Track whether Supabase workflows are loading. */
   supabaseLoading: boolean;
+  /** The active workflow id for auto-save (maps to Supabase row). */
+  activeWorkflowId: string | null;
+  setActiveWorkflowId: (id: string | null) => void;
+  /** True while an auto-save or manual save is in-flight. */
+  isSaving: boolean;
+  /** Timestamp of last successful save. */
+  lastSavedAt: Date | null;
+
+  // Guest persistence
+  snapshotToLocalStorage: () => void;
+  restoreFromLocalStorage: () => boolean;
 }
 
 /** Convert current canvas nodes to backend payload format. */
@@ -355,6 +373,28 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     }
   },
 
+  loadAgenticFlow: (payload) => {
+    // Basic validation should happen before calling this, but we extract what we need
+    const rfNodes: Node<WorkflowNodeData>[] = payload.nodes.map((n) => ({
+      id: n.id,
+      type: n.type,
+      position: n.position || { x: Math.random() * 500, y: Math.random() * 500 },
+      data: (n.data || {}) as WorkflowNodeData,
+    }));
+
+    const rfEdges: Edge[] = payload.edges.map((e) => ({
+      ...e,
+      id: e.id ?? `e-${uuid()}`,
+    }));
+
+    set({
+      nodes: rfNodes,
+      edges: rfEdges,
+      estimation: null,
+      currentScenarioId: null,
+    });
+  },
+
   // ── UI ─────────────────────────────────────────────────────
   openConfigModal: () =>
     set((s) => ({ ui: { ...s.ui, isConfigModalOpen: true } })),
@@ -389,13 +429,32 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   setActualStats: (stats) => set({ actualStats: stats }),
   clearActualStats: () => set({ actualStats: [] }),
 
+  // ── Guest Persistence ──────────────────────────────────────
+  snapshotToLocalStorage: () => {
+    const { nodes, edges } = get();
+    saveGuestWorkflow(nodes, edges);
+  },
+  restoreFromLocalStorage: (): boolean => {
+    const snapshot = loadGuestWorkflow();
+    if (!snapshot) return false;
+    set({ nodes: snapshot.nodes as Node<WorkflowNodeData>[], edges: snapshot.edges });
+    clearGuestWorkflow();
+    return true;
+  },
+
   // ── Supabase persistence ─────────────────────────────────
   supabaseLoading: false,
+  activeWorkflowId: null,
+  setActiveWorkflowId: (id) => set({ activeWorkflowId: id }),
+  isSaving: false,
+  lastSavedAt: null,
 
   saveWorkflowToSupabase: async (name, description) => {
     const s = get();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
+
+    set({ isSaving: true });
 
     const graph = {
       nodes: nodesToPayload(s.nodes),
@@ -403,12 +462,11 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       recursionLimit: 25,
     };
 
-    // If we have a current scenario that already came from Supabase, update it
-    const currentId = s.currentScenarioId;
-    const existing = currentId ? s.scenarios[currentId] : null;
+    // If we have an active workflow or current scenario from Supabase, update it
+    const activeId = s.activeWorkflowId ?? s.currentScenarioId;
+    const existing = activeId ? s.scenarios[activeId] : null;
 
     if (existing) {
-      // Update existing row
       const { error } = await supabase
         .from("workflows")
         .update({ name, description: description ?? null, graph, last_estimate: s.estimation })
@@ -416,19 +474,21 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         .eq("user_id", user.id);
       if (error) {
         console.error("Supabase update error:", error);
+        set({ isSaving: false });
         return null;
       }
-      // Sync local store
       const now = new Date().toISOString();
       set((prev) => ({
         scenarios: {
           ...prev.scenarios,
           [existing.id]: { ...existing, name, updatedAt: now, graph, estimate: s.estimation ?? undefined },
         },
+        isSaving: false,
+        lastSavedAt: new Date(),
+        activeWorkflowId: existing.id,
       }));
       return existing.id;
     } else {
-      // Insert new row
       const id = uuid();
       const now = new Date().toISOString();
       const { error } = await supabase.from("workflows").insert({
@@ -441,6 +501,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       });
       if (error) {
         console.error("Supabase insert error:", error);
+        set({ isSaving: false });
         return null;
       }
       const scenario: WorkflowScenario = {
@@ -454,6 +515,9 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       set((prev) => ({
         scenarios: { ...prev.scenarios, [id]: scenario },
         currentScenarioId: id,
+        activeWorkflowId: id,
+        isSaving: false,
+        lastSavedAt: new Date(),
       }));
       return id;
     }

@@ -9,6 +9,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   X,
   LogIn,
@@ -19,7 +20,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore, useAuthModalOpen, useAuthModalReason } from "@/store/useAuthStore";
-import { useUIState } from "@/store/useWorkflowStore";
+import { useUIState, useWorkflowStore } from "@/store/useWorkflowStore";
 
 // ── OAuth provider config ────────────────────────────────────
 type OAuthProvider = "google" | "github";
@@ -58,6 +59,7 @@ const OAUTH_PROVIDERS: ProviderButton[] = [
 ];
 
 export default function AuthModal() {
+  const router = useRouter();
   const open = useAuthModalOpen();
   const reason = useAuthModalReason();
   const closeAuthModal = useAuthStore((s) => s.closeAuthModal);
@@ -94,6 +96,8 @@ export default function AuthModal() {
           password,
         });
         if (signInError) throw signInError;
+        router.push("/editor");
+        closeAuthModal();
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Authentication failed");
@@ -107,6 +111,7 @@ export default function AuthModal() {
     setError(null);
     setOauthLoading(provider);
     try {
+      useWorkflowStore.getState().snapshotToLocalStorage();
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
@@ -147,18 +152,16 @@ export default function AuthModal() {
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div
-        className={`relative w-full max-w-sm rounded-xl border shadow-2xl p-6 max-h-[90vh] overflow-y-auto ${
-          isDark
-            ? "border-slate-700 bg-slate-900 text-slate-100"
-            : "border-gray-200 bg-white text-gray-800"
-        }`}
+        className={`relative w-full max-w-sm rounded-xl border shadow-2xl p-6 max-h-[90vh] overflow-y-auto ${isDark
+          ? "border-slate-700 bg-slate-900 text-slate-100"
+          : "border-gray-200 bg-white text-gray-800"
+          }`}
       >
         {/* Close button */}
         <button
           onClick={closeAuthModal}
-          className={`absolute top-3 right-3 p-1 rounded-md transition ${
-            isDark ? "hover:bg-slate-800 text-slate-400" : "hover:bg-gray-100 text-gray-400"
-          }`}
+          className={`absolute top-3 right-3 p-1 rounded-md transition ${isDark ? "hover:bg-slate-800 text-slate-400" : "hover:bg-gray-100 text-gray-400"
+            }`}
         >
           <X className="w-4 h-4" />
         </button>
@@ -181,11 +184,10 @@ export default function AuthModal() {
         {/* Error banner */}
         {error && (
           <div
-            className={`flex items-start gap-2 rounded-md border px-3 py-2 text-xs mb-3 ${
-              isDark
-                ? "border-red-800 bg-red-900/30 text-red-300"
-                : "border-red-200 bg-red-50 text-red-700"
-            }`}
+            className={`flex items-start gap-2 rounded-md border px-3 py-2 text-xs mb-3 ${isDark
+              ? "border-red-800 bg-red-900/30 text-red-300"
+              : "border-red-200 bg-red-50 text-red-700"
+              }`}
           >
             <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
             <span>{error}</span>
@@ -214,11 +216,10 @@ export default function AuthModal() {
                   key={p.id}
                   onClick={() => handleOAuth(p.id)}
                   disabled={oauthLoading !== null}
-                  className={`flex items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${
-                    isDark
-                      ? "border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700"
-                      : `${p.bgClass} ${p.hoverClass}`
-                  }`}
+                  className={`flex items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${isDark
+                    ? "border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700"
+                    : `${p.bgClass} ${p.hoverClass}`
+                    }`}
                 >
                   {oauthLoading === p.id ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -243,11 +244,10 @@ export default function AuthModal() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={`rounded-md border px-3 py-2 text-sm outline-none transition ${
-                    isDark
-                      ? "border-slate-600 bg-slate-800 text-slate-100 focus:border-blue-500"
-                      : "border-gray-300 bg-white text-gray-800 focus:border-blue-500"
-                  }`}
+                  className={`rounded-md border px-3 py-2 text-sm outline-none transition ${isDark
+                    ? "border-slate-600 bg-slate-800 text-slate-100 focus:border-blue-500"
+                    : "border-gray-300 bg-white text-gray-800 focus:border-blue-500"
+                    }`}
                   placeholder="you@example.com"
                 />
               </label>
@@ -262,11 +262,10 @@ export default function AuthModal() {
                   minLength={6}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className={`rounded-md border px-3 py-2 text-sm outline-none transition ${
-                    isDark
-                      ? "border-slate-600 bg-slate-800 text-slate-100 focus:border-blue-500"
-                      : "border-gray-300 bg-white text-gray-800 focus:border-blue-500"
-                  }`}
+                  className={`rounded-md border px-3 py-2 text-sm outline-none transition ${isDark
+                    ? "border-slate-600 bg-slate-800 text-slate-100 focus:border-blue-500"
+                    : "border-gray-300 bg-white text-gray-800 focus:border-blue-500"
+                    }`}
                   placeholder="Min 6 characters"
                 />
               </label>

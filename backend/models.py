@@ -25,7 +25,10 @@ class ParallelStep(BaseModel):
 
 class NodeConfig(BaseModel):
     id: str
-    type: Literal["startNode", "agentNode", "toolNode", "finishNode"]
+    type: Literal[
+        "startNode", "agentNode", "toolNode", "finishNode",
+        "blankBoxNode", "textNode",
+    ]
     label: Optional[str] = None
     model_provider: Optional[str] = Field(
         default=None, description="e.g. OpenAI, Anthropic, Google"
@@ -131,6 +134,8 @@ class NodeEstimation(BaseModel):
     latency_share: float = 0.0
     # Bottleneck severity: "low" | "medium" | "high" (top X% of cost or latency)
     bottleneck_severity: Optional[str] = None
+    # Annotation flag: True for blankBoxNode, textNode — excluded from bottleneck/health scoring
+    is_annotation: bool = False
 
 
 class CycleInfo(BaseModel):

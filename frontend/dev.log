@@ -1,0 +1,35 @@
+
+> frontend@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.2.87:3000
+- Environments: .env.local
+
+✓ Starting...
+✓ Ready in 518ms
+ GET / 200 in 2.8s (compile: 2.6s, render: 186ms)
+ GET /editor 200 in 698ms (compile: 599ms, render: 99ms)
+ GET /auth/callback?code=240b42dc-dab2-4f82-9fa7-0cd51f93d390 307 in 617ms (compile: 83ms, render: 534ms)
+ GET / 200 in 70ms (compile: 5ms, render: 65ms)
+ GET /editor 200 in 47ms (compile: 6ms, render: 41ms)
+✓ Compiled in 404ms
+✓ Compiled in 47ms
+✓ Compiled in 138ms
+✓ Compiled in 85ms
+✓ Compiled in 376ms
+ GET /editor 200 in 287ms (compile: 95ms, render: 192ms)
+ GET /editor 200 in 58ms (compile: 9ms, render: 49ms)
+ GET /auth/callback?code=4e2de0e8-8244-4b1b-8d7a-e4150cca81dd 307 in 190ms (compile: 11ms, render: 179ms)
+ GET / 200 in 232ms (compile: 64ms, render: 168ms)
+ GET /editor 200 in 62ms (compile: 15ms, render: 47ms)
+ GET /editor 200 in 48ms (compile: 8ms, render: 41ms)
+✓ Compiled in 135ms
+✓ Compiled in 461ms
+ GET /auth/callback?code=81fb5d3e-1fd8-4cc6-9870-df7d9ecdf23a 307 in 333ms (compile: 92ms, render: 241ms)
+ GET /editor 200 in 206ms (compile: 48ms, render: 158ms)
+✓ Compiled in 108ms
+✓ Compiled in 202ms
+ GET /editor 200 in 715ms (compile: 522ms, render: 193ms)
+ GET /editor 200 in 57ms (compile: 7ms, render: 50ms)

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useRef, useEffect } from "react";
 import {
   ReactFlow,
   Background,
@@ -17,6 +17,8 @@ import "@xyflow/react/dist/style.css";
 import { v4 as uuid } from "uuid";
 
 import WorkflowNode from "@/components/nodes/WorkflowNode";
+import BlankBoxNode from "@/components/nodes/BlankBoxNode";
+import TextNode from "@/components/nodes/TextNode";
 import {
   useWorkflowStore,
   useWorkflowNodes,
@@ -32,6 +34,8 @@ const nodeTypes = {
   agentNode: WorkflowNode,
   toolNode: WorkflowNode,
   finishNode: WorkflowNode,
+  blankBoxNode: BlankBoxNode,
+  textNode: TextNode,
 };
 
 /** Default edge options — animated with arrow marker */
@@ -61,7 +65,13 @@ export default function Canvas() {
     addNode,
     setSelectedNodeId,
     openConfigModal,
+    restoreFromLocalStorage,
   } = useWorkflowStore();
+
+  // ── Restore local storage guest snapshot on mount ───────────
+  useEffect(() => {
+    restoreFromLocalStorage();
+  }, [restoreFromLocalStorage]);
 
   // ── Derive critical path edge set for highlighting ───────────
   const criticalPathEdgeSet = React.useMemo(() => {
@@ -168,19 +178,19 @@ export default function Canvas() {
 
       const newEdge: Edge = isToolToAgent
         ? {
-            ...connection,
-            id: `e-${uuid()}`,
-            source: connection.source,
-            target: connection.target,
-            animated: true,
-            style: { strokeWidth: 2, stroke: "#f59e0b", strokeDasharray: "6 3" },
-          }
+          ...connection,
+          id: `e-${uuid()}`,
+          source: connection.source,
+          target: connection.target,
+          animated: true,
+          style: { strokeWidth: 2, stroke: "#f59e0b", strokeDasharray: "6 3" },
+        }
         : {
-            ...connection,
-            id: `e-${uuid()}`,
-            source: connection.source,
-            target: connection.target,
-          };
+          ...connection,
+          id: `e-${uuid()}`,
+          source: connection.source,
+          target: connection.target,
+        };
 
       setEdges(addEdge(newEdge, edges));
     },
@@ -206,12 +216,42 @@ export default function Canvas() {
         y: event.clientY,
       });
 
-      const newNode = {
+      const baseData: WorkflowNodeData = { label, type };
+
+      if (type === "blankBoxNode") {
+        baseData.blankBoxStyle = {
+          label: "Group",
+          labelPosition: "top-left",
+          labelColor: "#3b82f6",
+          labelBackground: "none",
+          borderStyle: "dashed",
+          borderColor: "#3b82f6",
+          borderWidth: 2,
+          backgroundColor: "#eff6ff",
+          backgroundOpacity: 40,
+          connectable: false,
+        };
+      }
+
+      if (type === "textNode") {
+        baseData.textNodeStyle = {
+          content: "Text",
+          fontSize: "md",
+          color: "#374151",
+          background: "none",
+        };
+      }
+
+      const newNode: Parameters<typeof addNode>[0] = {
         id: uuid(),
         type,
         position,
-        data: { label, type } as WorkflowNodeData,
+        data: baseData,
+        ...(type === "blankBoxNode" && {
+          style: { width: 320, height: 220, zIndex: -1 },
+        }),
       };
+
       addNode(newNode);
     },
     [addNode, screenToFlowPosition]
@@ -221,7 +261,12 @@ export default function Canvas() {
   const onNodeDoubleClick = useCallback(
     (_event: React.MouseEvent, node: { id: string; type?: string }) => {
       setSelectedNodeId(node.id);
-      if (node.type === "agentNode" || node.type === "toolNode") {
+      if (
+        node.type === "agentNode" ||
+        node.type === "toolNode" ||
+        node.type === "blankBoxNode" ||
+        node.type === "textNode"
+      ) {
         openConfigModal();
       }
     },
@@ -269,6 +314,8 @@ export default function Canvas() {
               case "agentNode": return "#3b82f6";
               case "toolNode": return "#f97316";
               case "finishNode": return "#ef4444";
+              case "blankBoxNode": return "#94a3b8";
+              case "textNode": return "#8b5cf6";
               default: return "#6b7280";
             }
           }}

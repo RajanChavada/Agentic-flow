@@ -312,7 +312,12 @@ def estimate_agent_node(
 
 
 def estimate_node(node: NodeConfig, in_cycle: bool = False) -> NodeEstimation:
-    """Return a zero estimation for non-agent, non-tool nodes."""
+    """Return a zero estimation for non-agent, non-tool nodes.
+
+    Annotation nodes (blankBoxNode, textNode) get is_annotation=True so
+    downstream scoring (bottlenecks, health) can exclude them.
+    """
+    is_annotation = node.type in ("blankBoxNode", "textNode")
     return NodeEstimation(
         node_id=node.id,
         node_name=node.label or node.type,
@@ -331,6 +336,7 @@ def estimate_node(node: NodeConfig, in_cycle: bool = False) -> NodeEstimation:
         tool_response_tokens=0,
         tool_latency=0.0,
         in_cycle=in_cycle,
+        is_annotation=is_annotation,
     )
 
 
@@ -418,17 +424,25 @@ def _compute_bottleneck_shares(
 ) -> None:
     """Mutate breakdown nodes in-place to add cost_share, latency_share, and bottleneck_severity.
 
+    Annotation nodes (is_annotation=True) are excluded from ranking.
+
     Severity classification:
-      - "high"   → node is in the top 20% of either cost or latency share
-      - "medium" → node is in the top 20-50% range
-      - "low"    → everything else
+      - "high"   -> node is in the top 20% of either cost or latency share
+      - "medium" -> node is in the top 20-50% range
+      - "low"    -> everything else
     """
     for b in breakdown:
+        if b.is_annotation:
+            b.cost_share = 0.0
+            b.latency_share = 0.0
+            b.bottleneck_severity = "low"
+            continue
         b.cost_share = round(b.cost / total_cost, 4) if total_cost > 0 else 0.0
         b.latency_share = round(b.latency / total_latency, 4) if total_latency > 0 else 0.0
 
-    # Compute severity based on max(cost_share, latency_share)
-    impacts = [(max(b.cost_share, b.latency_share), i) for i, b in enumerate(breakdown)]
+    # Compute severity based on max(cost_share, latency_share), excluding annotations
+    scoreable = [(i, b) for i, b in enumerate(breakdown) if not b.is_annotation]
+    impacts = [(max(b.cost_share, b.latency_share), i) for i, b in scoreable]
     impacts.sort(key=lambda x: x[0], reverse=True)
 
     n = len(impacts)
@@ -463,9 +477,12 @@ def _compute_health_score(
     badges: list[str] = []
     details: dict = {}
 
+    # Filter out annotation nodes from all health factor calculations
+    scoreable = [b for b in breakdown if not b.is_annotation]
+
     # ── Factor 1: Cost concentration (0-25) ─────────────────
     cost_shares = sorted(
-        [b.cost_share for b in breakdown if b.cost > 0], reverse=True
+        [b.cost_share for b in scoreable if b.cost > 0], reverse=True
     )
     top2_share = sum(cost_shares[:2]) if cost_shares else 0.0
     if top2_share <= 0.4:

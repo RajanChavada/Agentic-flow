@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Copy, Trash2, BarChart3, Save, Cloud } from "lucide-react";
+import { Copy, Trash2, BarChart3, Save, Cloud, Square, Type } from "lucide-react";
 import type { WorkflowNodeType, BatchEstimateResponse } from "@/types/workflow";
 import {
   useUIState,
@@ -191,6 +191,49 @@ export default function Sidebar() {
           <span>{item.label}</span>
         </div>
       ))}
+
+      {/* ── Canvas Authoring ──────────────────────────────── */}
+      <div
+        className={`mt-3 pt-3 border-t ${
+          isDark ? "border-slate-700" : "border-gray-200"
+        }`}
+      >
+        <h2
+          className={`text-xs font-bold uppercase tracking-wide mb-1 ${
+            isDark ? "text-slate-400" : "text-gray-500"
+          }`}
+        >
+          Canvas Authoring
+        </h2>
+
+        <div className="flex flex-col gap-1.5">
+          <div
+            draggable
+            onDragStart={(e) => onDragStart(e, "blankBoxNode" as WorkflowNodeType, "Group")}
+            className={`flex items-center gap-2.5 cursor-grab active:cursor-grabbing rounded-md border px-3 py-2.5 text-sm font-medium hover:shadow-md transition-all ${
+              isDark
+                ? "bg-slate-800/40 border-slate-600 text-slate-300"
+                : "bg-gray-50 border-gray-300 text-gray-700"
+            }`}
+          >
+            <Square className="w-4 h-4 opacity-60" strokeDasharray="4 3" />
+            <span>Group Box</span>
+          </div>
+
+          <div
+            draggable
+            onDragStart={(e) => onDragStart(e, "textNode" as WorkflowNodeType, "Text")}
+            className={`flex items-center gap-2.5 cursor-grab active:cursor-grabbing rounded-md border px-3 py-2.5 text-sm font-medium hover:shadow-md transition-all ${
+              isDark
+                ? "bg-violet-900/20 border-violet-700 text-violet-300"
+                : "bg-violet-50 border-violet-300 text-violet-700"
+            }`}
+          >
+            <Type className="w-4 h-4 opacity-60" />
+            <span>Text Label</span>
+          </div>
+        </div>
+      </div>
 
       {/* ── Saved Workflows ───────────────────────────────── */}
       <div

@@ -1116,3 +1116,539 @@ Autosave or “dirty state” indicator.
 
 Surface last estimate summary in the workflow list (e.g., $0.12 / 6.5s).
 
+
+
+-- 
+
+## Feature update fix: store the state of the users canvas as they are signing in or signing up so that when they come back its all there 
+
+The root cause is the full-page redirect that OAuth requires — localStorage survives it, React state does not. The fix is a pre-flight save to localStorage before triggering OAuth and a post-auth restore in the callback. Here is everything you need, file by file.
+
+## Root Cause
+When signInWithOAuth fires, the browser leaves your app entirely, goes to Google/GitHub, then comes back to /auth/callback. React's in-memory state (useState, Zustand store) is gone. localStorage survives because it is browser-side storage that outlasts page navigations.
+
+## Architecture of the Fix
+```text
+User clicks Save (unauthenticated)
+        │
+        ▼
+1. Serialize current nodes + edges + metadata → write to localStorage key "guest_workflow"
+        │
+        ▼
+2. signInWithOAuth({ redirectTo: "/auth/callback" })
+        │
+        ▼
+        (Google/GitHub redirect round-trip)
+        │
+        ▼
+3. /auth/callback route: auth confirmed
+        │
+        ▼
+4. Read "guest_workflow" from localStorage
+        │
+        ▼
+5. Rehydrate Zustand store (setNodes + setEdges)
+6. Remove "guest_workflow" from localStorage
+7. router.push("/app") — user is back on their canvas
+        │
+        ▼
+8. Optional: auto-trigger save to Supabase now that user is authenticated
+```
+Files to change
+## 1. New utility: src/lib/guestWorkflow.ts
+This is the single source of truth for the serialization key and helpers.
+
+```ts
+import type { Node, Edge } from "@xyflow/react";
+
+const KEY = "guest_workflow";
+
+export interface GuestWorkflowSnapshot {
+  nodes: Node[];
+  edges: Edge[];
+  savedAt: number; // unix ms — lets you warn if snapshot is >24h old
+}
+
+export function saveGuestWorkflow(nodes: Node[], edges: Edge[]) {
+  if (typeof window === "undefined") return;
+  const snapshot: GuestWorkflowSnapshot = { nodes, edges, savedAt: Date.now() };
+  localStorage.setItem(KEY, JSON.stringify(snapshot));
+}
+
+export function loadGuestWorkflow(): GuestWorkflowSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as GuestWorkflowSnapshot;
+  } catch {
+    return null;
+  }
+}
+
+export function clearGuestWorkflow() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(KEY);
+}
+```
+## 2. Update your Zustand store: src/store/useWorkflowStore.ts
+Add two new actions — snapshotToLocalStorage and restoreFromLocalStorage:
+
+```ts
+// Inside your useWorkflowStore slice, add:
+import { saveGuestWorkflow, loadGuestWorkflow, clearGuestWorkflow } from "@/lib/guestWorkflow";
+
+snapshotToLocalStorage: () => {
+  const { nodes, edges } = get();
+  saveGuestWorkflow(nodes, edges);
+},
+
+restoreFromLocalStorage: (): boolean => {
+  const snapshot = loadGuestWorkflow();
+  if (!snapshot) return false;
+  set({ nodes: snapshot.nodes, edges: snapshot.edges });
+  clearGuestWorkflow();
+  return true;
+},
+```
+## 3. Update your Save button handler (wherever you call signInWithOAuth)
+Before triggering OAuth, snapshot the canvas. This is the critical step — it must happen before the browser navigates away.
+​
+
+```ts
+import { useWorkflowStore } from "@/store/useWorkflowStore";
+import { createClient } from "@/lib/supabaseClient";
+
+const { snapshotToLocalStorage } = useWorkflowStore();
+const supabase = createClient();
+
+async function handleSave() {
+  const user = supabase.auth.getUser(); // or from your auth context
+
+  if (!user) {
+    // 1. Persist canvas to localStorage BEFORE leaving the page
+    snapshotToLocalStorage();
+
+    // 2. Trigger OAuth — browser will navigate away
+    await supabase.auth.signInWithOAuth({
+      provider: "google", // or "github"
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    // Everything below this line will NOT run (browser has navigated away)
+    return;
+  }
+
+  // User is already logged in — save normally to Supabase
+  await saveWorkflowToSupabase();
+}
+```
+## 4. Auth callback route: src/app/auth/callback/page.tsx
+This is where the user lands after SSO completes. Restore the canvas here.
+
+```tsx
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabaseClient";
+import { useWorkflowStore } from "@/store/useWorkflowStore";
+import { loadGuestWorkflow } from "@/lib/guestWorkflow";
+
+export default function AuthCallbackPage() {
+  const router = useRouter();
+  const { restoreFromLocalStorage, saveCurrentWorkflowToSupabase } = useWorkflowStore();
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    const handleCallback = async () => {
+      // 1. Confirm the session is valid
+      const { error } = await supabase.auth.getSession();
+      if (error) {
+        router.push("/");
+        return;
+      }
+
+      // 2. Check if there is a guest workflow to restore
+      const snapshot = loadGuestWorkflow();
+      if (snapshot) {
+        // 3. Rehydrate Zustand store + clear localStorage
+        restoreFromLocalStorage();
+
+        // 4. Optional: auto-save the restored workflow to Supabase
+        // Small delay so Zustand store settles before we read from it
+        setTimeout(async () => {
+          await saveCurrentWorkflowToSupabase("Recovered workflow");
+        }, 300);
+
+        // 5. Redirect back to the canvas with state intact
+        router.push("/app");
+      } else {
+        // No guest workflow — just go to the app normally
+        router.push("/app");
+      }
+    };
+
+    handleCallback();
+  }, []);
+
+  return (
+    <div className="flex h-screen items-center justify-center">
+      <p className="text-muted-foreground text-sm">Signing you in…</p>
+    </div>
+  );
+}
+```
+## 5. Canvas hydration guard: Canvas.tsx (your file)
+Add a one-time effect at the top of Canvas that restores from localStorage in case the user lands directly on /app after callback (belt-and-suspenders):
+
+```tsx
+// Add near the top of the Canvas component body
+const { restoreFromLocalStorage } = useWorkflowStore();
+
+useEffect(() => {
+  // Only restore once on mount if there's a pending guest snapshot
+  restoreFromLocalStorage();
+}, []); // eslint-disable-line react-hooks/exhaustive-deps
+```
+This is a no-op if restoreFromLocalStorage finds nothing in localStorage, so it is safe to always run.
+
+## 6. Stale snapshot warning (optional but good UX)
+In Canvas.tsx or your sidebar, warn the user if a snapshot is over 24 hours old:
+
+```tsx
+import { loadGuestWorkflow, clearGuestWorkflow } from "@/lib/guestWorkflow";
+
+useEffect(() => {
+  const snapshot = loadGuestWorkflow();
+  if (!snapshot) return;
+
+  const ageMs = Date.now() - snapshot.savedAt;
+  const ONE_DAY = 86_400_000;
+
+  if (ageMs > ONE_DAY) {
+    // Toast or inline warning
+    toast.warning("A saved canvas snapshot is more than 24 hours old. Restore it?", {
+      action: {
+        label: "Restore",
+        onClick: () => restoreFromLocalStorage(),
+      },
+      cancel: {
+        label: "Discard",
+        onClick: () => clearGuestWorkflow(),
+      },
+    });
+  }
+}, []);
+```
+
+
+# Import/Export Feature Roadmap
+
+## Decision: No Universal Importer
+
+There is no standard schema for agentic workflows across frameworks.
+Building a generic importer creates unbounded maintenance scope.
+Instead, the feature is split into three clearly-scoped pieces.
+
+---
+
+## Phase 1: Internal Export / Import (v1 — ship now)
+
+### Export
+- Triggered from header or workflow sidebar: "Export Workflow"
+- Serializes current Zustand store to JSON:
+
+```json
+{
+  "schema_version": "1.0",
+  "name": "string",
+  "exported_at": "ISO timestamp",
+  "nodes": [...],   // full NodeConfig array
+  "edges": [...],   // full EdgeConfig array
+  "config": {
+    "recursion_limit": 50
+  }
+}
+```
+
+File download: {workflow-name}.agenticflow.json
+
+Import
+Only accepts .agenticflow.json files (validated by schema_version field).
+
+On upload:
+
+Validate structure (required fields: schema_version, nodes, edges).
+
+Normalize node positions if missing.
+
+Load into Zustand store via setNodes + setEdges.
+
+Update workflow name and metadata.
+
+Error handling: show inline validation errors if schema is wrong.
+
+Frontend changes
+Add Export button to header toolbar.
+
+Import modal: default tab is "My Workflow" (file upload, not JSON textarea).
+
+Backend changes
+Optional: POST /api/import/internal — validates schema server-side.
+
+Minimum: validation can be pure frontend.
+
+-- 
+
+## BACKEND FEATURE UPDATE 
+> Feature: Blank Box Nodes + Text Nodes + Supabase Workflow Persistence
+> Milestone: Canvas Authoring Enhancements
+
+---
+
+## Overview
+
+Backend responsibilities for this milestone are split into two areas:
+1. Estimation system awareness of new node types (`blankBoxNode`, `textNode`)
+2. Supabase schema + RLS setup for persisting workflow data per authenticated user
+
+The FastAPI application itself does NOT own user auth — Supabase handles that entirely.
+The backend's job is to define the database schema, RLS policies, and update the
+estimation logic to gracefully handle the two new non-LLM node types.
+
+---
+
+## Section 1 — Estimator Updates for New Node Types
+
+### 1.1 Current Node Type Handling
+
+`estimator.py` currently handles:
+- `startNode` → 0 tokens, 0 cost, 0 latency
+- `finishNode` → 0 tokens, 0 cost, 0 latency
+- `agentNode` → full LLM estimation with task-type multipliers
+- `toolNode` → tool registry lookup (schema tokens + response tokens + latency_ms)
+
+### 1.2 Add Pass-Through Cases
+
+Add to `estimate_node()` in `estimator.py`:
+
+```python
+elif node.type in ("blankBoxNode", "textNode"):
+    return NodeEstimation(
+        node_id=node.id,
+        node_type=node.type,
+        node_label=node.label or node.type,
+        input_tokens=0,
+        output_tokens=0,
+        input_cost=0.0,
+        output_cost=0.0,
+        latency_ms=0.0,
+        in_cycle=False,
+        is_annotation=True,   # new flag
+    )
+```
+
+### 1.3 Update `NodeEstimation` Model
+
+In `models.py`, add one optional field:
+
+```python
+class NodeEstimation(BaseModel):
+    ...existing fields...
+    is_annotation: bool = False  # True for blankBoxNode, textNode — excluded from bottleneck scoring
+```
+
+`is_annotation=True` nodes should be excluded from:
+- Bottleneck detection
+- Workflow health scoring
+- Critical path calculation
+- Cycle detection (graph_analyzer.py — already handles this since annotation nodes have no edges)
+
+### 1.4 `NodeConfig` Model Update
+
+Add new node types to the `type` literal in `models.py`:
+
+```python
+class NodeConfig(BaseModel):
+    type: Literal[
+        "startNode", "agentNode", "toolNode", "finishNode",
+        "blankBoxNode", "textNode"   # ← add these
+    ]
+    ...
+```
+
+No other NodeConfig fields needed — blank box and text nodes carry no LLM config.
+
+---
+
+## Section 2 — Supabase Schema
+
+### 2.1 Tables to Create
+
+Run these migrations in the Supabase SQL editor or via a migration file.
+
+#### `workflows` table
+```sql
+CREATE TABLE workflows (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name         TEXT NOT NULL DEFAULT 'Untitled Workflow',
+  description  TEXT,
+  nodes        JSONB NOT NULL DEFAULT '[]',
+  edges        JSONB NOT NULL DEFAULT '[]',
+  recursion_limit INT DEFAULT 25,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Auto-update updated_at on every write
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER workflows_updated_at
+  BEFORE UPDATE ON workflows
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+```
+
+#### `scenarios` table
+```sql
+CREATE TABLE scenarios (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  workflow_id  UUID REFERENCES workflows(id) ON DELETE SET NULL,
+  name         TEXT NOT NULL,
+  nodes        JSONB NOT NULL DEFAULT '[]',
+  edges        JSONB NOT NULL DEFAULT '[]',
+  recursion_limit INT DEFAULT 25,
+  estimate     JSONB,   -- cached WorkflowEstimation result
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TRIGGER scenarios_updated_at
+  BEFORE UPDATE ON scenarios
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+```
+
+#### `user_preferences` table
+```sql
+CREATE TABLE user_preferences (
+  user_id      UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  theme        TEXT DEFAULT 'light',
+  drawer_width INT DEFAULT 420,
+  active_workflow_id UUID REFERENCES workflows(id) ON DELETE SET NULL,
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+---
+
+### 2.2 RLS Policies
+
+**CRITICAL: Enable RLS on every table before writing policies.**
+
+```sql
+ALTER TABLE workflows         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE scenarios         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_preferences  ENABLE ROW LEVEL SECURITY;
+```
+
+#### Workflows RLS
+```sql
+-- Users can only see their own workflows
+CREATE POLICY "workflows_select_own"
+  ON workflows FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "workflows_insert_own"
+  ON workflows FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "workflows_update_own"
+  ON workflows FOR UPDATE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "workflows_delete_own"
+  ON workflows FOR DELETE
+  USING (auth.uid() = user_id);
+```
+
+#### Scenarios RLS
+```sql
+CREATE POLICY "scenarios_select_own"  ON scenarios FOR SELECT  USING (auth.uid() = user_id);
+CREATE POLICY "scenarios_insert_own"  ON scenarios FOR INSERT  WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "scenarios_update_own"  ON scenarios FOR UPDATE  USING (auth.uid() = user_id);
+CREATE POLICY "scenarios_delete_own"  ON scenarios FOR DELETE  USING (auth.uid() = user_id);
+```
+
+#### User Preferences RLS
+```sql
+CREATE POLICY "prefs_select_own"  ON user_preferences FOR SELECT  USING (auth.uid() = user_id);
+CREATE POLICY "prefs_insert_own"  ON user_preferences FOR INSERT  WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "prefs_update_own"  ON user_preferences FOR UPDATE  USING (auth.uid() = user_id);
+```
+
+---
+
+### 2.3 Indexes
+
+```sql
+CREATE INDEX workflows_user_id_idx  ON workflows(user_id);
+CREATE INDEX workflows_updated_idx  ON workflows(updated_at DESC);
+CREATE INDEX scenarios_user_id_idx  ON scenarios(user_id);
+CREATE INDEX scenarios_workflow_idx ON scenarios(workflow_id);
+```
+
+---
+
+## Section 3 — FastAPI (Optional Endpoints)
+
+The frontend uses Supabase JS client directly for all CRUD — no FastAPI involvement needed
+for basic workflow persistence. FastAPI is only needed if you want:
+
+1. **Server-side validation before save** — optional, adds latency
+2. **Background estimation on save** — auto-run estimate and cache result in `scenarios.estimate`
+
+If you implement option 2, add to `main.py`:
+
+```python
+@app.post("/api/workflows/{workflow_id}/estimate-and-cache")
+async def estimate_and_cache(workflow_id: str, request: WorkflowRequest):
+    # Run estimation
+    result = estimate_workflow(request.nodes, request.edges, request.recursion_limit)
+    # Return result — frontend saves to Supabase scenarios.estimate column
+    return result
+```
+
+This keeps FastAPI as the estimation engine and Supabase as the persistence layer —
+clean separation of concerns.
+
+---
+
+## Acceptance Criteria — Backend
+
+- [ ] `blankBoxNode` and `textNode` added to `NodeConfig.type` literal in `models.py`
+- [ ] `is_annotation: bool = False` added to `NodeEstimation` in `models.py`
+- [ ] `estimate_node()` in `estimator.py` returns zero-cost `NodeEstimation(is_annotation=True)` for new types
+- [ ] Annotation nodes excluded from bottleneck scoring and health calculation
+- [ ] `workflows` table created with correct schema + RLS + updated_at trigger
+- [ ] `scenarios` table created with correct schema + RLS + updated_at trigger
+- [ ] `user_preferences` table created with correct schema + RLS
+- [ ] All three tables have RLS enabled BEFORE policies are written
+- [ ] Indexes created on user_id and updated_at columns
+- [ ] `GET /api/estimate` still returns correct results for existing DAG workflows (regression test)
+
+---
+
+## Do Not Touch (Backend)
+
+- `pricing_registry.py` — no changes needed
+- `tool_registry.py` — no changes needed
+- `graph_analyzer.py` — annotation nodes have no edges, cycle detection unaffected
+- `import_adapters.py` — annotation nodes not part of runnable workflow logic
+
