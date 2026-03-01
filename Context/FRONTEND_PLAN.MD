@@ -1410,3 +1410,265 @@ source node's type — avoids re-rendering the edge on unrelated node changes.
 - [ ] Double-clicking non-blankBox edges does nothing
 - [ ] Canvas panning does NOT trigger while typing in the input
 - [ ] `npx tsc --noEmit` passes
+
+
+-- 
+
+# Feature: Lucidchart-Style Contextual Toolbar (Replace NodeConfigModal)
+> Date: 2026-02-28
+> Type: Frontend refactor + new component
+> Replaces: `NodeConfigModal.tsx` (floating draggable modal)
+> Reference: Lucidchart top formatting bar pattern (see attached screenshot)
+
+---
+
+## Summary
+
+Replace the floating `NodeConfigModal` with a **contextual top toolbar** that slides
+in just below the `HeaderBar` whenever a configurable node is selected on the canvas.
+The toolbar is context-sensitive — its contents change entirely based on the selected
+node type. Deselecting a node (clicking the canvas background) hides it.
+
+This matches the Lucidchart/FigJam pattern: no floating popups, just a persistent
+formatting bar at the top that reacts to selection.
+
+---
+
+## Layout Change
+
+**Before:**
+```
+┌─────────────────────────────────────────┐
+│  HeaderBar                              │
+├─────────────────────────────────────────┤
+│  Canvas  (NodeConfigModal floats here)  │
+└─────────────────────────────────────────┘
+```
+
+**After:**
+```
+┌─────────────────────────────────────────┐
+│  HeaderBar                              │
+├─────────────────────────────────────────┤  ← slides in when node selected
+│  ContextToolbar  (0px → 48px tall)      │  ← collapses to 0px when nothing selected
+├─────────────────────────────────────────┤
+│  Canvas  (no floating modal)            │
+└─────────────────────────────────────────┘
+```
+
+The toolbar uses CSS `max-height` transition (`0px ↔ 64px`) for smooth slide-in/out.
+The Canvas gets the remaining height automatically via `flex-1`.
+
+---
+
+## Toolbar Anatomy (All Node Types)
+
+### agentNode toolbar
+```
+[● Agent Name (editable)] │ [Provider ▼] [Model ▼] │ [Task Type ▼] [Output ▼] │ [Loop: __] │ [Context: ________________] │ [🗑]
+```
+- Node name: inline editable `<input>` (updates `data.label`)
+- Provider: select → filters model dropdown (fetched from `/api/providers/detailed`)
+- Model: select → shows pricing pill on change (e.g. "$3.00 / $15.00 per 1M")
+- Task Type: select (6 options: Classification, Summarization, Code Gen, RAG, Tool Orchestration, Routing)
+- Output Size: select (Short / Medium / Long / Very Long)
+- Loop steps: compact number input (1–100, placeholder "10")
+- Context: text input (max 500 chars) — shows char count badge
+- Delete: Lucide `Trash2` icon button, red on hover
+
+### toolNode toolbar
+```
+[◆ Tool Name (editable)] │ [Category ▼] [Tool ▼] │ [🗑]
+```
+- Category: select (fetched from `/api/tools/categories/detailed`)
+- Tool: select filtered by category
+
+### blankBoxNode toolbar
+```
+[□ Label ______] │ [3×3 pos] │ [● ● ● ● ● ● ● ●] [#______] │ [Solid][Dashed][None] │ [1][2][3]px │ Fill:[□][#___] [──●── 40%] │ [None][Pill] │ [🗑]
+```
+- Label: text input
+- Position: compact 3×3 grid picker (9 buttons, 7×7px each, active = blue filled)
+- Color preset swatches: 8 circles (clicking sets both border + fill simultaneously)
+- Border hex input: updates border color independently
+- Border style: 3-button toggle group (Solid / Dashed / None)
+- Border width: 3-button toggle group (1px / 2px / 3px)
+- Fill hex input + opacity slider (0–100%)
+- Label background: 2-button toggle (None / Pill)
+- Delete
+
+### textNode toolbar
+```
+[T Content: ____________] │ [sm][md][lg][H] │ [● color] [#___] │ [None][Pill][Badge] │ [🗑]
+```
+- Content: text input (updates `textNodeStyle.content`)
+- Font size: 4-button toggle (sm / md / lg / Heading)
+- Color swatch + hex input
+- Background: 3-button toggle (None / Pill / Badge)
+- Delete
+
+### startNode / finishNode
+- Toolbar does NOT appear for these — they have no configurable properties.
+- Keep existing behavior (click selects, no toolbar shown).
+
+---
+
+## New File: `src/components/ContextToolbar.tsx`
+
+### Structure
+```tsx
+export default function ContextToolbar() {
+  const selectedNodeId = useWorkflowStore(s => s.selectedNodeId)
+  const nodes = useWorkflowNodes()
+  const node = nodes.find(n => n.id === selectedNodeId)
+
+  const visible = !!node && !["startNode", "finishNode"].includes(node.type ?? "")
+
+  return (
+    <div
+      className={cn(
+        "overflow-hidden transition-all duration-200 border-b",
+        "bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700",
+        visible ? "max-h-16 opacity-100" : "max-h-0 opacity-0"
+      )}
+    >
+      <div className="flex items-center gap-1 px-3 h-12 overflow-x-auto overflow-y-hidden">
+        {node?.type === "agentNode"    && <AgentToolbarSection    node={node} />}
+        {node?.type === "toolNode"     && <ToolToolbarSection     node={node} />}
+        {node?.type === "blankBoxNode" && <BlankBoxToolbarSection node={node} />}
+        {node?.type === "textNode"     && <TextToolbarSection     node={node} />}
+      </div>
+    </div>
+  )
+}
+```
+
+### Section sub-components (all inline in the same file)
+- `AgentToolbarSection`
+- `ToolToolbarSection`
+- `BlankBoxToolbarSection`
+- `TextToolbarSection`
+- `ToolbarDivider` (a `<div className="w-px h-6 bg-gray-200 dark:bg-slate-700 mx-1 shrink-0" />`)
+- `ToolbarLabel` (small gray label above a control group, optional)
+
+### Shared primitive components (inline, not separate files)
+- `ToolbarInput` — compact `<input>` styled for the bar height
+- `ToolbarSelect` — compact `<select>` or custom dropdown
+- `ToolbarButtonGroup` — horizontal group of toggle buttons
+- `ToolbarColorSwatch` — 16px circle button for color presets
+- `PositionPickerMini` — 3×3 grid of 7×7px buttons
+
+---
+
+## API Data: Move to Zustand
+
+Currently `NodeConfigModal.tsx` fetches providers and tools on open.
+With the toolbar, fetching on every selection is wasteful.
+
+### Add to `useWorkflowStore.ts`:
+```ts
+// API cache slices
+providerData: ProviderDetailed[] | null
+toolCategoryData: ToolCategoryDetailed[] | null
+isLoadingProviders: boolean
+isLoadingTools: boolean
+
+// Actions
+fetchProviders: () => Promise<void>   // fetches /api/providers/detailed, sets providerData
+fetchTools: () => Promise<void>       // fetches /api/tools/categories/detailed, sets toolCategoryData
+```
+
+Fetch strategy: call `fetchProviders()` and `fetchTools()` once on editor mount
+(`src/app/editor/page.tsx` useEffect), not on every toolbar render.
+Cache persists for the session — no re-fetching on node selection changes.
+
+---
+
+## Deprecate NodeConfigModal
+
+`NodeConfigModal.tsx` is replaced but should NOT be deleted immediately.
+Migration plan:
+1. Remove `openConfigModal` / `closeConfigModal` / `isConfigModalOpen` calls from Canvas.tsx
+2. Remove `onNodeDoubleClick` opening the modal for agentNode/toolNode/blankBoxNode/textNode
+   (keep the double-click for TextNode inline editing only — that's handled inside `TextNode.tsx`)
+3. Keep `NodeConfigModal.tsx` file but mark it `// DEPRECATED — replaced by ContextToolbar`
+4. Remove it in a follow-up cleanup commit after toolbar is verified working
+
+---
+
+## Files to Touch
+
+| File | Change |
+|------|--------|
+| `src/components/ContextToolbar.tsx` | NEW — full toolbar component |
+| `src/app/editor/page.tsx` | Add `<ContextToolbar />` between HeaderBar and Canvas; add `fetchProviders`/`fetchTools` on mount |
+| `src/components/Canvas.tsx` | Remove `openConfigModal` from `onNodeDoubleClick`; keep double-click for TextNode only |
+| `src/store/useWorkflowStore.ts` | Add `providerData`, `toolCategoryData`, `isLoadingProviders`, `isLoadingTools`, `fetchProviders`, `fetchTools`; remove or keep `isConfigModalOpen` actions (can keep for now) |
+| `src/components/NodeConfigModal.tsx` | Add deprecation comment; no functional changes needed |
+
+---
+
+## Do NOT Touch
+- `backend/` — no backend changes needed
+- `BlankBoxNode.tsx` — node component unchanged
+- `WorkflowNode.tsx` — node component unchanged
+- `EstimatePanel.tsx` — unaffected
+- `HeaderBar.tsx` — unaffected
+
+---
+
+## Behaviour Details
+
+### Selection → toolbar lifecycle
+1. User clicks any node → `setSelectedNodeId(id)` fires → `selectedNodeId` updates in store
+2. `ContextToolbar` reads `selectedNodeId`, finds node, determines visibility
+3. `max-height: 0 → 64px` CSS transition plays (200ms ease-out)
+4. Toolbar renders correct section
+
+### Deselection
+- User clicks canvas background → React Flow fires `onPaneClick`
+- Add `onPaneClick` handler to Canvas.tsx that calls `setSelectedNodeId(null)`
+- Toolbar slides back to `max-height: 0`
+
+### Immediate updates (no Save button)
+- Every toolbar control calls `updateNodeData(id, { field: value })` on change (not on blur)
+- No "Apply" or "Save" button — changes are live like Lucidchart
+- This is already how the store works — `updateNodeData` patches the node directly
+
+### Horizontal overflow
+- Toolbar uses `overflow-x: auto` with `overflow-y: hidden`
+- On small screens / many controls: toolbar scrolls horizontally
+- Controls use `shrink-0` to prevent squishing
+- Scrollbar is hidden via `scrollbar-hide` utility (add to globals.css if not present):
+  ```css
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  ```
+
+### Delete node
+- Trash icon at the right end of every toolbar section
+- Calls `deleteNode(selectedNodeId)` from store
+- After delete, `selectedNodeId` becomes null → toolbar collapses
+
+---
+
+## Acceptance Criteria
+
+- [ ] `ContextToolbar.tsx` created and renders correct section for each node type
+- [ ] Toolbar slides in (0 → 48px) when a configurable node is selected
+- [ ] Toolbar collapses when canvas background is clicked or node is deleted
+- [ ] `agentNode`: provider dropdown filters model dropdown; model change shows pricing
+- [ ] `agentNode`: context input, task type, output size, loop steps all update live
+- [ ] `toolNode`: category dropdown filters tool dropdown
+- [ ] `blankBoxNode`: all 8 controls update the node style live (label, position, colors, border, fill, opacity)
+- [ ] `textNode`: content, font size, color, background all update live
+- [ ] `startNode`/`finishNode`: toolbar does NOT appear
+- [ ] `onPaneClick` in Canvas.tsx deselects and collapses toolbar
+- [ ] API data (providers, tools) fetched once on editor mount, not on each selection
+- [ ] Toolbar scrolls horizontally on small screens without breaking layout
+- [ ] Delete button removes the node and collapses toolbar
+- [ ] Full dark mode support on all toolbar controls
+- [ ] `NodeConfigModal.tsx` marked deprecated (no functional removal yet)
+- [ ] `npx tsc --noEmit` passes with zero errors
+
+

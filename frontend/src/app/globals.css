@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ── Smooth scroll for anchor links ──────────────────────── */
 html {
   scroll-behavior: smooth;
