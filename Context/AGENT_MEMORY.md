@@ -1711,3 +1711,26 @@ The modal was `position: fixed` and placed next to the selected node via `flowTo
 
 **Next Steps**:
 1. **User verification** — Test all connection types in browser (top/bottom/left/right, cross-box connections).
+
+---
+
+### Update 33 — Editable Edge Labels on BlankBox Connections (2026-02-28)
+
+**Task**: Double-clicking an edge originating from a `blankBoxNode` opens an inline text input at the edge midpoint. Users type a label, press Enter to save (pill display), or Esc to cancel. Non-blankBox edges are not editable.
+
+**Approach and Methodology**:
+1. **New `AnnotationEdge` component** (`src/components/edges/AnnotationEdge.tsx`): Uses `getBezierPath` for the path, `BaseEdge` for rendering, `EdgeLabelRenderer` for HTML label overlay outside SVG. A transparent `strokeWidth={20}` path provides a 20px hit zone for double-click. Source-type check via Zustand selector subscribing only to the source node's type. Input container uses `nodrag nopan` classes. Label pill uses `pointer-events-none`.
+2. **`updateEdgeLabel` action** added to `useWorkflowStore.ts`: Patches `edge.data.label` for the given edge ID.
+3. **Canvas.tsx registration**: Imported `AnnotationEdge`, created `edgeTypes` map, set `defaultEdgeOptions.type = "annotationEdge"`, passed `edgeTypes` prop to `<ReactFlow>`.
+
+**Results**: `npx tsc --noEmit`: zero errors. Zero linter errors.
+
+**Files Modified**:
+| File | Changes |
+|------|---------|
+| `frontend/src/components/edges/AnnotationEdge.tsx` | **New file** — custom edge with inline label editing |
+| `frontend/src/store/useWorkflowStore.ts` | Added `updateEdgeLabel(id, label)` action |
+| `frontend/src/components/Canvas.tsx` | Imported AnnotationEdge, registered edgeTypes, set default edge type, passed edgeTypes prop |
+
+**Next Steps**:
+1. **User verification** — Test double-click on blankBox edges, Enter/Esc behavior, pill rendering.

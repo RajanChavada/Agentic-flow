@@ -70,6 +70,9 @@ interface WorkflowStore {
   updateNodeData: (id: string, data: Partial<WorkflowNodeData>) => void;
   deleteNode: (id: string) => void;
 
+  // Edge label
+  updateEdgeLabel: (id: string, label: string) => void;
+
   // Selection
   setSelectedNodeId: (id: string | null) => void;
 
@@ -206,6 +209,14 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     set((s) => ({
       nodes: s.nodes.filter((n) => n.id !== id),
       edges: s.edges.filter((e) => e.source !== id && e.target !== id),
+    })),
+
+  // ── Edge label ─────────────────────────────────────────────
+  updateEdgeLabel: (id, label) =>
+    set((s) => ({
+      edges: s.edges.map((e) =>
+        e.id === id ? { ...e, data: { ...((e.data as Record<string, unknown>) ?? {}), label } } : e
+      ),
     })),
 
   // ── Selection ──────────────────────────────────────────────

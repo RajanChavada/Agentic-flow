@@ -20,6 +20,7 @@ import { v4 as uuid } from "uuid";
 import WorkflowNode from "@/components/nodes/WorkflowNode";
 import BlankBoxNode from "@/components/nodes/BlankBoxNode";
 import TextNode from "@/components/nodes/TextNode";
+import AnnotationEdge from "@/components/edges/AnnotationEdge";
 import {
   useWorkflowStore,
   useWorkflowNodes,
@@ -39,8 +40,14 @@ const nodeTypes = {
   textNode: TextNode,
 };
 
-/** Default edge options — animated with arrow marker */
+/** Register custom edge types once. */
+const edgeTypes = {
+  annotationEdge: AnnotationEdge,
+};
+
+/** Default edge options — animated with arrow marker, uses AnnotationEdge */
 const defaultEdgeOptions = {
+  type: "annotationEdge" as const,
   animated: true,
   style: { strokeWidth: 2, stroke: "#6b7280" },
   markerEnd: {
@@ -297,6 +304,7 @@ export default function Canvas() {
         onNodeClick={onNodeClick}
         onNodeDoubleClick={onNodeDoubleClick}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
         fitView
         className={theme === "dark" ? "bg-slate-800" : "bg-gray-50"}
