@@ -1,4 +1,5 @@
 "use client";
+"use no memo";
 
 import React, { memo, useState, useCallback, useRef, useEffect } from "react";
 import { type NodeProps } from "@xyflow/react";

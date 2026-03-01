@@ -1,4 +1,5 @@
 "use client";
+"use no memo";
 
 import React, { memo } from "react";
 import { Handle, Position, NodeResizer, type NodeProps } from "@xyflow/react";
@@ -15,7 +16,7 @@ const DEFAULT_STYLE: BlankBoxStyle = {
   borderWidth: 2,
   backgroundColor: "#eff6ff",
   backgroundOpacity: 40,
-  connectable: false,
+  connectable: true,
 };
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -72,28 +73,29 @@ function BlankBoxNode({ data, selected }: NodeProps & { data: WorkflowNodeData }
   const s: BlankBoxStyle = { ...DEFAULT_STYLE, ...data.blankBoxStyle };
 
   return (
-    <>
+    <div className="relative w-full h-full">
       <NodeResizer
         isVisible={selected}
         minWidth={120}
         minHeight={80}
-        lineClassName="!border-blue-400"
-        handleClassName="!w-2.5 !h-2.5 !bg-white !border-blue-400 !rounded-sm"
+        lineClassName="border-blue-400!"
+        handleClassName="w-2.5! h-2.5! bg-white! border-blue-400! rounded-sm!"
       />
 
-      {s.connectable && (
-        <Handle type="target" position={Position.Top} className="!bg-gray-400 !w-2 !h-2" />
-      )}
+      {/* ── Target handles (all 4 sides) — same style as WorkflowNode ── */}
+      <Handle id="t-top" type="target" position={Position.Top} className="bg-gray-500! w-2.5! h-2.5!" />
+      <Handle id="t-right" type="target" position={Position.Right} className="bg-gray-500! w-2.5! h-2.5!" />
+      <Handle id="t-bottom" type="target" position={Position.Bottom} className="bg-gray-500! w-2.5! h-2.5!" />
+      <Handle id="t-left" type="target" position={Position.Left} className="bg-gray-500! w-2.5! h-2.5!" />
 
+      {/* ── Visual box (pointer-events-none so it doesn't block connections) ── */}
       <div
-        className="relative w-full h-full rounded-md"
+        className="pointer-events-none absolute inset-0 rounded-md"
         style={{
           border: s.borderStyle === "none"
             ? "none"
             : `${s.borderWidth}px ${s.borderStyle} ${s.borderColor}`,
           backgroundColor: hexToRgba(s.backgroundColor, s.backgroundOpacity / 100),
-          minWidth: 120,
-          minHeight: 80,
         }}
       >
         <LabelTag
@@ -104,10 +106,12 @@ function BlankBoxNode({ data, selected }: NodeProps & { data: WorkflowNodeData }
         />
       </div>
 
-      {s.connectable && (
-        <Handle type="source" position={Position.Bottom} className="!bg-gray-400 !w-2 !h-2" />
-      )}
-    </>
+      {/* ── Source handles (all 4 sides) — same style as WorkflowNode ── */}
+      <Handle id="s-top" type="source" position={Position.Top} className="bg-gray-500! w-2.5! h-2.5!" />
+      <Handle id="s-right" type="source" position={Position.Right} className="bg-gray-500! w-2.5! h-2.5!" />
+      <Handle id="s-bottom" type="source" position={Position.Bottom} className="bg-gray-500! w-2.5! h-2.5!" />
+      <Handle id="s-left" type="source" position={Position.Left} className="bg-gray-500! w-2.5! h-2.5!" />
+    </div>
   );
 }
 

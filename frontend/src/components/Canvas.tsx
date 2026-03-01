@@ -1,4 +1,5 @@
 "use client";
+"use no memo";
 
 import React, { useCallback, useRef, useEffect } from "react";
 import {
@@ -162,8 +163,11 @@ export default function Canvas() {
   // ── Connect two nodes (with validation + edge styling) ───────
   const onConnect = useCallback(
     (connection: Connection) => {
-      const sourceNode = nodes.find((n) => n.id === connection.source);
-      const targetNode = nodes.find((n) => n.id === connection.target);
+      const currentNodes = useWorkflowStore.getState().nodes;
+      const currentEdges = useWorkflowStore.getState().edges;
+
+      const sourceNode = currentNodes.find((n) => n.id === connection.source);
+      const targetNode = currentNodes.find((n) => n.id === connection.target);
       if (!sourceNode || !targetNode) return;
 
       // Rule 1: Nothing can point TO a Start node
@@ -192,9 +196,9 @@ export default function Canvas() {
           target: connection.target,
         };
 
-      setEdges(addEdge(newEdge, edges));
+      setEdges(addEdge(newEdge, currentEdges));
     },
-    [nodes, edges, setEdges]
+    [setEdges]
   );
 
   // ── Drop a new node from the sidebar ─────────────────────────
@@ -229,7 +233,7 @@ export default function Canvas() {
           borderWidth: 2,
           backgroundColor: "#eff6ff",
           backgroundOpacity: 40,
-          connectable: false,
+          connectable: true,
         };
       }
 
@@ -248,7 +252,7 @@ export default function Canvas() {
         position,
         data: baseData,
         ...(type === "blankBoxNode" && {
-          style: { width: 320, height: 220, zIndex: -1 },
+          style: { width: 320, height: 220 },
         }),
       };
 
@@ -307,7 +311,7 @@ export default function Canvas() {
         <MiniMap
           pannable
           zoomable
-          className={theme === "dark" ? "!bg-slate-700" : "!bg-white"}
+          className={theme === "dark" ? "bg-slate-700!" : "bg-white!"}
           nodeColor={(n) => {
             switch (n.type) {
               case "startNode": return "#22c55e";

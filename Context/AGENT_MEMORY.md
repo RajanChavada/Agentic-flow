@@ -1631,3 +1631,83 @@ The modal was `position: fixed` and placed next to the selected node via `flowTo
 3. **Configure Supabase** — Add production Vercel URL to Redirect URLs + Site URL in dashboard.
 4. **Test OAuth end-to-end** — Sign in with Google/GitHub from the production URL.
 5. **Custom domain** (optional) — Add domain to Vercel, update Supabase redirect URLs.
+
+---
+
+### Update 30 — Enhanced BlankBoxNode (9-Position Labels, Color Presets, Opacity)
+
+**Agent**: Frontend agent — Enhanced BlankBoxNode
+
+**Task Description**: Upgrade `BlankBoxNode` from a minimal dashed-border container into a fully labeled, color-customizable group box — matching Lucidchart/FigJam container patterns. Users can now label boxes with configurable text, position (9 anchor points), label color, label background pill, 8 color presets, background opacity slider, and border width control.
+
+**Approach and Methodology**:
+1. Added `LabelPosition` type (9-value union) and `BlankBoxStyle` type (11 fields) to `workflow.ts`.
+2. Rewrote `BlankBoxNode.tsx` with `hexToRgba()`, `POSITION_CLASSES`, and `LabelTag` sub-component.
+3. Updated `Canvas.tsx` onDrop defaults: 320x220, blue preset, label "Group", 40% opacity.
+4. Updated `Sidebar.tsx`: drag label "Group", display name "Group Box".
+5. Rewrote `NodeConfigModal.tsx` blankBox panel with 3x3 position picker, 8 color swatches, opacity slider, border width buttons, label color picker, label pill toggle.
+
+**Results**: `npx tsc --noEmit`: zero errors. Zero linter errors.
+
+**Files Modified**:
+| File | Changes |
+|------|---------|
+| `frontend/src/types/workflow.ts` | Added `LabelPosition`, `BlankBoxStyle` types |
+| `frontend/src/components/nodes/BlankBoxNode.tsx` | Full rewrite with LabelTag, hexToRgba, 9-position labels |
+| `frontend/src/components/Canvas.tsx` | Updated default blankBoxStyle on drop |
+| `frontend/src/components/Sidebar.tsx` | Changed drag label to "Group" |
+| `frontend/src/components/NodeConfigModal.tsx` | Rewrote blankBox config panel |
+
+---
+
+### Update 31 — Edge Connection Bug Fix
+
+**Agent**: Frontend agent — Canvas edge connection bug fix
+
+**Task Description**: Fix bug where edges could not be connected between nodes — "nothing comes out" when dragging from handles. Three root causes identified and fixed.
+
+**Approach and Methodology**:
+1. **React Compiler interference**: `reactCompiler: true` in `next.config.ts` was interfering with React Flow's internal event handling for connection initiation. Added `"use no memo"` directive to `Canvas.tsx`, `WorkflowNode.tsx`, `BlankBoxNode.tsx`, and `TextNode.tsx` to opt these components out of the React Compiler.
+2. **Stale closure in `onConnect`**: The `onConnect` callback captured `nodes` and `edges` from its closure, which could become stale between renders. Changed to use `useWorkflowStore.getState()` for fresh state access, and reduced the dependency array to `[setEdges]` only.
+3. **Tailwind v4 syntax**: Handle CSS classes used v3 `!` prefix (`!bg-gray-500 !w-2.5 !h-2.5`) instead of v4 postfix (`bg-gray-500! w-2.5! h-2.5!`). Corrected across WorkflowNode, BlankBoxNode, and Canvas MiniMap.
+
+**Results**: `npx tsc --noEmit`: zero errors. Zero linter errors.
+
+**Files Modified**:
+| File | Changes |
+|------|---------|
+| `frontend/src/components/Canvas.tsx` | `"use no memo"`, onConnect uses getState(), MiniMap v4 syntax |
+| `frontend/src/components/nodes/WorkflowNode.tsx` | `"use no memo"`, Handle classes v4 syntax |
+| `frontend/src/components/nodes/BlankBoxNode.tsx` | `"use no memo"`, Handle + NodeResizer classes v4 syntax |
+| `frontend/src/components/nodes/TextNode.tsx` | `"use no memo"` |
+
+**Next Steps**:
+1. **User verification** — User should test edge connections in the browser to confirm fix.
+2. **React Compiler audit** — Review other components using React Flow hooks (NodeConfigModal, EstimatePanel) for similar compiler conflicts.
+3. **Consider removing `reactCompiler: true`** — If more conflicts arise, disable globally and add `"use memo"` selectively to non-React-Flow components.
+
+---
+
+### Update 32 — Bugfix: Edge Connections + 4-Way Handles (2026-02-28)
+
+**Task**: Fix 3 remaining edge connection issues: (1) BlankBoxNode content div swallowing drag events, (2) BlankBoxNode default connectable: false meant no handles, (3) WorkflowNode only had top/bottom handles and missing handle IDs causing React Flow to silently fail connections.
+
+**Approach and Methodology**:
+1. **BlankBoxNode pointer-events-none**: Added `pointer-events-none` class to the BlankBoxNode content div so it doesn't intercept drag events when users draw connections across it.
+2. **BlankBoxNode default connectable: true**: Changed `DEFAULT_STYLE.connectable` from `false` to `true` so handles render by default.
+3. **4-way handles on all nodes**: Added Left + Right handles (both source and target) to WorkflowNode and BlankBoxNode. Every node now has handles on all 4 sides. Source + target overlap at each position for bidirectional connections.
+4. **Handle IDs**: All handles now have unique `id` props (`t-top`, `s-top`, `t-right`, `s-right`, etc.) so React Flow can properly track which handle is source/target of each edge.
+5. **startNode/finishNode rules preserved**: startNode has no target handles, finishNode has no source handles.
+6. **Removed zIndex: -1**: BlankBoxNode no longer uses `zIndex: -1` in Canvas onDrop since `pointer-events-none` makes it non-blocking.
+
+**Results**: `npx tsc --noEmit`: zero errors. Zero linter errors. Dev server compiled cleanly.
+
+**Files Modified**:
+| File | Changes |
+|------|---------|
+| `frontend/src/components/nodes/WorkflowNode.tsx` | Added IDs to all handles; added Left + Right handles (4 source + 4 target per node) |
+| `frontend/src/components/nodes/BlankBoxNode.tsx` | `pointer-events-none` on content div; default connectable: true; 8 handles (4 sides × 2 types) |
+| `frontend/src/components/Canvas.tsx` | Removed `zIndex: -1` from blankBoxNode onDrop style |
+
+**Next Steps**:
+1. **User verification** — Test all connection types in browser (top/bottom/left/right, cross-box connections).

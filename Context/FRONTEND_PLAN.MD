@@ -944,3 +944,469 @@ Extend `Sidebar.tsx` "Saved Workflows" section:
 - `SOUL.md` hard rules still apply: no emojis, Tailwind v4 syntax, Lucide icons only
 
 
+
+
+-- 
+
+## Feature update -> Canvas text and blank box changes 
+
+The current implementation allows the user to insert a blank box with no colors, assume the user is creating workflows where they need to label the boxes as well
+- Allow the users to add labels to the boxes themselves
+- Allow the text to be centered, left centered, right centered, top-left-right placed, bottom-left-right placed
+
+> Extends: BlankBoxNode from canvas-annotations-supabase-persistence.md
+> Date: 2026-02-28
+> Status: PLANNED — Frontend only, no backend changes needed
+
+---
+
+## Summary
+
+Upgrade `BlankBoxNode` into a fully labeled, color-customizable container node.
+Users can label a box (e.g. "Backend", "Frontend", "LLM Layer") with configurable
+label text, label position (9 anchor points), label color, box border color,
+and box background fill color — exactly how Lucidchart and FigJam handle group containers.
+
+---
+
+## Agent Assignment
+Frontend agent only. No backend changes required.
+Reads: `MEMORY.md`, `SOUL.md`, `FRONTEND_PLAN.md`, this file.
+
+---
+
+## Visual Spec
+
+### Label Position Grid (9 anchor points)
+
+```
+┌─────────────────────────────────────┐
+│ [TL]      [TC]              [TR]    │
+│                                     │
+│                                     │
+│ [ML]      [MC]              [MR]    │
+│                                     │
+│                                     │
+│ [BL]      [BC]              [BR]    │
+└─────────────────────────────────────┘
+```
+
+`TL` = top-left (default for container labels like Lucidchart)
+`TC` = top-center
+`TR` = top-right
+`ML` = middle-left
+`MC` = middle-center
+`MR` = middle-right
+`BL` = bottom-left
+`BC` = bottom-center
+`BR` = bottom-right
+
+### Color System
+- **Box border color** — stroke color of the container outline
+- **Box background color** — fill with opacity control (0–100%)
+- **Label text color** — independent from border color
+- **Label background** — optional pill/badge behind the label text only
+
+### Preset Color Palette (8 swatches + custom hex input)
+| Name       | Border hex  | Fill hex (20% opacity default) |
+|------------|-------------|-------------------------------|
+| Slate      | `#64748b`   | `#f1f5f9`                     |
+| Blue       | `#3b82f6`   | `#eff6ff`                     |
+| Violet     | `#8b5cf6`   | `#f5f3ff`                     |
+| Green      | `#22c55e`   | `#f0fdf4`                     |
+| Amber      | `#f59e0b`   | `#fffbeb`                     |
+| Rose       | `#f43f5e`   | `#fff1f2`                     |
+| Orange     | `#f97316`   | `#fff7ed`                     |
+| Neutral    | `#e5e7eb`   | `#f9fafb`                     |
+
+---
+
+## State Shape
+
+Extend `WorkflowNodeData` in `src/types/workflow.ts`:
+
+```ts
+export type LabelPosition =
+  | 'top-left'    | 'top-center'    | 'top-right'
+  | 'middle-left' | 'middle-center' | 'middle-right'
+  | 'bottom-left' | 'bottom-center' | 'bottom-right'
+
+export type BlankBoxStyle = {
+  label: string                      // e.g. "Backend"
+  labelPosition: LabelPosition       // default: 'top-left'
+  labelColor: string                 // hex, default: border color
+  labelBackground: 'none' | 'pill'   // default: 'none'
+  borderStyle: 'solid' | 'dashed' | 'none'
+  borderColor: string                // hex
+  borderWidth: 1 | 2 | 3            // px
+  backgroundColor: string            // hex
+  backgroundOpacity: number          // 0–100
+  connectable: boolean               // default: false
+}
+```
+
+---
+
+## Component: `BlankBoxNode.tsx`
+
+Full implementation spec for `src/components/nodes/BlankBoxNode.tsx`:
+
+### Structure
+```tsx
+<div className="relative w-full h-full" style={{ border, background }}>
+  {/* Label rendered at one of 9 absolute positions */}
+  <LabelTag
+    text={data.blankBoxStyle.label}
+    position={data.blankBoxStyle.labelPosition}
+    color={data.blankBoxStyle.labelColor}
+    background={data.blankBoxStyle.labelBackground}
+  />
+  {/* Resize handle — only visible on selection */}
+  <NodeResizer
+    minWidth={120}
+    minHeight={80}
+    isVisible={selected}
+    lineClassName="border-blue-400"
+    handleClassName="bg-white border border-blue-400 rounded-sm"
+  />
+</div>
+```
+
+### `LabelTag` sub-component (inline, not a separate file)
+
+Maps `LabelPosition` → Tailwind absolute positioning classes:
+
+```ts
+const POSITION_CLASSES: Record<LabelPosition, string> = {
+  'top-left':      'top-2 left-2',
+  'top-center':    'top-2 left-1/2 -translate-x-1/2',
+  'top-right':     'top-2 right-2',
+  'middle-left':   'top-1/2 left-2 -translate-y-1/2',
+  'middle-center': 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
+  'middle-right':  'top-1/2 right-2 -translate-y-1/2',
+  'bottom-left':   'bottom-2 left-2',
+  'bottom-center': 'bottom-2 left-1/2 -translate-x-1/2',
+  'bottom-right':  'bottom-2 right-2',
+}
+```
+
+Label renders as:
+```tsx
+<span
+  className={cn(
+    'absolute text-xs font-semibold tracking-wide pointer-events-none select-none',
+    labelBackground === 'pill' && 'px-2 py-0.5 rounded-full',
+    POSITION_CLASSES[position]
+  )}
+  style={{
+    color: labelColor,
+    backgroundColor: labelBackground === 'pill' ? labelColor + '20' : 'transparent'
+  }}
+>
+  {text}
+</span>
+```
+
+### Node container styling
+```tsx
+<div
+  className="relative w-full h-full rounded-md"
+  style={{
+    border: `${borderWidth}px ${borderStyle} ${borderColor}`,
+    backgroundColor: hexToRgba(backgroundColor, backgroundOpacity / 100),
+  }}
+>
+```
+
+Helper function (inline in the file):
+```ts
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+```
+
+---
+
+## NodeConfigModal Extension
+
+Add a `BlankBoxConfig` panel inside `NodeConfigModal.tsx`.
+This renders when `node.type === 'blankBoxNode'`.
+
+### Fields layout:
+
+```
+Label text          [________________] (text input)
+
+Label Position      [3x3 grid picker]
+
+─── Box Style ──────────────────────────
+
+Color Preset        [● ● ● ● ● ● ● ●] + [# hex input]
+Border Style        [Solid] [Dashed] [None]
+Border Width        [1px] [2px] [3px]
+Background Opacity  [────●────] 0–100%
+
+─── Label Style ────────────────────────
+
+Label Color         [● ● ● ● ● ● ● ●] + [# hex input]
+Label Background    [None] [Pill]
+
+─── Advanced ───────────────────────────
+
+Connectable         [toggle] Allow edges to connect to this box
+```
+
+### 3x3 Position Picker Component
+
+Build inline in `NodeConfigModal.tsx` as `PositionPicker`:
+
+```tsx
+const POSITIONS: LabelPosition[][] = [
+  ['top-left',    'top-center',    'top-right'],
+  ['middle-left', 'middle-center', 'middle-right'],
+  ['bottom-left', 'bottom-center', 'bottom-right'],
+]
+
+function PositionPicker({ value, onChange }) {
+  return (
+    <div className="grid grid-cols-3 gap-1 w-24">
+      {POSITIONS.flat().map((pos) => (
+        <button
+          key={pos}
+          onClick={() => onChange(pos)}
+          className={cn(
+            'w-7 h-7 rounded border',
+            value === pos
+              ? 'bg-blue-500 border-blue-600'
+              : 'bg-gray-100 border-gray-300 hover:bg-gray-200 dark:bg-gray-700 dark:border-gray-600'
+          )}
+        />
+      ))}
+    </div>
+  )
+}
+```
+
+### Color Swatch Picker Component
+
+Build inline as `ColorSwatchPicker`:
+
+```tsx
+const PRESETS = [
+  { border: '#64748b', bg: '#f1f5f9' },
+  { border: '#3b82f6', bg: '#eff6ff' },
+  { border: '#8b5cf6', bg: '#f5f3ff' },
+  { border: '#22c55e', bg: '#f0fdf4' },
+  { border: '#f59e0b', bg: '#fffbeb' },
+  { border: '#f43f5e', bg: '#fff1f2' },
+  { border: '#f97316', bg: '#fff7ed' },
+  { border: '#e5e7eb', bg: '#f9fafb' },
+]
+
+// On preset click → set both borderColor and backgroundColor simultaneously
+```
+
+---
+
+## Sidebar Palette Entry
+
+In `Sidebar.tsx`, the BlankBox drag item should show a small preview of a dashed box
+with a label at top-left, using Lucide `SquareDashedBottom` or `Square` icon:
+
+```tsx
+// Drag data
+dataTransfer.setData('application/reactflow-type', 'blankBoxNode')
+dataTransfer.setData('application/reactflow-label', 'Group')
+
+// Default blankBoxStyle on drop (set in Canvas.tsx onDrop handler)
+blankBoxStyle: {
+  label: 'Group',
+  labelPosition: 'top-left',
+  labelColor: '#3b82f6',
+  labelBackground: 'none',
+  borderStyle: 'dashed',
+  borderColor: '#3b82f6',
+  borderWidth: 2,
+  backgroundColor: '#eff6ff',
+  backgroundOpacity: 40,
+  connectable: false,
+}
+```
+
+---
+
+## Canvas.tsx — Default Size on Drop
+
+When a `blankBoxNode` is dropped, set initial dimensions larger than a regular node:
+
+```ts
+const newNode = {
+  id: getId(),
+  type: 'blankBoxNode',
+  position,
+  style: { width: 320, height: 220 },   // ← larger default
+  data: { label: 'Group', blankBoxStyle: DEFAULT_BLANK_BOX_STYLE },
+  zIndex: -1,
+}
+```
+
+---
+
+## Files to Touch
+
+| File | Change |
+|------|--------|
+| `src/types/workflow.ts` | Add `LabelPosition` type, `BlankBoxStyle` type, extend `WorkflowNodeData` |
+| `src/components/nodes/BlankBoxNode.tsx` | NEW — full component with LabelTag, NodeResizer, hexToRgba |
+| `src/components/NodeConfigModal.tsx` | Add BlankBoxConfig panel, PositionPicker, ColorSwatchPicker |
+| `src/components/Canvas.tsx` | Set default size on blankBoxNode drop, ensure zIndex: -1 |
+| `src/components/Sidebar.tsx` | Drag item with correct default style payload |
+
+---
+
+## Do Not Touch
+
+- `EstimatePanel.tsx` — annotation nodes already excluded via `is_annotation` flag
+- `backend/` — no backend changes needed for styling
+- `SOUL.md` hard rules apply: no emojis, Tailwind v4 syntax (`bg-white!` not `!bg-white`), Lucide icons only
+- `NodeResizer` must come from `@xyflow/react` — do not install a separate library
+
+---
+
+## Acceptance Criteria
+
+- [ ] BlankBoxNode renders with correct border style, border color, background fill + opacity
+- [ ] Label renders at all 9 positions correctly with no overflow
+- [ ] Label pill background renders when `labelBackground === 'pill'`
+- [ ] NodeConfigModal shows 3x3 position picker, color swatches, border style buttons, opacity slider
+- [ ] Selecting a color preset sets both `borderColor` and `backgroundColor` simultaneously
+- [ ] Label color and box border color are independently configurable
+- [ ] Dragging a BlankBoxNode from sidebar drops with 320×220 default size
+- [ ] Node renders behind all other nodes (`zIndex: -1`)
+- [ ] `NodeResizer` handles appear only when node is selected
+- [ ] `hexToRgba` correctly converts hex + opacity to rgba
+- [ ] `npx tsc --noEmit` passes with zero errors
+
+
+-- 
+# Bugfix: Edge Connections + 4-Way Handles
+> Date: 2026-02-28
+> Type: Bug fix + feature enhancement
+
+## Root Causes (3 issues)
+
+### 1. BlankBoxNode content div swallowing drag events
+The `<div>` that renders the box border and fill had no `pointer-events: none`.
+When users dragged a connection from a WorkflowNode handle across the BlankBoxNode
+surface, the box div intercepted the drag, breaking the connection attempt.
+**Fix**: Add `pointer-events-none` to the BlankBoxNode content div.
+
+### 2. BlankBoxNode had no handles (default connectable: false)
+The handles were gated behind `s.connectable` which defaulted to `false`.
+Users couldn't connect TO or FROM a box.
+**Fix**: Changed default to `connectable: true`. Handles always render when connectable.
+
+### 3. Missing handle IDs + only top/bottom handles on WorkflowNode
+React Flow requires unique `id` props when a node has multiple handles of the same
+`type`. Without IDs, React Flow cannot track which handle was the source/target of an
+edge, causing silent connection failures. WorkflowNode also only had top (target)
+and bottom (source), blocking left/right connections.
+**Fix**: Added `id` to all handles + added Left/Right handles on all nodes.
+
+---
+
+## Pattern: Source + Target handles overlapping at same position
+
+Each side now has BOTH a source and target handle with the same position.
+They render as ONE visible dot per side. React Flow distinguishes them:
+- Dragging FROM the dot → uses the source handle
+- Dropping ONTO the dot → uses the target handle
+
+This is the standard React Flow pattern for bidirectional connections per side.
+
+IDs follow the pattern: `"t-{side}"` for target, `"s-{side}"` for source.
+Example: `id="t-top"`, `id="s-top"`, `id="t-right"`, `id="s-right"`, etc.
+
+---
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| `BlankBoxNode.tsx` | `pointer-events-none` on content div; all 8 handles (4 sides × 2 types); default connectable: true |
+| `WorkflowNode.tsx` | Added IDs to all handles; added Left + Right handles (4-way connections) |
+| `Canvas.tsx` | Removed `zIndex: -1` from blankBoxNode onDrop (pointer-events-none makes it non-blocking) |
+
+---
+
+## startNode / finishNode handle rules (unchanged)
+- `startNode`: NO target handles (nothing connects TO start)
+- `finishNode`: NO source handles (nothing connects FROM finish)
+- All other nodes: target on all 4 sides, source on all 4 sides
+
+
+-- 
+
+# Feature: Editable Edge Labels on BlankBox Connections
+> Date: 2026-02-28
+> Frontend only. No backend changes needed.
+
+## Summary
+Double-clicking a connection that originates from a `blankBoxNode` opens an inline
+text input affixed to the midpoint of the edge. Users can type a label, press Enter
+to save it, or Esc to cancel. The label persists on the edge as a styled pill.
+Non-blankBox edges (agent, tool, start, finish) are not editable.
+
+## New File
+`src/components/edges/AnnotationEdge.tsx`
+
+## Modified Files
+| File | Change |
+|------|--------|
+| `Canvas.tsx` | Import + register `edgeTypes`, add `type: "annotationEdge"` to `defaultEdgeOptions`, pass `edgeTypes` prop to `<ReactFlow>` |
+| `useWorkflowStore.ts` | Add `updateEdgeLabel(id, label)` action that patches `edge.data.label` |
+
+## Key Design Decisions
+
+### Why EdgeLabelRenderer (not foreignObject or SVG text)?
+`EdgeLabelRenderer` renders the label in a div overlay OUTSIDE the SVG, positioned
+with CSS transform. This is the official React Flow way to put HTML on edges.
+`foreignObject` has inconsistent cross-browser behavior. Plain SVG `<text>` can't
+render styled inputs.
+
+### Why a transparent wide stroke hit area?
+The visible edge line is 2px wide — nearly impossible to double-click precisely.
+A transparent `strokeWidth={20}` path over the same bezier curve gives a comfortable
+20px hit zone without changing the visual appearance.
+
+### Why pointer-events-none on the label pill?
+The static pill sits at the same position as the transparent hit area. If the pill
+captured pointer events, it would block double-clicks on the hit area, making it
+impossible to re-edit after saving. With pointer-events-none, clicks pass through
+the pill to the transparent path beneath it.
+
+### Why nodrag + nopan on the input container?
+Without these React Flow classes, clicking into the input would trigger canvas
+panning (React Flow intercepts mousedown on the canvas). `nodrag nopan` tells
+React Flow to leave pointer events in this region alone.
+
+### Source-type check
+`isBlankBoxSource` uses a Zustand selector that only subscribes to the single
+source node's type — avoids re-rendering the edge on unrelated node changes.
+
+## Acceptance Criteria
+- [ ] `AnnotationEdge.tsx` created at `src/components/edges/AnnotationEdge.tsx`
+- [ ] `updateEdgeLabel` action added to `useWorkflowStore.ts`
+- [ ] `edgeTypes` registered in `Canvas.tsx`
+- [ ] `defaultEdgeOptions.type = "annotationEdge"` set in `Canvas.tsx`
+- [ ] `edgeTypes` prop passed to `<ReactFlow>`
+- [ ] Double-clicking a blankBoxNode edge opens inline input at edge midpoint
+- [ ] Enter saves label, Esc cancels without saving
+- [ ] Saved label renders as a pill on the edge
+- [ ] Double-clicking the pill area re-opens the input for editing
+- [ ] Double-clicking non-blankBox edges does nothing
+- [ ] Canvas panning does NOT trigger while typing in the input
+- [ ] `npx tsc --noEmit` passes

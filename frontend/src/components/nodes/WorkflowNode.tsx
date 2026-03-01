@@ -1,4 +1,5 @@
 "use client";
+"use no memo";
 
 import React, { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
@@ -137,9 +138,14 @@ function WorkflowNode({ id, data, selected }: NodeProps & { data: WorkflowNodeDa
         ${selected ? "ring-2 ring-offset-2 ring-blue-400" : ""}
       `}
     >
-      {/* Incoming handle */}
+      {/* ── Target handles (all 4 sides) — hidden for startNode ── */}
       {data.type !== "startNode" && (
-        <Handle type="target" position={Position.Top} className="!bg-gray-500 !w-2.5 !h-2.5" />
+        <>
+          <Handle id="t-top" type="target" position={Position.Top} className="bg-gray-500! w-2.5! h-2.5!" />
+          <Handle id="t-right" type="target" position={Position.Right} className="bg-gray-500! w-2.5! h-2.5!" />
+          <Handle id="t-bottom" type="target" position={Position.Bottom} className="bg-gray-500! w-2.5! h-2.5!" />
+          <Handle id="t-left" type="target" position={Position.Left} className="bg-gray-500! w-2.5! h-2.5!" />
+        </>
       )}
 
       <div className="flex items-center justify-center gap-2">
@@ -265,9 +271,14 @@ function WorkflowNode({ id, data, selected }: NodeProps & { data: WorkflowNodeDa
         </div>
       )}
 
-      {/* Outgoing handle */}
+      {/* ── Source handles (all 4 sides) — hidden for finishNode ── */}
       {data.type !== "finishNode" && (
-        <Handle type="source" position={Position.Bottom} className="!bg-gray-500 !w-2.5 !h-2.5" />
+        <>
+          <Handle id="s-top" type="source" position={Position.Top} className="bg-gray-500! w-2.5! h-2.5!" />
+          <Handle id="s-right" type="source" position={Position.Right} className="bg-gray-500! w-2.5! h-2.5!" />
+          <Handle id="s-bottom" type="source" position={Position.Bottom} className="bg-gray-500! w-2.5! h-2.5!" />
+          <Handle id="s-left" type="source" position={Position.Left} className="bg-gray-500! w-2.5! h-2.5!" />
+        </>
       )}
     </div>
   );
