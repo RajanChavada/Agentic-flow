@@ -8,7 +8,7 @@ services:
     region: oregon
     envVars:
       - key: FRONTEND_ORIGINS
-        value: http://localhost:3000
+        value: http://localhost:3000,https://agentic-flow-alpha.vercel.app
       - key: PORT
         value: "8000"
     healthCheckPath: /health
