@@ -1827,3 +1827,28 @@ The modal was `position: fixed` and placed next to the selected node via `flowTo
 **Next Steps**:
 1. **User verification** — Test save/save-as/new/load/delete flows in both local and deployed environments.
 2. **Backend PATCH endpoint** — Not needed with current Supabase architecture (client-side UPDATE). Can add if moving to server-side API later.
+
+---
+
+### Update 38 — Auto-Layout on Workflow Load (2026-03-01)
+
+**Task**: Automatically run dagre layout when a workflow is loaded from the sidebar or on initial mount, so every loaded workflow opens clean and readable. Preserve annotation node positions (blankBoxNode, textNode).
+
+**Approach and Methodology**:
+1. **`useAutoLayout.ts`**: Refactored to accept optional `nodesToLayout`/`edgesToLayout` overrides (avoids stale closure). Reads from `useWorkflowStore.getState()` when no overrides provided. Added `SKIP_TYPES` set for `blankBoxNode`/`textNode` — these are excluded from dagre and their positions are preserved. Removed `nodes`/`edges` from dependency array (reads fresh from store).
+2. **`editor/page.tsx`**: Split into `Home` (renders `<ReactFlowProvider>`) and `EditorContent` (all hooks + JSX, inside the provider). This allows `useAutoLayout()` (which needs `useReactFlow()`) to work. Added `requestAnimationFrame(() => applyLayout())` after initial workflow load.
+3. **`Sidebar.tsx`**: Added `useAutoLayout` import + hook call. After `loadScenario`/`setCurrentWorkflow`, calls `requestAnimationFrame(() => applyLayout())` for clean layout on every load click.
+4. **`HeaderBar.tsx`**: Wrapped `autoLayout` call in lambda (`() => autoLayout()`) to fix TS2322 (optional params conflicting with MouseEvent handler type).
+
+**Results**: `npx tsc --noEmit`: zero errors. Zero linter errors.
+
+**Files Modified**:
+| File | Changes |
+|------|---------|
+| `frontend/src/hooks/useAutoLayout.ts` | Refactored: optional overrides, skip annotations, getState() reads, trimmed deps |
+| `frontend/src/app/editor/page.tsx` | Split Home/EditorContent for useReactFlow access; auto-layout on initial load |
+| `frontend/src/components/Sidebar.tsx` | Import useAutoLayout, call applyLayout() after workflow load |
+| `frontend/src/components/HeaderBar.tsx` | Wrap autoLayout in lambda for onClick |
+
+**Next Steps**:
+1. **User verification** — Load a saved workflow, verify it layouts cleanly. Verify blankBoxNode/textNode positions preserved.

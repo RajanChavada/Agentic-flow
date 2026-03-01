@@ -1,74 +1,84 @@
 /**
  * useAutoLayout – dagre-based auto-layout for the React Flow canvas.
  *
- * Reads nodes + edges from the Zustand store, computes a top-to-bottom
- * DAG layout using dagre, then writes the new positions back to the store.
+ * Returns a function that computes a top-to-bottom DAG layout and writes
+ * new positions back to the store. Skips blankBoxNode and textNode
+ * (annotations) so their positions are preserved.
+ *
+ * Usage:
+ *   applyLayout()                     — layout current store state
+ *   applyLayout(freshNodes, freshEdges) — layout explicit data (avoids stale closure)
  */
 
 import { useCallback } from "react";
-import { useReactFlow } from "@xyflow/react";
+import { useReactFlow, type Node, type Edge } from "@xyflow/react";
 import dagre from "@dagrejs/dagre";
-import { useWorkflowStore, useWorkflowNodes, useWorkflowEdges } from "@/store/useWorkflowStore";
+import { useWorkflowStore } from "@/store/useWorkflowStore";
 import type { WorkflowNodeData } from "@/types/workflow";
-import type { Node } from "@xyflow/react";
 
-/** Default node size for layout calculation. */
 const NODE_WIDTH = 200;
 const NODE_HEIGHT = 80;
 
-/** dagre layout options. */
 const DAGRE_CONFIG = {
-  rankdir: "TB" as const,   // top → bottom
-  nodesep: 80,               // horizontal spacing between nodes
-  ranksep: 120,              // vertical spacing between ranks
+  rankdir: "TB" as const,
+  nodesep: 80,
+  ranksep: 120,
   marginx: 40,
   marginy: 40,
 };
 
+const SKIP_TYPES = new Set(["blankBoxNode", "textNode"]);
+
 export function useAutoLayout() {
-  const nodes = useWorkflowNodes();
-  const edges = useWorkflowEdges();
   const { setNodes } = useWorkflowStore();
   const { fitView } = useReactFlow();
 
-  const autoLayout = useCallback(() => {
-    if (nodes.length === 0) return;
+  return useCallback(
+    (
+      nodesToLayout?: Node<WorkflowNodeData>[],
+      edgesToLayout?: Edge[],
+    ) => {
+      const storeState = useWorkflowStore.getState();
+      const nodes = nodesToLayout ?? storeState.nodes;
+      const edges = edgesToLayout ?? storeState.edges;
 
-    const g = new dagre.graphlib.Graph();
-    g.setDefaultEdgeLabel(() => ({}));
-    g.setGraph(DAGRE_CONFIG);
+      if (nodes.length === 0) return;
 
-    // Add nodes
-    for (const node of nodes) {
-      g.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
-    }
+      const g = new dagre.graphlib.Graph();
+      g.setDefaultEdgeLabel(() => ({}));
+      g.setGraph(DAGRE_CONFIG);
 
-    // Add edges
-    for (const edge of edges) {
-      g.setEdge(edge.source, edge.target);
-    }
+      for (const node of nodes) {
+        if (SKIP_TYPES.has(node.type ?? "")) continue;
+        g.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+      }
 
-    dagre.layout(g);
+      for (const edge of edges) {
+        if (g.hasNode(edge.source) && g.hasNode(edge.target)) {
+          g.setEdge(edge.source, edge.target);
+        }
+      }
 
-    // Map dagre positions back to React Flow nodes
-    const layoutedNodes: Node<WorkflowNodeData>[] = nodes.map((node) => {
-      const pos = g.node(node.id);
-      return {
-        ...node,
-        position: {
-          x: pos.x - NODE_WIDTH / 2,
-          y: pos.y - NODE_HEIGHT / 2,
-        },
-      };
-    });
+      dagre.layout(g);
 
-    setNodes(layoutedNodes);
+      const laidOut: Node<WorkflowNodeData>[] = nodes.map((node) => {
+        if (SKIP_TYPES.has(node.type ?? "")) return node;
+        const pos = g.node(node.id);
+        return {
+          ...node,
+          position: {
+            x: pos.x - NODE_WIDTH / 2,
+            y: pos.y - NODE_HEIGHT / 2,
+          },
+        };
+      });
 
-    // Fit the view to show all nodes after layout
-    requestAnimationFrame(() => {
-      fitView({ padding: 0.2, duration: 300 });
-    });
-  }, [nodes, edges, setNodes, fitView]);
+      setNodes(laidOut);
 
-  return autoLayout;
+      requestAnimationFrame(() => {
+        fitView({ padding: 0.15, duration: 300 });
+      });
+    },
+    [setNodes, fitView],
+  );
 }

@@ -1950,3 +1950,250 @@ The existing create endpoint stays identical. PATCH is additive.
 - [ ] `npx tsc --noEmit` zero errors (frontend)
 - [ ] No duplicate workflows created on re-save
 
+
+-- 
+
+# Feature: Auto-Layout on Workflow Load
+> Date: 2026-03-01
+> Status: Roadmapped — ready to implement
+> Type: Frontend only — no backend changes needed
+
+---
+
+## Summary
+
+When a user loads a saved workflow from the sidebar, the nodes are restored
+at the exact pixel positions they were saved at. If the user had scattered
+nodes around the canvas (as seen in the screenshot), they load scattered.
+
+This feature **automatically runs the dagre layout algorithm** immediately
+after a workflow is loaded, before the canvas becomes interactive, so every
+loaded workflow always opens clean and readable.
+
+The existing **Layout** button in the header already does this on-demand.
+This feature just calls that same function automatically on load.
+
+---
+
+## How the Layout Button Currently Works
+
+The `Layout` button in `HeaderBar.tsx` calls a function (likely `applyLayout`
+or `runLayout`) that:
+1. Reads current `nodes` and `edges` from the store
+2. Passes them through dagre to compute new `{x, y}` positions
+3. Calls `setNodes(laidOutNodes)` to update positions
+4. Calls `reactFlowInstance.fitView()` to re-center the camera
+
+This is the exact same function that needs to run on workflow load.
+No new layout logic needs to be written — just reused.
+
+---
+
+## What Needs to Change
+
+### The only real change: call `applyLayout` inside `loadWorkflow`
+
+Right now `loadWorkflow` (or wherever the sidebar sets nodes/edges) does:
+```ts
+// Current behaviour
+setNodes(workflow.nodes);
+setEdges(workflow.edges);
+setCurrentWorkflow(workflow.id, workflow.name);
+```
+
+It needs to do:
+```ts
+// New behaviour
+setNodes(workflow.nodes);
+setEdges(workflow.edges);
+setCurrentWorkflow(workflow.id, workflow.name);
+applyAutoLayout();   // ← one new line
+```
+
+The challenge: `applyAutoLayout` needs `fitView()` from the React Flow
+instance, which is only available inside a component (via `useReactFlow()`),
+not inside the Zustand store directly. The solution is a **layout ref pattern**
+described below.
+
+---
+
+## Implementation: Layout Ref Pattern
+
+### Step 1 — Extract layout logic into a shared hook
+
+Create `src/hooks/useAutoLayout.ts`:
+
+```ts
+import { useCallback } from "react";
+import { useReactFlow } from "@xyflow/react";
+import dagre from "@dagrejs/dagre";
+import { useWorkflowStore } from "@/store/useWorkflowStore";
+
+const NODE_WIDTH  = 220;
+const NODE_HEIGHT = 100;   // approximate — matches WorkflowNode max height
+
+export function useAutoLayout() {
+  const { fitView } = useReactFlow();
+  const { nodes, edges, setNodes } = useWorkflowStore();
+
+  return useCallback((nodesToLayout = nodes, edgesToLayout = edges) => {
+    const graph = new dagre.graphlib.Graph();
+    graph.setDefaultEdgeLabel(() => ({}));
+    graph.setGraph({ rankdir: "TB", nodesep: 60, ranksep: 80 });
+
+    nodesToLayout.forEach((node) => {
+      // Skip layout for blankBoxNode and textNode — they are annotations,
+      // not part of the flow logic, and should stay where the user placed them
+      if (node.type === "blankBoxNode" || node.type === "textNode") return;
+      graph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+    });
+
+    edgesToLayout.forEach((edge) => {
+      // Only add edges where both endpoints were registered as nodes
+      if (graph.hasNode(edge.source) && graph.hasNode(edge.target)) {
+        graph.setEdge(edge.source, edge.target);
+      }
+    });
+
+    dagre.layout(graph);
+
+    const laidOut = nodesToLayout.map((node) => {
+      if (node.type === "blankBoxNode" || node.type === "textNode") {
+        return node;   // preserve annotation positions
+      }
+      const { x, y } = graph.node(node.id);
+      return {
+        ...node,
+        position: {
+          x: x - NODE_WIDTH  / 2,
+          y: y - NODE_HEIGHT / 2,
+        },
+      };
+    });
+
+    setNodes(laidOut);
+
+    // fitView after a tick so React Flow has painted the new positions
+    requestAnimationFrame(() => {
+      fitView({ padding: 0.15, duration: 300 });
+    });
+  }, [nodes, edges, setNodes, fitView]);
+}
+```
+
+---
+
+### Step 2 — Wire into the Layout button (`HeaderBar.tsx`)
+
+Replace the current inline layout logic with the hook:
+
+```tsx
+// HeaderBar.tsx
+import { useAutoLayout } from "@/hooks/useAutoLayout";
+
+const applyLayout = useAutoLayout();
+
+// Layout button onClick stays the same
+<button onClick={() => applyLayout()}>Layout</button>
+```
+
+---
+
+### Step 3 — Wire into workflow load (`SavedWorkflows.tsx`)
+
+```tsx
+// SavedWorkflows.tsx
+import { useAutoLayout } from "@/hooks/useAutoLayout";
+
+const applyLayout = useAutoLayout();
+
+const handleLoad = (workflow: SavedWorkflow) => {
+  setNodes(workflow.nodes);
+  setEdges(workflow.edges);
+  setCurrentWorkflow(workflow.id, workflow.name);
+
+  // Layout runs after nodes/edges are in the store.
+  // One rAF tick ensures the store has committed before dagre reads it.
+  requestAnimationFrame(() => applyLayout(workflow.nodes, workflow.edges));
+};
+```
+
+Passing `workflow.nodes` and `workflow.edges` directly to `applyLayout`
+avoids a stale-closure issue where the hook might read the old nodes from
+the store before the `setNodes` call has propagated.
+
+---
+
+### Step 4 — Pass nodes/edges explicitly to `applyLayout`
+
+Update `useAutoLayout` signature to accept optional overrides:
+
+```ts
+return useCallback((
+  nodesToLayout = nodes,   // defaults to current store nodes
+  edgesToLayout = edges    // defaults to current store edges
+) => { ... })
+```
+
+This makes the hook usable both ways:
+- `applyLayout()` — uses current store state (Layout button)
+- `applyLayout(workflow.nodes, workflow.edges)` — uses fresh loaded data
+
+---
+
+## Node Type Handling
+
+| Node type | Layout behaviour |
+|-----------|-----------------|
+| `startNode` | Positioned by dagre — always at top of graph |
+| `agentNode` | Positioned by dagre |
+| `toolNode` | Positioned by dagre |
+| `finishNode` | Positioned by dagre — always at bottom of graph |
+| `blankBoxNode` | **Skipped** — preserved at saved position (annotation) |
+| `textNode` | **Skipped** — preserved at saved position (annotation) |
+
+---
+
+## Animation Behaviour
+
+- Node positions update instantly (Zustand `setNodes`)
+- `fitView({ duration: 300 })` — smooth 300ms camera pan/zoom to fit all nodes
+- No flash or jarring jump — layout and camera move together
+- If the user immediately starts dragging a node after load, the `requestAnimationFrame`
+  delay (one frame ≈ 16ms) is imperceptible
+
+---
+
+## Files to Touch
+
+| File | Change |
+|------|--------|
+| `src/hooks/useAutoLayout.ts` | **NEW** — shared dagre layout hook |
+| `src/components/HeaderBar.tsx` | Replace inline layout logic with `useAutoLayout()` hook call |
+| `src/components/SavedWorkflows.tsx` | Call `applyLayout(workflow.nodes, workflow.edges)` inside `handleLoad` after `setNodes` / `setEdges` |
+
+### No changes needed
+- `Canvas.tsx` — untouched
+- `useWorkflowStore.ts` — untouched
+- Any backend file — no backend changes
+
+---
+
+## Dependencies
+
+`@dagrejs/dagre` — already used by the Layout button.
+If not yet installed: `npm install @dagrejs/dagre`
+TypeScript types: `npm install -D @types/dagre`
+
+---
+
+## Acceptance Criteria
+
+- [ ] `useAutoLayout.ts` hook created and exported
+- [ ] `HeaderBar.tsx` Layout button uses the hook (same visual behaviour as before)
+- [ ] Loading a workflow from the sidebar immediately lays it out
+- [ ] `blankBoxNode` and `textNode` positions are preserved on load
+- [ ] Camera fits all nodes after layout with smooth animation (`duration: 300`)
+- [ ] Loading the same workflow twice produces the same layout each time
+- [ ] Layout button still works manually after load (re-runs layout on demand)
+- [ ] `npx tsc --noEmit` zero errors

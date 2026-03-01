@@ -11,6 +11,7 @@ import {
   useWorkflowStore,
 } from "@/store/useWorkflowStore";
 import { useUser } from "@/store/useAuthStore";
+import { useAutoLayout } from "@/hooks/useAutoLayout";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -95,6 +96,7 @@ export default function Sidebar() {
     deleteWorkflowFromSupabase,
     setCurrentWorkflow,
   } = useWorkflowStore();
+  const applyLayout = useAutoLayout();
   const isDark = theme === "dark";
   const [comparing, setComparing] = useState(false);
   const user = useUser();
@@ -315,6 +317,7 @@ export default function Sidebar() {
                     onClick={() => {
                       loadScenario(sc.id);
                       setCurrentWorkflow(sc.id, sc.name);
+                      requestAnimationFrame(() => applyLayout());
                     }}
                     title={`Load "${sc.name}"`}
                   >

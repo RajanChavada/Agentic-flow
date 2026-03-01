@@ -225,14 +225,14 @@ export default function HeaderBar() {
 
   return (
     <header
-      className={`flex items-center justify-between border-b px-6 py-3 transition-colors ${
+      className={`flex items-center justify-between border-b px-6 h-14 shrink-0 transition-colors ${
         isDark
           ? "border-slate-700 bg-slate-900"
           : "border-gray-200 bg-white"
       }`}
     >
       {/* ── Left side: brand + workflow name + status ── */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0">
         <h1
           className={`text-lg font-bold tracking-tight ${
             isDark ? "text-slate-100" : "text-gray-800"
@@ -279,28 +279,30 @@ export default function HeaderBar() {
           <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" title="Unsaved changes" />
         )}
 
-        {/* Save status */}
-        {isSaving && (
-          <span
-            className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${
-              isDark ? "bg-amber-900/30 text-amber-400" : "bg-amber-50 text-amber-600"
-            }`}
-          >
-            <Loader2 className="w-3 h-3 animate-spin" /> Saving...
-          </span>
-        )}
-        {showSaved && !isSaving && (
-          <span
-            className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full transition-opacity ${
-              isDark ? "bg-green-900/30 text-green-400" : "bg-green-50 text-green-700"
-            }`}
-          >
-            <Check className="w-3 h-3" /> Saved
-          </span>
-        )}
-        {saveError && !isSaving && (
-          <span className="text-[10px] text-red-500 px-2">{saveError}</span>
-        )}
+        {/* Save status — fixed-size container prevents layout shift */}
+        <span className="inline-flex items-center w-20 shrink-0">
+          {isSaving && (
+            <span
+              className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap ${
+                isDark ? "bg-amber-900/30 text-amber-400" : "bg-amber-50 text-amber-600"
+              }`}
+            >
+              <Loader2 className="w-3 h-3 animate-spin" /> Saving...
+            </span>
+          )}
+          {showSaved && !isSaving && (
+            <span
+              className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap ${
+                isDark ? "bg-green-900/30 text-green-400" : "bg-green-50 text-green-700"
+              }`}
+            >
+              <Check className="w-3 h-3" /> Saved
+            </span>
+          )}
+          {saveError && !isSaving && (
+            <span className="text-[10px] text-red-500 whitespace-nowrap truncate">{saveError}</span>
+          )}
+        </span>
       </div>
 
       {/* ── Right side: action buttons ── */}
@@ -377,7 +379,7 @@ export default function HeaderBar() {
 
         {/* Auto-layout */}
         <button
-          onClick={autoLayout}
+          onClick={() => autoLayout()}
           disabled={nodes.length === 0}
           className={`rounded-md border px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 ${
             isDark
