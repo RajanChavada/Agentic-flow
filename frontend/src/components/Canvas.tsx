@@ -72,7 +72,6 @@ export default function Canvas() {
     setEdges,
     addNode,
     setSelectedNodeId,
-    openConfigModal,
     restoreFromLocalStorage,
   } = useWorkflowStore();
 
@@ -268,28 +267,16 @@ export default function Canvas() {
     [addNode, screenToFlowPosition]
   );
 
-  // ── Double‑click to open config modal (agent & tool nodes) ──
-  const onNodeDoubleClick = useCallback(
-    (_event: React.MouseEvent, node: { id: string; type?: string }) => {
-      setSelectedNodeId(node.id);
-      if (
-        node.type === "agentNode" ||
-        node.type === "toolNode" ||
-        node.type === "blankBoxNode" ||
-        node.type === "textNode"
-      ) {
-        openConfigModal();
-      }
-    },
-    [setSelectedNodeId, openConfigModal]
-  );
-
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: { id: string }) => {
       setSelectedNodeId(node.id);
     },
     [setSelectedNodeId]
   );
+
+  const onPaneClick = useCallback(() => {
+    setSelectedNodeId(null);
+  }, [setSelectedNodeId]);
 
   return (
     <div ref={reactFlowWrapper} className="flex-1 h-full">
@@ -302,7 +289,7 @@ export default function Canvas() {
         onDrop={onDrop}
         onDragOver={onDragOver}
         onNodeClick={onNodeClick}
-        onNodeDoubleClick={onNodeDoubleClick}
+        onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultEdgeOptions={defaultEdgeOptions}

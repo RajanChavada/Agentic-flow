@@ -25,6 +25,8 @@ import type {
   BatchEstimateResult,
   ActualNodeStats,
   ImportedWorkflow,
+  ProviderDetailed,
+  ToolCategoryDetailed,
 } from "@/types/workflow";
 import { supabase } from "@/lib/supabase";
 import { saveGuestWorkflow, loadGuestWorkflow, clearGuestWorkflow } from "@/lib/guestWorkflow";
@@ -129,6 +131,14 @@ interface WorkflowStore {
   isSaving: boolean;
   /** Timestamp of last successful save. */
   lastSavedAt: Date | null;
+
+  // API cache (providers + tools)
+  providerData: ProviderDetailed[] | null;
+  toolCategoryData: ToolCategoryDetailed[] | null;
+  isLoadingProviders: boolean;
+  isLoadingTools: boolean;
+  fetchProviders: () => Promise<void>;
+  fetchTools: () => Promise<void>;
 
   // Guest persistence
   snapshotToLocalStorage: () => void;
@@ -440,6 +450,34 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   setActualStats: (stats) => set({ actualStats: stats }),
   clearActualStats: () => set({ actualStats: [] }),
 
+  // ── API Cache ─────────────────────────────────────────────
+  providerData: null,
+  toolCategoryData: null,
+  isLoadingProviders: false,
+  isLoadingTools: false,
+
+  fetchProviders: async () => {
+    if (get().providerData) return;
+    set({ isLoadingProviders: true });
+    try {
+      const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+      const res = await fetch(`${base}/api/providers/detailed`);
+      if (res.ok) set({ providerData: await res.json() });
+    } catch { /* silently fail */ }
+    set({ isLoadingProviders: false });
+  },
+
+  fetchTools: async () => {
+    if (get().toolCategoryData) return;
+    set({ isLoadingTools: true });
+    try {
+      const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+      const res = await fetch(`${base}/api/tools/categories/detailed`);
+      if (res.ok) set({ toolCategoryData: await res.json() });
+    } catch { /* silently fail */ }
+    set({ isLoadingTools: false });
+  },
+
   // ── Guest Persistence ──────────────────────────────────────
   snapshotToLocalStorage: () => {
     const { nodes, edges } = get();
@@ -598,3 +636,5 @@ export const useActualStats = () => useWorkflowStore((s) => s.actualStats);
 export const useScenarios = () => useWorkflowStore((s) => s.scenarios);
 export const useSelectedForComparison = () => useWorkflowStore((s) => s.selectedForComparison);
 export const useComparisonResults = () => useWorkflowStore((s) => s.comparisonResults);
+export const useProviderData = () => useWorkflowStore((s) => s.providerData);
+export const useToolCategoryData = () => useWorkflowStore((s) => s.toolCategoryData);

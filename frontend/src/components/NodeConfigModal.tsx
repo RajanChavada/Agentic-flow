@@ -1,3 +1,5 @@
+// DEPRECATED — replaced by ContextToolbar.tsx (Lucidchart-style contextual toolbar)
+// Kept for reference. Remove in follow-up cleanup commit after toolbar is verified working.
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from "react";

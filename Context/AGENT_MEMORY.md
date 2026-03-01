@@ -1734,3 +1734,33 @@ The modal was `position: fixed` and placed next to the selected node via `flowTo
 
 **Next Steps**:
 1. **User verification** — Test double-click on blankBox edges, Enter/Esc behavior, pill rendering.
+
+---
+
+### Update 34 — Lucidchart-Style Contextual Toolbar (2026-02-28)
+
+**Task**: Replace the floating `NodeConfigModal` with a contextual top toolbar that slides in below HeaderBar when a configurable node is selected. Contents change by node type (agent/tool/blankBox/text). startNode/finishNode show no toolbar.
+
+**Approach and Methodology**:
+1. **`useWorkflowStore.ts`**: Added `providerData`, `toolCategoryData`, `isLoadingProviders`, `isLoadingTools` slices + `fetchProviders()` and `fetchTools()` actions. API data cached in Zustand, fetched once on editor mount. Added `useProviderData` and `useToolCategoryData` selector hooks.
+2. **`ContextToolbar.tsx`** (new): Single file with 4 node-type sections (`AgentToolbarSection`, `ToolToolbarSection`, `BlankBoxToolbarSection`, `TextToolbarSection`) + shared inline primitives (`ToolbarInput`, `ToolbarSelect`, `ToolbarButtonGroup`, `ToolbarColorSwatch`, `PositionPickerMini`, `ToolbarDivider`, `DeleteButton`). Toolbar uses `max-h-0 → max-h-16` CSS transition (200ms) for slide-in/out. Each control calls `updateNodeData` immediately (no Save button). Delete uses Trash2 icon.
+3. **`editor/page.tsx`**: Added `<ContextToolbar />` between HeaderBar/ErrorBanner and Canvas row. Added `fetchProviders`/`fetchTools` on mount useEffect.
+4. **`Canvas.tsx`**: Removed `openConfigModal` from destructured store actions and `onNodeDoubleClick` handler. Added `onPaneClick` → `setSelectedNodeId(null)` for toolbar dismissal.
+5. **`NodeConfigModal.tsx`**: Added deprecation comment. Not functionally removed yet.
+6. **`globals.css`**: Added `.scrollbar-hide` utility for toolbar horizontal scroll.
+
+**Results**: `npx tsc --noEmit`: zero errors. Zero linter errors.
+
+**Files Modified**:
+| File | Changes |
+|------|---------|
+| `frontend/src/components/ContextToolbar.tsx` | **New file** — contextual toolbar with 4 sections + shared primitives |
+| `frontend/src/store/useWorkflowStore.ts` | Added API cache slices, fetch actions, selector hooks |
+| `frontend/src/app/editor/page.tsx` | Added ContextToolbar, fetch on mount |
+| `frontend/src/components/Canvas.tsx` | Removed openConfigModal, removed onNodeDoubleClick, added onPaneClick |
+| `frontend/src/components/NodeConfigModal.tsx` | Added deprecation comment |
+| `frontend/src/app/globals.css` | Added scrollbar-hide utility |
+
+**Next Steps**:
+1. **User verification** — Test toolbar on each node type, verify live updates, pane click deselection.
+2. **Cleanup** — Remove NodeConfigModal.tsx and related store actions in a follow-up commit.
