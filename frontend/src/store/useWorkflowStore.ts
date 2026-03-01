@@ -457,25 +457,37 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   isLoadingTools: false,
 
   fetchProviders: async () => {
-    if (get().providerData) return;
+    const { providerData, isLoadingProviders } = get();
+    if (providerData !== null || isLoadingProviders) return;
     set({ isLoadingProviders: true });
     try {
       const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
       const res = await fetch(`${base}/api/providers/detailed`);
-      if (res.ok) set({ providerData: await res.json() });
-    } catch { /* silently fail */ }
-    set({ isLoadingProviders: false });
+      if (res.ok) {
+        set({ providerData: await res.json(), isLoadingProviders: false });
+      } else {
+        set({ providerData: [], isLoadingProviders: false });
+      }
+    } catch {
+      set({ providerData: [], isLoadingProviders: false });
+    }
   },
 
   fetchTools: async () => {
-    if (get().toolCategoryData) return;
+    const { toolCategoryData, isLoadingTools } = get();
+    if (toolCategoryData !== null || isLoadingTools) return;
     set({ isLoadingTools: true });
     try {
       const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
       const res = await fetch(`${base}/api/tools/categories/detailed`);
-      if (res.ok) set({ toolCategoryData: await res.json() });
-    } catch { /* silently fail */ }
-    set({ isLoadingTools: false });
+      if (res.ok) {
+        set({ toolCategoryData: await res.json(), isLoadingTools: false });
+      } else {
+        set({ toolCategoryData: [], isLoadingTools: false });
+      }
+    } catch {
+      set({ toolCategoryData: [], isLoadingTools: false });
+    }
   },
 
   // ── Guest Persistence ──────────────────────────────────────

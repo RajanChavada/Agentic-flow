@@ -1672,3 +1672,98 @@ Migration plan:
 - [ ] `npx tsc --noEmit` passes with zero errors
 
 
+-- 
+
+## Feature update and bug fixes
+
+## Bug 1 — task_type enum mismatch (frontend → backend)
+Root cause: ContextToolbar.tsx sends "rag" but the backend Pydantic Literal expects "rag_answer".
+
+Fix — ContextToolbar.tsx, one line:
+
+```tsx
+// Before
+{ value: "rag", label: "RAG" },
+
+// After
+{ value: "rag_answer", label: "RAG" },
+```
+That's it. The label stays "RAG" so the UI is unchanged; only the value sent to the API changes.
+
+## Bug 2 — ImportError: cannot import name 'FRONTEND_ORIGIN' from 'config'
+Root cause: main.py was updated to import FRONTEND_ORIGIN but config.py still has the old variable name (probably FRONTEND_URL or similar — it's missing entirely).
+
+Fix — config.py, add the variable:
+
+```python
+import os
+
+FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+```
+Or if it already exists under a different name, alias it:
+
+```python
+FRONTEND_URL = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+FRONTEND_ORIGIN = FRONTEND_URL  # alias for main.py import
+```
+## Bug 3 — "Failed to fetch" on prod + API hammer in logs
+These are the same root cause: fetchProviders and fetchTools have no fetch-once guard, so they re-run on every re-render. The logs show 15+ duplicate calls.
+
+Fix — useWorkflowStore.ts, add a hasFetched guard:
+
+```ts
+// `In store state
+providerData: ProviderDetailed[] | null = null
+toolCategoryData: ToolCategoryDetailed[] | null = null
+isLoadingProviders: boolean = false
+isLoadingTools: boolean = false
+
+// In actions — guard with isLoading AND existing data check
+fetchProviders: async () => {
+  const { providerData, isLoadingProviders } = get();
+  if (providerData !== null || isLoadingProviders) return;  // ← guard
+
+  set({ isLoadingProviders: true });
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/providers/detailed`);
+    const data = await res.json();
+    set({ providerData: data, isLoadingProviders: false });
+  } catch {
+    set({ isLoadingProviders: false });
+  }
+},
+
+fetchTools: async () => {
+  const { toolCategoryData, isLoadingTools } = get();
+  if (toolCategoryData !== null || isLoadingTools) return;  // ← guard
+
+  set({ isLoadingTools: true });
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tools/categories/detailed`);
+    const data = await res.json();
+    set({ toolCategoryData: data, isLoadingTools: false });
+  } catch {
+    set({ isLoadingTools: false });
+  }
+},
+```
+Bug 4 — "Failed to fetch" on prod (env var missing)
+The prod deployment doesn't know the backend URL because NEXT_PUBLIC_API_URL is not set in the hosting environment.
+
+Fix — set in your hosting platform (Vercel/Railway/etc.):
+
+```text
+NEXT_PUBLIC_API_URL=https://your-backend-domain.com
+```
+And ensure config.py on the backend side also has:
+
+```text
+FRONTEND_ORIGIN=https://your-frontend-domain.com
+Summary of all changes
+File	Change
+ContextToolbar.tsx	"rag" → "rag_answer" in TASK_TYPES array
+backend/config.py	Add FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+useWorkflowStore.ts	Add if (data !== null || isLoading) return; guard at top of both fetch actions
+Hosting env vars	Set NEXT_PUBLIC_API_URL on frontend, FRONTEND_ORIGIN on backend
+```
+

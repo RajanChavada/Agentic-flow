@@ -198,7 +198,7 @@ const TASK_TYPES = [
   { value: "classification", label: "Classification" },
   { value: "summarization", label: "Summarization" },
   { value: "code_generation", label: "Code Gen" },
-  { value: "rag", label: "RAG" },
+  { value: "rag_answer", label: "RAG" },
   { value: "tool_orchestration", label: "Tool Orchestration" },
   { value: "routing", label: "Routing" },
 ];

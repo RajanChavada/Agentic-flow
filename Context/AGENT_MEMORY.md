@@ -1764,3 +1764,26 @@ The modal was `position: fixed` and placed next to the selected node via `flowTo
 **Next Steps**:
 1. **User verification** — Test toolbar on each node type, verify live updates, pane click deselection.
 2. **Cleanup** — Remove NodeConfigModal.tsx and related store actions in a follow-up commit.
+
+---
+
+### Update 35 — Bugfix: task_type enum mismatch + fetch hammering (2026-02-28)
+
+**Task**: Fix 3 bugs introduced by the ContextToolbar migration: (1) `"rag"` vs `"rag_answer"` enum mismatch causing 422 errors on estimation, (2) missing `isLoading` guard causing 15+ duplicate API calls per page load, (3) verify ToolToolbarSection parity.
+
+**Approach and Methodology**:
+1. **Bug 1 — `ContextToolbar.tsx`**: Changed `{ value: "rag", label: "RAG" }` to `{ value: "rag_answer", label: "RAG" }` in the `TASK_TYPES` array. The old `NodeConfigModal` correctly used `"rag_answer"` — the mismatch was introduced when the toolbar was created. Backend Pydantic `Literal` rejects `"rag"` with 422.
+2. **Bug 3 — `useWorkflowStore.ts`**: Both `fetchProviders` and `fetchTools` now check `isLoading` alongside `data !== null` before firing. On fetch failure (network error or non-200), data is set to `[]` instead of left as `null` — this prevents infinite retry loops. React 18 Strict Mode double-execution in dev was causing `fetchTools` to fire twice per mount since the first call hadn't completed by the second invocation.
+3. **Verification**: Confirmed `ToolToolbarSection` uses identical `c.id`/`t.id` keys as old `NodeConfigModal`. Confirmed `nodesToPayload` correctly converts camelCase → snake_case. Confirmed backend `config.py` already has `FRONTEND_ORIGINS` (no change needed). Confirmed `openConfigModal` is never called from any `.tsx` file — NodeConfigModal is dead code.
+
+**Results**: `npx tsc --noEmit`: zero errors. Backend logs showed 15+ duplicate fetch calls and 422 on `/api/estimate` before fix.
+
+**Files Modified**:
+| File | Changes |
+|------|---------|
+| `frontend/src/components/ContextToolbar.tsx` | `"rag"` → `"rag_answer"` in TASK_TYPES |
+| `frontend/src/store/useWorkflowStore.ts` | Added `isLoading` guard + `[]` fallback on failure for both fetch actions |
+
+**Next Steps**:
+1. **Deploy verification** — Confirm `NEXT_PUBLIC_API_URL` is set in hosting env vars.
+2. **Cleanup** — Remove NodeConfigModal.tsx and related store actions.
