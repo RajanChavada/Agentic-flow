@@ -5,12 +5,25 @@ const KEY = "guest_workflow";
 export interface GuestWorkflowSnapshot {
     nodes: Node[];
     edges: Edge[];
-    savedAt: number; // unix ms
+    savedAt: number;
+    currentWorkflowId?: string | null;
+    currentWorkflowName?: string;
 }
 
-export function saveGuestWorkflow(nodes: Node[], edges: Edge[]) {
+export function saveGuestWorkflow(
+    nodes: Node[],
+    edges: Edge[],
+    currentWorkflowId?: string | null,
+    currentWorkflowName?: string,
+) {
     if (typeof window === "undefined") return;
-    const snapshot: GuestWorkflowSnapshot = { nodes, edges, savedAt: Date.now() };
+    const snapshot: GuestWorkflowSnapshot = {
+        nodes,
+        edges,
+        savedAt: Date.now(),
+        currentWorkflowId,
+        currentWorkflowName,
+    };
     localStorage.setItem(KEY, JSON.stringify(snapshot));
 }
 

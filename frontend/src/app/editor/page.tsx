@@ -36,7 +36,7 @@ export default function Home() {
       // Only auto-load if the canvas is empty (no user-created nodes yet)
       if (workflows.length > 0 && s.nodes.length === 0) {
         s.loadScenario(workflows[0].id);
-        s.setActiveWorkflowId(workflows[0].id);
+        s.setCurrentWorkflow(workflows[0].id, workflows[0].name);
       }
     });
   }, [user]);

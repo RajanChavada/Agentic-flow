@@ -7,6 +7,7 @@ import {
   useUIState,
   useScenarios,
   useSelectedForComparison,
+  useCurrentWorkflowId,
   useWorkflowStore,
 } from "@/store/useWorkflowStore";
 import { useUser } from "@/store/useAuthStore";
@@ -81,6 +82,7 @@ export default function Sidebar() {
   const { theme } = useUIState();
   const scenarios = useScenarios();
   const selectedIds = useSelectedForComparison();
+  const currentWorkflowId = useCurrentWorkflowId();
   const {
     toggleComparisonSelection,
     loadScenario,
@@ -91,6 +93,7 @@ export default function Sidebar() {
     setErrorBanner,
     loadWorkflowsFromSupabase,
     deleteWorkflowFromSupabase,
+    setCurrentWorkflow,
   } = useWorkflowStore();
   const isDark = theme === "dark";
   const [comparing, setComparing] = useState(false);
@@ -278,11 +281,16 @@ export default function Sidebar() {
         <div className="flex flex-col gap-1.5">
           {scenarioList.map((sc) => {
             const isSelected = selectedIds.includes(sc.id);
+            const isActive = sc.id === currentWorkflowId;
             return (
               <div
                 key={sc.id}
                 className={`rounded-md border px-2 py-1.5 text-xs transition ${
-                  isSelected
+                  isActive
+                    ? isDark
+                      ? "border-l-2 border-l-blue-400 border-blue-500 bg-blue-900/30"
+                      : "border-l-2 border-l-blue-500 border-blue-400 bg-blue-50"
+                    : isSelected
                     ? isDark
                       ? "border-blue-500 bg-blue-900/30"
                       : "border-blue-400 bg-blue-50"
@@ -301,10 +309,13 @@ export default function Sidebar() {
                     title="Select for comparison"
                   />
                   <span
-                    className={`font-medium truncate flex-1 cursor-pointer ${
-                      isDark ? "text-slate-200" : "text-gray-800"
-                    }`}
-                    onClick={() => loadScenario(sc.id)}
+                    className={`truncate flex-1 cursor-pointer ${
+                      isActive ? "font-bold" : "font-medium"
+                    } ${isDark ? "text-slate-200" : "text-gray-800"}`}
+                    onClick={() => {
+                      loadScenario(sc.id);
+                      setCurrentWorkflow(sc.id, sc.name);
+                    }}
                     title={`Load "${sc.name}"`}
                   >
                     {sc.name}

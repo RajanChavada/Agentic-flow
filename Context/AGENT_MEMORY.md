@@ -1787,3 +1787,43 @@ The modal was `position: fixed` and placed next to the selected node via `flowTo
 **Next Steps**:
 1. **Deploy verification** — Confirm `NEXT_PUBLIC_API_URL` is set in hosting env vars.
 2. **Cleanup** — Remove NodeConfigModal.tsx and related store actions.
+
+---
+
+### Update 36 — BlankBox zIndex fix (2026-02-28)
+
+**Task**: Prevent blank box nodes from rendering on top of other nodes.
+
+**Approach**: Set `zIndex: -1` on blank box nodes at creation (Canvas.tsx `onDrop`). Added normalization in `onNodesChange` (store) to enforce `zIndex: -1` on all blank box nodes after every change, handling existing workflows and React Flow elevation resets.
+
+**Files Modified**: `Canvas.tsx` (zIndex on creation), `useWorkflowStore.ts` (zIndex normalization in onNodesChange).
+
+---
+
+### Update 37 — Save / Update Existing Workflow (Save vs Save As) (2026-02-28)
+
+**Task**: Replace the always-create-new save behavior with proper dirty tracking, PATCH-in-place for saved workflows, Save As for intentional forks, and an inline editable workflow name.
+
+**Approach and Methodology**:
+1. **`useWorkflowStore.ts`**: Added `currentWorkflowId`, `currentWorkflowName`, `isDirty` state. Added `setCurrentWorkflow`, `clearCurrentWorkflow`, `markDirty`, `setCurrentWorkflowName` actions. Wired `isDirty: true` into `onNodesChange` (non-select changes), `onEdgesChange` (non-select), `addNode`, `updateNodeData`, `deleteNode`, `updateEdgeLabel`. Replaced `activeWorkflowId`/`setActiveWorkflowId` with `currentWorkflowId`. Updated `saveWorkflowToSupabase` to branch on `currentWorkflowId` (UPDATE existing vs INSERT new), set `isDirty: false` on success. Updated `deleteScenario`/`deleteWorkflowFromSupabase` to clear current if deleted is active. Updated `snapshotToLocalStorage`/`restoreFromLocalStorage` to persist `currentWorkflowId`/`currentWorkflowName`. Added 3 new selector hooks.
+2. **`guestWorkflow.ts`**: Extended `GuestWorkflowSnapshot` interface with optional `currentWorkflowId` + `currentWorkflowName`. Updated `saveGuestWorkflow` to accept and persist them.
+3. **`HeaderBar.tsx`**: Replaced static Save button with: inline editable workflow name (click to edit, Enter/blur to commit, Escape to cancel), amber dirty dot (`isDirty`), branching Save (PATCH if `currentWorkflowId`, POST if null), Save As button (always POST), New Workflow button (`clearCurrentWorkflow`), "Saved ✓" flash (1.5s auto-dismiss), inline error text on failure. Uses `SaveAll`, `FilePlus` Lucide icons.
+4. **`Sidebar.tsx`**: On workflow load click → `loadScenario(id)` + `setCurrentWorkflow(id, name)`. Active workflow highlighted with blue left border + bold name. Delete already handled by store.
+5. **`useAutoSave.ts`**: Migrated from `activeWorkflowId` to `currentWorkflowId`. Auto-save only fires when `isDirty` is true. Uses `currentWorkflowName` for the save name.
+6. **`editor/page.tsx`**: Replaced `setActiveWorkflowId` with `setCurrentWorkflow` on initial workflow load.
+
+**Results**: `npx tsc --noEmit`: zero errors. Zero linter errors.
+
+**Files Modified**:
+| File | Changes |
+|------|---------|
+| `frontend/src/store/useWorkflowStore.ts` | New state (currentWorkflowId, currentWorkflowName, isDirty), new actions, markDirty wiring, replaced activeWorkflowId, updated save/delete logic |
+| `frontend/src/lib/guestWorkflow.ts` | Extended snapshot interface + saveGuestWorkflow signature |
+| `frontend/src/components/HeaderBar.tsx` | Full rewrite: inline name, dirty dot, Save/Save As/New buttons, saved flash, error text |
+| `frontend/src/components/Sidebar.tsx` | setCurrentWorkflow on load, highlight active workflow |
+| `frontend/src/hooks/useAutoSave.ts` | Migrated to currentWorkflowId, isDirty guard |
+| `frontend/src/app/editor/page.tsx` | Replaced setActiveWorkflowId with setCurrentWorkflow |
+
+**Next Steps**:
+1. **User verification** — Test save/save-as/new/load/delete flows in both local and deployed environments.
+2. **Backend PATCH endpoint** — Not needed with current Supabase architecture (client-side UPDATE). Can add if moving to server-side API later.

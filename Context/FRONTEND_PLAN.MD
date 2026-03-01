@@ -1767,3 +1767,186 @@ useWorkflowStore.ts	Add if (data !== null || isLoading) return; guard at top of 
 Hosting env vars	Set NEXT_PUBLIC_API_URL on frontend, FRONTEND_ORIGIN on backend
 ```
 
+-- 
+
+# Feature: Save / Update Existing Workflow (Save vs Save As)
+> Date: 2026-02-28
+> Status: Roadmapped — ready to implement
+
+---
+
+## Summary
+
+Every Save currently calls `POST /api/workflows` and creates a new entry.
+This feature introduces a **dirty state tracker** and a **current workflow ID**
+so that saving an already-saved workflow PATCHes it in place instead of
+duplicating it. Adds a **Save As** path for intentional forks.
+
+---
+
+## New Store State (`useWorkflowStore.ts`)
+
+```ts
+// State
+currentWorkflowId:   string | null  // null = new unsaved workflow
+currentWorkflowName: string         // default "Untitled Workflow"
+isDirty:             boolean        // true = unsaved changes exist
+
+// Actions
+setCurrentWorkflow(id: string, name: string): void
+  → sets currentWorkflowId, currentWorkflowName, isDirty: false
+
+clearCurrentWorkflow(): void
+  → sets currentWorkflowId: null, isDirty: false
+  → called by: "New Workflow" button, delete-loaded-workflow
+
+markDirty(): void
+  → sets isDirty: true
+  → wired into: onNodesChange, onEdgesChange, updateNodeData, updateEdgeLabel
+```
+
+### Persistence
+Add `currentWorkflowId` and `currentWorkflowName` to the `localStorage`
+snapshot so session survives a browser refresh.
+
+---
+
+## Frontend Tasks
+
+### 1. `useWorkflowStore.ts`
+- [ ] Add `currentWorkflowId`, `currentWorkflowName`, `isDirty` to state slice
+- [ ] Implement `setCurrentWorkflow`, `clearCurrentWorkflow`, `markDirty` actions
+- [ ] Call `markDirty()` at the end of: `onNodesChange`, `onEdgesChange`,
+      `updateNodeData`, `updateEdgeLabel`, `deleteNode`, `addNode`
+- [ ] Persist `currentWorkflowId` + `currentWorkflowName` to localStorage snapshot
+- [ ] Re-hydrate them in `restoreFromLocalStorage`
+
+### 2. `HeaderBar.tsx`
+- [ ] Replace static "Save" button with three elements:
+  - **Workflow name input** — inline editable `<input>`, updates
+    `currentWorkflowName`, calls `markDirty()`
+  - **Dirty indicator** — small amber `●` dot, visible only when `isDirty === true`
+  - **Save button** — branches on `currentWorkflowId`:
+    - If set → `PATCH /api/workflows/:id`
+    - If null → `POST /api/workflows` then `setCurrentWorkflow(newId, name)`
+  - **Save As... button** — always `POST /api/workflows`, then
+    `setCurrentWorkflow(newId, name)`
+- [ ] Show a brief "Saved ✓" inline confirmation (fade out after 1.5s) on success
+- [ ] Show inline error text on failure (not a toast, not a modal)
+- [ ] Disable Save button while save is in-flight (`isSaving` local state)
+
+```tsx
+// Button label logic
+const saveLabel = isSaving ? "Saving…" : currentWorkflowId ? "Save" : "Save";
+
+// Save handler
+const handleSave = async () => {
+  setIsSaving(true);
+  if (currentWorkflowId) {
+    await api.patch(`/api/workflows/${currentWorkflowId}`, { name, nodes, edges });
+  } else {
+    const { id } = await api.post("/api/workflows", { name, nodes, edges });
+    setCurrentWorkflow(id, name);
+  }
+  setIsDirty(false);
+  setIsSaving(false);
+};
+```
+
+### 3. `SavedWorkflows.tsx` (sidebar panel)
+- [ ] On workflow load: call `setCurrentWorkflow(workflow.id, workflow.name)`
+  so subsequent Saves PATCH instead of POST
+- [ ] On workflow delete: if deleted ID === `currentWorkflowId`,
+  call `clearCurrentWorkflow()`
+- [ ] Highlight the currently loaded workflow in the list
+  (e.g. blue left border or bold name) using `currentWorkflowId` from store
+
+### 4. Canvas / New Workflow button (wherever "New" is triggered)
+- [ ] Call `clearCurrentWorkflow()` on new workflow creation so next Save
+  creates fresh rather than overwriting the previous workflow
+
+---
+
+## Backend Tasks
+
+### 1. New endpoint — `PATCH /api/workflows/{workflow_id}`
+
+**File:** `backend/routes/workflows.py` (or wherever `POST /api/workflows` lives)
+
+```python
+@router.patch("/api/workflows/{workflow_id}")
+async def update_workflow(
+    workflow_id: str,
+    body: WorkflowSaveRequest,
+    user=Depends(get_current_user),   # keep same auth as POST
+):
+    # 1. Verify workflow belongs to this user (authorization check)
+    # 2. Update name, nodes_json, edges_json, updated_at in DB
+    # 3. Return updated workflow record
+    ...
+    return UpdatedWorkflowResponse(id=workflow_id, name=body.name, updated_at=now)
+```
+
+**Request body** — reuse existing `WorkflowSaveRequest` (same shape as POST):
+```python
+class WorkflowSaveRequest(BaseModel):
+    name: str
+    nodes: list[dict]
+    edges: list[dict]
+```
+
+**Response:**
+```python
+class UpdatedWorkflowResponse(BaseModel):
+    id: str
+    name: str
+    updated_at: datetime
+```
+
+**Error cases to handle:**
+- `404` if `workflow_id` not found
+- `403` if workflow belongs to a different user
+- `422` on invalid body (Pydantic handles automatically)
+
+### 2. No changes to `POST /api/workflows`
+The existing create endpoint stays identical. PATCH is additive.
+
+---
+
+## Edge Cases
+
+| Scenario | Behaviour |
+|----------|-----------|
+| Save a brand-new workflow | `POST` → receive ID → `setCurrentWorkflow(id, name)` |
+| Edit and re-save | `PATCH /:id` → no new entry created |
+| "Save As" on existing | `POST` → new ID → `setCurrentWorkflow(newId, name)` |
+| Delete the currently loaded workflow | `clearCurrentWorkflow()` → next Save creates new |
+| "New Workflow" while one is loaded | `clearCurrentWorkflow()` → prevents overwriting old |
+| Browser refresh | `currentWorkflowId` restored from localStorage → Save still PATCHes |
+| PATCH returns 404 (deleted externally) | Show error, call `clearCurrentWorkflow()`, allow retry as POST |
+
+---
+
+## Acceptance Criteria
+
+### Frontend
+- [ ] `isDirty` flips to `true` on any node/edge change after last save
+- [ ] Amber dirty dot appears in header when `isDirty === true`
+- [ ] "Save" on an unsaved workflow creates a new entry and tracks its ID
+- [ ] "Save" on an already-saved workflow updates it in place (no new list entry)
+- [ ] "Save As" always creates a new entry and switches tracking to new ID
+- [ ] Workflow name is editable inline in the header
+- [ ] Currently loaded workflow is highlighted in the sidebar list
+- [ ] Loading a workflow sets `currentWorkflowId` correctly
+- [ ] Deleting the loaded workflow calls `clearCurrentWorkflow()`
+- [ ] "New Workflow" calls `clearCurrentWorkflow()`
+- [ ] `currentWorkflowId` survives a browser refresh
+
+### Backend
+- [ ] `PATCH /api/workflows/{id}` updates name + graph data
+- [ ] Returns `403` if workflow belongs to different user
+- [ ] Returns `404` if workflow not found
+- [ ] `POST /api/workflows` unchanged
+- [ ] `npx tsc --noEmit` zero errors (frontend)
+- [ ] No duplicate workflows created on re-save
+

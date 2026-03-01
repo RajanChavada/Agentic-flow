@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Sun,
   MoonStar,
   Save,
+  SaveAll,
+  FilePlus,
   Download,
   LayoutDashboard,
   LogIn,
@@ -18,6 +20,9 @@ import {
   useWorkflowNodes,
   useWorkflowEdges,
   useUIState,
+  useCurrentWorkflowId,
+  useCurrentWorkflowName,
+  useIsDirty,
 } from "@/store/useWorkflowStore";
 import { useAuthStore, useUser } from "@/store/useAuthStore";
 import type {
@@ -42,34 +47,107 @@ export default function HeaderBar() {
   const isDark = theme === "dark";
   const autoLayout = useAutoLayout();
 
-  // Auth state
+  // Auth
   const user = useUser();
   const { openAuthModal, signOut } = useAuthStore();
 
-  // Auto-save status
+  // Current workflow tracking
+  const currentWorkflowId = useCurrentWorkflowId();
+  const currentWorkflowName = useCurrentWorkflowName();
+  const isDirty = useIsDirty();
   const isSaving = useWorkflowStore((s) => s.isSaving);
   const lastSavedAt = useWorkflowStore((s) => s.lastSavedAt);
-  const activeWorkflowId = useWorkflowStore((s) => s.activeWorkflowId);
 
-  // ── Save scenario ────────────────────────────────────────
-  const scenarioCount = Object.keys(useWorkflowStore.getState().scenarios).length;
+  // Inline name editing
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState(currentWorkflowName);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSave = () => {
+  useEffect(() => {
+    if (!editingName) setNameValue(currentWorkflowName);
+  }, [currentWorkflowName, editingName]);
+
+  useEffect(() => {
+    if (editingName) nameInputRef.current?.select();
+  }, [editingName]);
+
+  const commitName = useCallback(() => {
+    setEditingName(false);
+    const trimmed = nameValue.trim();
+    if (trimmed && trimmed !== currentWorkflowName) {
+      useWorkflowStore.getState().setCurrentWorkflowName(trimmed);
+    }
+  }, [nameValue, currentWorkflowName]);
+
+  // "Saved ✓" flash (auto-dismiss after 1.5s)
+  const [showSaved, setShowSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (lastSavedAt && !isSaving) {
+      setShowSaved(true);
+      setSaveError(null);
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => setShowSaved(false), 1500);
+    }
+  }, [lastSavedAt, isSaving]);
+
+  // ── Save (PATCH existing or POST new) ──────────────────────
+  const handleSave = async () => {
     if (!user) {
       openAuthModal({
         reason: "Sign in to save your workflow.",
-        onSuccess: () => {
-          // After sign-in, re-trigger save
-          const name = prompt("Scenario name:", `Scenario-${scenarioCount + 1}`);
-          if (!name) return;
-          useWorkflowStore.getState().saveWorkflowToSupabase(name);
-        },
+        onSuccess: () => doSave(),
       });
       return;
     }
-    const name = prompt("Scenario name:", `Scenario-${scenarioCount + 1}`);
+    doSave();
+  };
+
+  const doSave = async () => {
+    setSaveError(null);
+    const name = useWorkflowStore.getState().currentWorkflowName;
+    const result = await useWorkflowStore.getState().saveWorkflowToSupabase(name);
+    if (!result) {
+      setSaveError("Save failed. Please try again.");
+    }
+  };
+
+  // ── Save As (always POST new) ──────────────────────────────
+  const handleSaveAs = async () => {
+    if (!user) {
+      openAuthModal({
+        reason: "Sign in to save your workflow.",
+        onSuccess: () => doSaveAs(),
+      });
+      return;
+    }
+    doSaveAs();
+  };
+
+  const doSaveAs = async () => {
+    setSaveError(null);
+    const store = useWorkflowStore.getState();
+    const name = prompt("New workflow name:", `${store.currentWorkflowName} (copy)`);
     if (!name) return;
-    useWorkflowStore.getState().saveWorkflowToSupabase(name);
+    const prevId = store.currentWorkflowId;
+    if (prevId) store.clearCurrentWorkflow();
+    useWorkflowStore.setState({
+      nodes: store.nodes,
+      edges: store.edges,
+      estimation: store.estimation,
+      currentWorkflowName: name,
+    });
+    const result = await useWorkflowStore.getState().saveWorkflowToSupabase(name);
+    if (!result) {
+      setSaveError("Save As failed. Please try again.");
+    }
+  };
+
+  // ── New Workflow ───────────────────────────────────────────
+  const handleNew = () => {
+    useWorkflowStore.getState().clearCurrentWorkflow();
   };
 
   const handleImport = () => {
@@ -84,7 +162,6 @@ export default function HeaderBar() {
   };
 
   const handleEstimate = async () => {
-    // Basic validation
     const hasStart = nodes.some((n) => n.type === "startNode");
     const hasFinish = nodes.some((n) => n.type === "finishNode");
     if (!hasStart || !hasFinish) {
@@ -154,6 +231,7 @@ export default function HeaderBar() {
           : "border-gray-200 bg-white"
       }`}
     >
+      {/* ── Left side: brand + workflow name + status ── */}
       <div className="flex items-center gap-3">
         <h1
           className={`text-lg font-bold tracking-tight ${
@@ -163,26 +241,70 @@ export default function HeaderBar() {
           Agentic Flow Designer
         </h1>
 
-        {user && activeWorkflowId && (
+        <span className={`text-sm ${isDark ? "text-slate-600" : "text-gray-300"}`}>/</span>
+
+        {/* Inline editable workflow name */}
+        {editingName ? (
+          <input
+            ref={nameInputRef}
+            value={nameValue}
+            onChange={(e) => setNameValue(e.target.value)}
+            onBlur={commitName}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitName();
+              if (e.key === "Escape") setEditingName(false);
+            }}
+            className={`text-sm font-medium px-1.5 py-0.5 rounded border outline-none w-48 ${
+              isDark
+                ? "bg-slate-800 border-slate-600 text-slate-100 focus:border-blue-500"
+                : "bg-white border-gray-300 text-gray-800 focus:border-blue-500"
+            }`}
+          />
+        ) : (
+          <button
+            onClick={() => setEditingName(true)}
+            className={`text-sm font-medium px-1.5 py-0.5 rounded hover:bg-opacity-50 transition truncate max-w-48 ${
+              isDark
+                ? "text-slate-300 hover:bg-slate-800"
+                : "text-gray-600 hover:bg-gray-100"
+            }`}
+            title="Click to rename workflow"
+          >
+            {currentWorkflowName}
+          </button>
+        )}
+
+        {/* Dirty indicator */}
+        {isDirty && (
+          <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" title="Unsaved changes" />
+        )}
+
+        {/* Save status */}
+        {isSaving && (
           <span
             className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${
-              isSaving
-                ? isDark ? "bg-amber-900/30 text-amber-400" : "bg-amber-50 text-amber-600"
-                : lastSavedAt
-                ? isDark ? "bg-green-900/30 text-green-400" : "bg-green-50 text-green-700"
-                : ""
+              isDark ? "bg-amber-900/30 text-amber-400" : "bg-amber-50 text-amber-600"
             }`}
           >
-            {isSaving ? (
-              <><Loader2 className="w-3 h-3 animate-spin" /> Saving...</>
-            ) : lastSavedAt ? (
-              <><Check className="w-3 h-3" /> Saved</>
-            ) : null}
+            <Loader2 className="w-3 h-3 animate-spin" /> Saving...
           </span>
+        )}
+        {showSaved && !isSaving && (
+          <span
+            className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full transition-opacity ${
+              isDark ? "bg-green-900/30 text-green-400" : "bg-green-50 text-green-700"
+            }`}
+          >
+            <Check className="w-3 h-3" /> Saved
+          </span>
+        )}
+        {saveError && !isSaving && (
+          <span className="text-[10px] text-red-500 px-2">{saveError}</span>
         )}
       </div>
 
-      <div className="flex items-center gap-3">
+      {/* ── Right side: action buttons ── */}
+      <div className="flex items-center gap-2">
         {/* Theme toggle */}
         <button
           onClick={toggleTheme}
@@ -196,21 +318,51 @@ export default function HeaderBar() {
           {isDark ? <><Sun className="inline w-3.5 h-3.5 mr-1" /> Light</> : <><MoonStar className="inline w-3.5 h-3.5 mr-1" /> Dark</>}
         </button>
 
-        {/* Save current workflow as scenario */}
+        {/* New Workflow */}
+        <button
+          onClick={handleNew}
+          className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
+            isDark
+              ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+              : "border-gray-300 text-gray-600 hover:bg-gray-100"
+          }`}
+          title="New blank workflow"
+        >
+          <FilePlus className="inline w-3.5 h-3.5 mr-1" /> New
+        </button>
+
+        {/* Save */}
         <button
           onClick={handleSave}
-          disabled={nodes.length === 0}
+          disabled={nodes.length === 0 || isSaving}
           className={`rounded-md border px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 ${
             isDark
               ? "border-emerald-700 text-emerald-300 hover:bg-emerald-800/40"
               : "border-emerald-300 text-emerald-700 hover:bg-emerald-50"
           }`}
-          title="Save current workflow as a scenario"
+          title={currentWorkflowId ? "Save changes to current workflow" : "Save as new workflow"}
         >
-          <Save className="inline w-3.5 h-3.5 mr-1" /> Save
+          <Save className="inline w-3.5 h-3.5 mr-1" />
+          {isSaving ? "Saving\u2026" : "Save"}
         </button>
 
-        {/* Import workflow from JSON */}
+        {/* Save As (only show when we have a current workflow) */}
+        {currentWorkflowId && (
+          <button
+            onClick={handleSaveAs}
+            disabled={nodes.length === 0 || isSaving}
+            className={`rounded-md border px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 ${
+              isDark
+                ? "border-teal-700 text-teal-300 hover:bg-teal-800/40"
+                : "border-teal-300 text-teal-700 hover:bg-teal-50"
+            }`}
+            title="Save a copy as a new workflow"
+          >
+            <SaveAll className="inline w-3.5 h-3.5 mr-1" /> Save As
+          </button>
+        )}
+
+        {/* Import */}
         <button
           onClick={handleImport}
           className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
@@ -223,7 +375,7 @@ export default function HeaderBar() {
           <Download className="inline w-3.5 h-3.5 mr-1" /> Import
         </button>
 
-        {/* Auto-layout (dagre) */}
+        {/* Auto-layout */}
         <button
           onClick={autoLayout}
           disabled={nodes.length === 0}
@@ -237,18 +389,19 @@ export default function HeaderBar() {
           <LayoutDashboard className="inline w-3.5 h-3.5 mr-1" /> Layout
         </button>
 
-        {/* Export dropdown */}
+        {/* Export */}
         <ExportDropdown isDark={isDark} />
 
+        {/* Estimate */}
         <button
           onClick={handleEstimate}
           disabled={loading}
           className="rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition"
         >
-          {loading ? "Running…" : "Run Workflow & Gen Estimate"}
+          {loading ? "Running\u2026" : "Run Workflow & Gen Estimate"}
         </button>
 
-        {/* ── Auth controls ─────────────────────────────── */}
+        {/* ── Auth controls ── */}
         <div
           className={`ml-2 pl-2 border-l flex items-center gap-2 ${
             isDark ? "border-slate-700" : "border-gray-200"

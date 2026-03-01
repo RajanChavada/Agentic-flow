@@ -63,6 +63,11 @@ interface WorkflowStore {
   selectedForComparison: string[];
   comparisonResults: BatchEstimateResult[];
 
+  // Current workflow tracking (Save vs Save As)
+  currentWorkflowId: string | null;
+  currentWorkflowName: string;
+  isDirty: boolean;
+
   // Node / edge actions
   setNodes: (nodes: Node<WorkflowNodeData>[]) => void;
   setEdges: (edges: Edge[]) => void;
@@ -77,6 +82,12 @@ interface WorkflowStore {
 
   // Selection
   setSelectedNodeId: (id: string | null) => void;
+
+  // Current workflow actions
+  setCurrentWorkflow: (id: string, name: string) => void;
+  clearCurrentWorkflow: () => void;
+  markDirty: () => void;
+  setCurrentWorkflowName: (name: string) => void;
 
   // Estimation
   setEstimation: (est: WorkflowEstimation) => void;
@@ -116,20 +127,11 @@ interface WorkflowStore {
   clearActualStats: () => void;
 
   // Supabase persistence
-  /** Save/update the current canvas to Supabase. Returns the workflow id. */
   saveWorkflowToSupabase: (name: string, description?: string) => Promise<string | null>;
-  /** Fetch all workflows for the current user from Supabase. */
   loadWorkflowsFromSupabase: () => Promise<void>;
-  /** Delete a workflow from Supabase by id. */
   deleteWorkflowFromSupabase: (id: string) => Promise<void>;
-  /** Track whether Supabase workflows are loading. */
   supabaseLoading: boolean;
-  /** The active workflow id for auto-save (maps to Supabase row). */
-  activeWorkflowId: string | null;
-  setActiveWorkflowId: (id: string | null) => void;
-  /** True while an auto-save or manual save is in-flight. */
   isSaving: boolean;
-  /** Timestamp of last successful save. */
   lastSavedAt: Date | null;
 
   // API cache (providers + tools)
@@ -190,6 +192,11 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   selectedForComparison: [],
   comparisonResults: [],
 
+  // Current workflow tracking
+  currentWorkflowId: null,
+  currentWorkflowName: "Untitled Workflow",
+  isDirty: false,
+
   // Scaling
   scalingParams: { runsPerDay: null, loopIntensity: 1.0 },
 
@@ -202,33 +209,42 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
 
   onNodesChange: (changes) => {
     const updated = applyNodeChanges(changes, get().nodes) as Node<WorkflowNodeData>[];
-    let dirty = false;
+    let needsZFix = false;
     for (const n of updated) {
-      if (n.type === "blankBoxNode" && n.zIndex !== -1) { dirty = true; break; }
+      if (n.type === "blankBoxNode" && n.zIndex !== -1) { needsZFix = true; break; }
     }
+    const meaningful = changes.some((c) => c.type !== "select");
     set({
-      nodes: dirty
+      nodes: needsZFix
         ? updated.map((n) => n.type === "blankBoxNode" && n.zIndex !== -1 ? { ...n, zIndex: -1 } : n)
         : updated,
+      ...(meaningful && !get().isDirty ? { isDirty: true } : {}),
     });
   },
 
-  onEdgesChange: (changes) =>
-    set({ edges: applyEdgeChanges(changes, get().edges) }),
+  onEdgesChange: (changes) => {
+    const meaningful = changes.some((c) => c.type !== "select");
+    set({
+      edges: applyEdgeChanges(changes, get().edges),
+      ...(meaningful && !get().isDirty ? { isDirty: true } : {}),
+    });
+  },
 
-  addNode: (node) => set((s) => ({ nodes: [...s.nodes, node] })),
+  addNode: (node) => set((s) => ({ nodes: [...s.nodes, node], isDirty: true })),
 
   updateNodeData: (id, data) =>
     set((s) => ({
       nodes: s.nodes.map((n) =>
         n.id === id ? { ...n, data: { ...n.data, ...data } } : n
       ),
+      isDirty: true,
     })),
 
   deleteNode: (id) =>
     set((s) => ({
       nodes: s.nodes.filter((n) => n.id !== id),
       edges: s.edges.filter((e) => e.source !== id && e.target !== id),
+      isDirty: true,
     })),
 
   // ── Edge label ─────────────────────────────────────────────
@@ -237,10 +253,32 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       edges: s.edges.map((e) =>
         e.id === id ? { ...e, data: { ...((e.data as Record<string, unknown>) ?? {}), label } } : e
       ),
+      isDirty: true,
     })),
 
   // ── Selection ──────────────────────────────────────────────
   setSelectedNodeId: (id) => set({ selectedNodeId: id }),
+
+  // ── Current workflow tracking ─────────────────────────────
+  setCurrentWorkflow: (id, name) =>
+    set({ currentWorkflowId: id, currentWorkflowName: name, isDirty: false }),
+
+  clearCurrentWorkflow: () =>
+    set({
+      currentWorkflowId: null,
+      currentWorkflowName: "Untitled Workflow",
+      isDirty: false,
+      nodes: [],
+      edges: [],
+      estimation: null,
+    }),
+
+  markDirty: () => {
+    if (!get().isDirty) set({ isDirty: true });
+  },
+
+  setCurrentWorkflowName: (name) =>
+    set({ currentWorkflowName: name, isDirty: true }),
 
   // ── Estimation ─────────────────────────────────────────────
   setEstimation: (estimation) =>
@@ -312,10 +350,12 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   deleteScenario: (id: string) =>
     set((s) => {
       const { [id]: _, ...rest } = s.scenarios;
+      const isCurrent = s.currentWorkflowId === id;
       return {
         scenarios: rest,
         selectedForComparison: s.selectedForComparison.filter((sid) => sid !== id),
         currentScenarioId: s.currentScenarioId === id ? null : s.currentScenarioId,
+        ...(isCurrent ? { currentWorkflowId: null, currentWorkflowName: "Untitled Workflow", isDirty: false } : {}),
       };
     }),
 
@@ -502,21 +542,26 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
 
   // ── Guest Persistence ──────────────────────────────────────
   snapshotToLocalStorage: () => {
-    const { nodes, edges } = get();
-    saveGuestWorkflow(nodes, edges);
+    const { nodes, edges, currentWorkflowId, currentWorkflowName } = get();
+    saveGuestWorkflow(nodes, edges, currentWorkflowId, currentWorkflowName);
   },
   restoreFromLocalStorage: (): boolean => {
     const snapshot = loadGuestWorkflow();
     if (!snapshot) return false;
-    set({ nodes: snapshot.nodes as Node<WorkflowNodeData>[], edges: snapshot.edges });
+    set({
+      nodes: snapshot.nodes as Node<WorkflowNodeData>[],
+      edges: snapshot.edges,
+      ...(snapshot.currentWorkflowId ? {
+        currentWorkflowId: snapshot.currentWorkflowId,
+        currentWorkflowName: snapshot.currentWorkflowName ?? "Untitled Workflow",
+      } : {}),
+    });
     clearGuestWorkflow();
     return true;
   },
 
   // ── Supabase persistence ─────────────────────────────────
   supabaseLoading: false,
-  activeWorkflowId: null,
-  setActiveWorkflowId: (id) => set({ activeWorkflowId: id }),
   isSaving: false,
   lastSavedAt: null,
 
@@ -533,15 +578,11 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       recursionLimit: 25,
     };
 
-    // If we have an active workflow or current scenario from Supabase, update it
-    const activeId = s.activeWorkflowId ?? s.currentScenarioId;
-    const existing = activeId ? s.scenarios[activeId] : null;
-
-    if (existing) {
+    if (s.currentWorkflowId) {
       const { error } = await supabase
         .from("workflows")
         .update({ name, description: description ?? null, graph, last_estimate: s.estimation })
-        .eq("id", existing.id)
+        .eq("id", s.currentWorkflowId)
         .eq("user_id", user.id);
       if (error) {
         console.error("Supabase update error:", error);
@@ -549,16 +590,24 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         return null;
       }
       const now = new Date().toISOString();
+      const existing = s.scenarios[s.currentWorkflowId];
       set((prev) => ({
         scenarios: {
           ...prev.scenarios,
-          [existing.id]: { ...existing, name, updatedAt: now, graph, estimate: s.estimation ?? undefined },
+          [s.currentWorkflowId!]: {
+            ...(existing ?? { id: s.currentWorkflowId!, createdAt: now, graph }),
+            name,
+            updatedAt: now,
+            graph,
+            estimate: s.estimation ?? undefined,
+          },
         },
+        currentWorkflowName: name,
+        isDirty: false,
         isSaving: false,
         lastSavedAt: new Date(),
-        activeWorkflowId: existing.id,
       }));
-      return existing.id;
+      return s.currentWorkflowId;
     } else {
       const id = uuid();
       const now = new Date().toISOString();
@@ -586,7 +635,9 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       set((prev) => ({
         scenarios: { ...prev.scenarios, [id]: scenario },
         currentScenarioId: id,
-        activeWorkflowId: id,
+        currentWorkflowId: id,
+        currentWorkflowName: name,
+        isDirty: false,
         isSaving: false,
         lastSavedAt: new Date(),
       }));
@@ -635,13 +686,14 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     if (error) {
       console.error("Supabase delete error:", error);
     }
-    // Also remove from local store
     set((s) => {
       const { [id]: _, ...rest } = s.scenarios;
+      const isCurrent = s.currentWorkflowId === id;
       return {
         scenarios: rest,
         selectedForComparison: s.selectedForComparison.filter((sid) => sid !== id),
         currentScenarioId: s.currentScenarioId === id ? null : s.currentScenarioId,
+        ...(isCurrent ? { currentWorkflowId: null, currentWorkflowName: "Untitled Workflow", isDirty: false } : {}),
       };
     });
   },
@@ -660,3 +712,6 @@ export const useSelectedForComparison = () => useWorkflowStore((s) => s.selected
 export const useComparisonResults = () => useWorkflowStore((s) => s.comparisonResults);
 export const useProviderData = () => useWorkflowStore((s) => s.providerData);
 export const useToolCategoryData = () => useWorkflowStore((s) => s.toolCategoryData);
+export const useCurrentWorkflowId = () => useWorkflowStore((s) => s.currentWorkflowId);
+export const useCurrentWorkflowName = () => useWorkflowStore((s) => s.currentWorkflowName);
+export const useIsDirty = () => useWorkflowStore((s) => s.isDirty);
