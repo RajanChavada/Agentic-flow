@@ -1,4 +1,4 @@
-/* ── Shared TypeScript types for the Agentic‑Flow frontend ─── */
+/* ── Shared TypeScript types for the Neurovn frontend ─── */
 
 /** The node kinds supported on the canvas. */
 export type WorkflowNodeType =

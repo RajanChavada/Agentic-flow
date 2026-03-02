@@ -104,7 +104,7 @@ interface WorkflowStore {
 
   // Import
   importWorkflow: (imported: ImportedWorkflow, mode: "replace" | "scenario") => void;
-  loadAgenticFlow: (payload: {
+  loadNeurovnWorkflow: (payload: {
     schema_version?: string;
     nodes: { id: string; type: WorkflowNodeType; position?: { x: number; y: number }; data?: Record<string, unknown> }[];
     edges: Edge[];
@@ -444,7 +444,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     }
   },
 
-  loadAgenticFlow: (payload) => {
+  loadNeurovnWorkflow: (payload) => {
     // Basic validation should happen before calling this, but we extract what we need
     const rfNodes: Node<WorkflowNodeData>[] = payload.nodes.map((n) => ({
       id: n.id,

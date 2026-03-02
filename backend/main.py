@@ -1,4 +1,4 @@
-"""FastAPI application – Agentic Workflow Analyzer backend."""
+"""FastAPI application – Neurovn backend."""
 
 from typing import Optional
 
@@ -27,8 +27,8 @@ from tool_registry import tool_registry
 from import_adapters import get_adapter
 
 app = FastAPI(
-    title="Agentic Workflow Analyzer",
-    description="Estimates token usage, cost, and latency for agentic workflows.",
+    title="Neurovn",
+    description="Estimates token usage, cost, and latency for AI workflows.",
     version="0.2.0",
 )
 

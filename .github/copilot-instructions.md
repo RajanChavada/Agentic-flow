@@ -1,15 +1,15 @@
-# Copilot Instructions — Agentic Flow Designer
+# Copilot Instructions — Neurovn
 
 ## Project overview
 
-Agentic Flow is a **monorepo** with two independent services:
+Neurovn is a **monorepo** with two independent services:
 
 | Layer | Path | Stack | Dev server |
 |-------|------|-------|------------|
 | Frontend | `frontend/` | Next.js 15 (App Router), React 19, TypeScript, React Flow (`@xyflow/react`), Zustand, Tailwind CSS, Recharts | `npm run dev` → `:3000` |
 | Backend | `backend/` | Python 3.11+, FastAPI, Pydantic, tiktoken, Uvicorn | `python main.py` → `:8000` |
 
-The frontend is a Lucidchart‑style canvas; the backend estimates token cost & latency for agentic workflows.
+The frontend is a Lucidchart‑style canvas; the backend estimates token cost & latency for AI workflows.
 
 ## Architecture at a glance
 

@@ -22,7 +22,7 @@ function FooterSection() {
               Stay Connected
             </h2>
             <p className="mb-6 text-sm text-muted-foreground">
-              Join the newsletter for updates on Agentic Flow and new features.
+              Join the newsletter for updates on Neurovn and new features.
             </p>
             <form
               className="relative"
@@ -72,7 +72,7 @@ function FooterSection() {
                 How It Works
               </a>
               <a
-                href="https://github.com/RajanChavada/Agentic-flow"
+                href="https://github.com/RajanChavada/neurovn"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block transition-colors hover:text-foreground text-muted-foreground"
@@ -182,7 +182,7 @@ function FooterSection() {
 
             <p className="mt-5 text-sm font-medium">Rajan Chavada</p>
             <p className="text-xs text-muted-foreground">
-              Builder of Agentic Flow
+              Builder of Neurovn
             </p>
           </div>
         </div>
@@ -190,12 +190,12 @@ function FooterSection() {
         {/* Bottom bar */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border/60 pt-8 text-center md:flex-row">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Agentic Flow · Rajan Chavada. All
+            © {new Date().getFullYear()} Neurovn · Rajan Chavada. All
             rights reserved.
           </p>
           <nav className="flex gap-4 text-sm text-muted-foreground">
             <a
-              href="https://github.com/RajanChavada/Agentic-flow"
+              href="https://github.com/RajanChavada/neurovn"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"

@@ -7,7 +7,7 @@ load_dotenv()
 
 # CORS origins for the Next.js frontend.
 # Supports multiple origins separated by commas for local + production.
-# Example: "http://localhost:3000,https://agentic-flow.vercel.app"
+# Example: "http://localhost:3000,https://neurovn.vercel.app"
 _raw_origins = os.getenv("FRONTEND_ORIGINS", os.getenv("FRONTEND_ORIGIN", "http://localhost:3000"))
 FRONTEND_ORIGINS: list[str] = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 

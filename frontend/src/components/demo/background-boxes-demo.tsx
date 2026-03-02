@@ -13,7 +13,7 @@ export function BackgroundBoxesDemo() {
         </h2>
         <p className="mt-3 max-w-md text-sm text-gray-500 dark:text-slate-400 sm:text-base">
           DAG analysis, critical-path detection, token-level cost breakdowns —
-          everything you need to architect efficient agentic systems.
+          everything you need to architect efficient AI systems.
         </p>
       </div>
     </div>

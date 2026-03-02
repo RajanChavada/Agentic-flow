@@ -1,7 +1,7 @@
 ### Purpose of this document 
 This document outlines the entire frontend development plan with specific images for the UI mock-up the resources needed to run the frontend and scaffold, as well as future iterations and phases that are tackled, this document will serve both as a guide for th frontend development as well as a reference for the agent to document their update/progress and next steps 
 
-# Frontend Plan – Agentic Workflow Designer
+# Frontend Plan – Neurovn
 
 ## 1. Goals
 

@@ -378,7 +378,7 @@ export function ProblemBanner() {
             viewport={{ once: true }}
             transition={{ delay: 0.35 }}
           >
-            Agentic Flow fixes this. Here&apos;s how ↓
+            Neurovn fixes this. Here&apos;s how ↓
           </motion.p>
         </motion.div>
       </div>
@@ -418,7 +418,7 @@ export function CauseAndEffect() {
           Every problem has an answer
         </h2>
         <p className="mx-auto mt-3 max-w-lg text-sm text-muted-foreground sm:text-base">
-          Click a challenge to see how Agentic Flow solves it — with real output previews.
+          Click a challenge to see how Neurovn solves it — with real output previews.
         </p>
       </motion.div>
 

@@ -238,7 +238,7 @@ export default function HeaderBar() {
             isDark ? "text-slate-100" : "text-gray-800"
           }`}
         >
-          Agentic Flow Designer
+          Neurovn
         </h1>
 
         <span className={`text-sm ${isDark ? "text-slate-600" : "text-gray-300"}`}>/</span>

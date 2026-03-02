@@ -2,7 +2,7 @@
 this is the backend plan document for the backend agent which will go over the goals and the tech stack for the backend development of the project, this document will also outline the specific routes that need to be implemented in the FastAPI backend and the purpose of each route, this document will also serve as a reference for the agent to document their update/progress and next steps
 
 
-# Backend Plan – Agentic Workflow Analyzer
+# Backend Plan – Neurovn
 
 ## 1. Goals
 
@@ -1374,10 +1374,10 @@ Instead, the feature is split into three clearly-scoped pieces.
 }
 ```
 
-File download: {workflow-name}.agenticflow.json
+File download: {workflow-name}.neurovn.json
 
 Import
-Only accepts .agenticflow.json files (validated by schema_version field).
+Only accepts .neurovn.json files (validated by schema_version field).
 
 On upload:
 

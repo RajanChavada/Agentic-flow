@@ -78,9 +78,9 @@ export default function LandingPage() {
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
           <a href="/" className="flex items-center gap-2.5 font-semibold tracking-tight">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-[10px] font-bold text-background">
-              AF
+              NV
             </div>
-            <span className="hidden sm:inline">Agentic Flow</span>
+            <span className="hidden sm:inline">Neurovn</span>
           </a>
 
           <div className="flex items-center gap-5 text-sm">
@@ -91,7 +91,7 @@ export default function LandingPage() {
               How It Works
             </a>
             <a
-              href="https://github.com/RajanChavada/Agentic-flow"
+              href="https://github.com/RajanChavada/neurovn"
               target="_blank"
               rel="noopener noreferrer"
               className="hidden items-center gap-1.5 text-muted-foreground transition hover:text-foreground sm:inline-flex"
@@ -136,7 +136,7 @@ export default function LandingPage() {
           </motion.div>
 
           <h1 className="text-4xl font-semibold leading-tight tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
-            Design agentic workflows.
+            Design AI workflows.
             <br />
             <span className="text-muted-foreground">See the cost before you ship.</span>
           </h1>
@@ -219,7 +219,7 @@ export default function LandingPage() {
             Ready to build smarter?
           </h2>
           <p className="mx-auto mt-4 max-w-md text-base text-muted-foreground sm:text-lg">
-            Start designing agentic workflows in seconds — no sign-up required.
+            Start designing AI workflows in seconds — no sign-up required.
           </p>
           <a
             href="/editor"

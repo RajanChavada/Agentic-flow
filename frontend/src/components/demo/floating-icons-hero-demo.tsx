@@ -29,7 +29,7 @@ export default function FloatingIconsHeroDemo() {
   return (
     <FloatingIconsHero
       title="Craft Intelligent Workflows."
-      subtitle="The minimalist canvas for agentic AI. Visualize, estimate, and optimize — before you ship."
+      subtitle="The minimalist canvas for AI workflows. Visualize, estimate, and optimize — before you ship."
       ctaText="Launch Canvas"
       ctaHref="/editor"
       secondaryCtaText="Learn More"

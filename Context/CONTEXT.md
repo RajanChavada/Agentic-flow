@@ -21,7 +21,7 @@ This project will create a canvas where users can create agentic workflows, they
 ### Auto‑layout and export: 
 - Integrate a DAG layout engine (e.g., dagre or ELK) with React Flow to “auto‑tidy” the canvas, then add export options for PNG/SVG of the graph plus downloadable run reports and comparison reports in JSON/Markdown/PDF.
 
-# Agentic Workflow Designer – Feature Roadmap (Next Milestones)
+# Neurovn – Feature Roadmap (Next Milestones)
 
 ## Overview
 
@@ -115,7 +115,7 @@ npx shadcn-ui@latest init
   - `src/components/ui` (design-system pieces: Button, FloatingIconsHero, Boxes).
   - `src/components/demo` (demo wrappers, easily replaced later).
 - Use `FloatingIconsHero` for the main hero on `/`:
-  - Pass copy tuned to agentic workflows (e.g., "Design. Optimize. Agentic Workflows.").
+  - Pass copy tuned to AI workflows (e.g., "Design. Optimize. AI Workflows.").
   - Use lucide-react icons (Bot, Workflow, CircuitBoard, etc.) instead of emojis.
 - Use `BackgroundBoxes` as:
   - A secondary hero or background effect for a “How it works”/“Technical” section.

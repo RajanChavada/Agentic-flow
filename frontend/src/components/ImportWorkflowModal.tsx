@@ -9,7 +9,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 // Re-map internal SOURCE_OPTIONS to UI tabs
 const uiTabs = [
-  { id: "my_workflow", label: "My Workflow", hint: "Upload .agenticflow.json" },
+  { id: "my_workflow", label: "My Workflow", hint: "Upload .neurovn.json" },
   { id: "estimate", label: "Quick Estimate", hint: "Structured external import" },
   { id: "langgraph", label: "LangGraph (beta)", hint: "StateGraph-style JSON" },
 ] as const;
@@ -33,7 +33,7 @@ interface Props {
 
 export default function ImportWorkflowModal({ isOpen, onClose }: Props) {
   const { theme } = useUIState();
-  const { importWorkflow, loadAgenticFlow, setErrorBanner } = useWorkflowStore();
+  const { importWorkflow, loadNeurovnWorkflow, setErrorBanner } = useWorkflowStore();
   const isDark = theme === "dark";
 
   const [activeTab, setActiveTab] = useState<TabId>("my_workflow");
@@ -105,18 +105,18 @@ export default function ImportWorkflowModal({ isOpen, onClose }: Props) {
     try {
       if (activeTab === "my_workflow") {
         if (!selectedFile) {
-          throw new Error("Please select a .agenticflow.json file to upload.");
+          throw new Error("Please select a .neurovn.json file to upload.");
         }
 
         const text = await selectedFile.text();
         const payload = JSON.parse(text);
 
         if (payload.schema_version !== "1.0" || !payload.nodes || !payload.edges) {
-          throw new Error("Invalid AgenticFlow schema. Expected schema_version 1.0 with nodes and edges.");
+          throw new Error("Invalid Neurovn schema. Expected schema_version 1.0 with nodes and edges.");
         }
 
         // Direct load bypassing external formatting
-        loadAgenticFlow(payload);
+        loadNeurovnWorkflow(payload);
 
       } else if (activeTab === "estimate") {
         // Mock generic payload based on structured form
@@ -253,7 +253,7 @@ export default function ImportWorkflowModal({ isOpen, onClose }: Props) {
                 />
                 <UploadCloud className={`mx-auto mb-2 w-8 h-8 ${isDark ? "text-slate-400" : "text-gray-400"}`} />
                 <p className={`text-sm font-medium ${isDark ? "text-slate-200" : "text-gray-700"}`}>
-                  {selectedFile ? selectedFile.name : "Click to upload .agenticflow.json"}
+                  {selectedFile ? selectedFile.name : "Click to upload .neurovn.json"}
                 </p>
                 <p className={`text-xs mt-1 ${isDark ? "text-slate-500" : "text-gray-500"}`}>
                   Restores a previously exported workflow exactly as it was.

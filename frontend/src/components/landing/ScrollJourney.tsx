@@ -99,7 +99,7 @@ export function ProblemStatement() {
 
         <FadeIn delay={0.4}>
           <p className="mt-10 text-center text-lg font-semibold text-foreground sm:text-xl">
-            Agentic Flow fixes all of this. Here&apos;s how&nbsp;↓
+            Neurovn fixes all of this. Here&apos;s how&nbsp;↓
           </p>
         </FadeIn>
       </div>

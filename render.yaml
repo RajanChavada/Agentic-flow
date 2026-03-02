@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: agentic-flow-api
+    name: neurovn-api
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
@@ -8,7 +8,7 @@ services:
     region: oregon
     envVars:
       - key: FRONTEND_ORIGINS
-        value: http://localhost:3000,https://agentic-flow-alpha.vercel.app
+        value: http://localhost:3000,https://neurovn.vercel.app
       - key: PORT
         value: "8000"
     healthCheckPath: /health

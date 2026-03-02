@@ -193,7 +193,7 @@ export default function PlaygroundPreview() {
           <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
           <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
           <span className="ml-3 text-xs font-medium text-muted-foreground">
-            playground — Agentic Flow
+            playground — Neurovn
           </span>
         </div>
 

@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Three strategic milestones that deepen the Agentic Flow Designer from a layout + estimation tool into a **context-aware, interoperable, exportable** workflow analysis platform.
+Three strategic milestones that deepen Neurovn from a layout + estimation tool into a **context-aware, interoperable, exportable** workflow analysis platform.
 
 | # | Milestone | Goal | Backend scope | Frontend scope |
 |---|-----------|------|--------------|----------------|

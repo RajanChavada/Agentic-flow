@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Agentic Flow Designer",
-  description: "Visual canvas for designing and estimating agentic workflows",
+  title: "Neurovn",
+  description: "Visual canvas for designing and estimating AI workflows",
 };
 
 export default function RootLayout({
