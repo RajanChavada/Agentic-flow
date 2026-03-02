@@ -1,6 +1,6 @@
-# Agentic Flow Designer
+# Neurovn
 
-A visual canvas for designing, connecting, and cost‑estimating agentic (LLM) workflows — inspired by Lucidchart / Figma.
+A visual canvas for designing, connecting, and cost‑estimating AI (LLM) workflows — inspired by Lucidchart / Figma.
 
 ## Repository layout
 

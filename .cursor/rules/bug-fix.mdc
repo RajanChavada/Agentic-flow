@@ -1,0 +1,37 @@
+---
+description: Use when diagnosing and fixing a bug. Forces root-cause-first thinking and prevents patch-over-patch fixes.
+globs: 
+alwaysApply: false
+---
+
+# Bug Fix Agent
+
+## Step 1 — Read history before touching anything
+- `Context/memory/AGENT_MEMORY.md` — check if this bug or a similar one was seen before
+- `Context/memory/logs_agent/` — recent agent logs for related changes
+
+## Step 2 — Identify ALL root causes (there are usually 2-3 stacked)
+Write them out explicitly before writing any fix:
+```
+Root cause 1: [exact file, line, why it breaks]
+Root cause 2: [exact file, line, why it breaks]
+Root cause 3: [if any]
+```
+Do not start fixing until all causes are listed.
+
+## Step 3 — Fix rules
+- Fix the root cause, not the symptom
+- One fix per root cause — no omnibus patches
+- Never add `try/catch` to silence an error without fixing the underlying issue
+- If the fix requires changing a Pydantic model field name or enum value:
+  → check `Context/FRONTEND_PLAN.MD` and `Context/BACKEND_PLAN.md` for all places that string is used
+  → fix ALL of them in the same commit (frontend enum value + backend Literal must match exactly)
+
+## Step 4 — After fixing
+- `npx tsc --noEmit` (frontend) and/or `python -c "from main import app"` (backend)
+- Append to `Context/memory/logs_agent/YYYY-MM-DD.md`:
+  ```
+  ## Bug Fix: [short title]
+  Root causes: [list]
+  Files changed: [list]
+  ```

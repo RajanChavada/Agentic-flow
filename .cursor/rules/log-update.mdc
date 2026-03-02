@@ -1,0 +1,39 @@
+---
+description: Use after completing any task to write the daily log and update agent memory. Always the last step.
+globs: 
+alwaysApply: false
+---
+
+# Log and Memory Update Agent
+
+## After EVERY completed task, do both of these:
+
+### 1. Append to `Context/memory/logs_agent/YYYY-MM-DD.md`
+Use today's date. Create the file if it does not exist.
+```markdown
+## [Task title] — [HH:MM]
+**Agent:** [Frontend / Backend / Full-stack] agent — [area of work]
+
+### What changed
+- `path/to/file.tsx` — [one line description]
+- `path/to/file.py` — [one line description]
+
+### Root causes fixed (if bug fix)
+- [cause] in [file]
+
+### Next steps
+- [ ] [anything left to do]
+```
+
+### 2. Append to `Context/memory/AGENT_MEMORY.md`
+Only if a non-obvious decision or lesson was learned:
+```markdown
+## [Short title] — [YYYY-MM-DD]
+**Context:** [why this decision was made]
+**Decision:** [what was done]
+**Don't repeat:** [what NOT to do next time]
+```
+
+## When NOT to update AGENT_MEMORY.md
+- Routine feature implementation with no surprises → skip
+- Only update for: non-obvious bugs, architectural pivots, "I wish I knew this earlier" moments
