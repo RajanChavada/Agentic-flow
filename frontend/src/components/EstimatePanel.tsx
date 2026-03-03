@@ -64,6 +64,21 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 const STORAGE_KEY = "estimate-panel-sections";
 
+/** Minimum panel width (narrowest user can resize to) — keeps hero text legible. */
+const PANEL_MIN_WIDTH = 380;
+/** Maximum panel width in sidebar mode. */
+const PANEL_MAX_WIDTH = 700;
+
+/** Hero number text size class based on panel width. Clamps to avoid cut-off in narrow sidebar. */
+function getHeroTextClass(width: number, isFullscreen: boolean): string {
+  if (isFullscreen) return "text-3xl";
+  if (width < 380) return "text-base";
+  if (width < 440) return "text-lg";
+  if (width < 520) return "text-xl";
+  if (width < 600) return "text-2xl";
+  return "text-3xl";
+}
+
 type SectionId = "health" | "breakdown" | "cycles" | "scaling" | "observability";
 
 function loadSectionState(): Record<SectionId, boolean> {
@@ -235,7 +250,7 @@ export default function EstimatePanel() {
   }, [scalingParams.runsPerDay, scalingParams.loopIntensity]);
 
   /* ── Resizable width state ──────────────────────────────── */
-  const [width, setWidth] = useState(420);
+  const [width, setWidth] = useState(Math.max(PANEL_MIN_WIDTH, 420));
   const isResizing = useRef(false);
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
@@ -248,7 +263,7 @@ export default function EstimatePanel() {
     const onMouseMove = (ev: MouseEvent) => {
       if (!isResizing.current) return;
       const delta = startX - ev.clientX; // dragging left → wider
-      setWidth(Math.max(320, Math.min(700, startWidth + delta)));
+      setWidth(Math.max(PANEL_MIN_WIDTH, Math.min(PANEL_MAX_WIDTH, startWidth + delta)));
     };
 
     const onMouseUp = () => {
@@ -285,6 +300,9 @@ export default function EstimatePanel() {
     latency: Number((b.latency * 1000).toFixed(1)),
     idx: i,
   }));
+
+  /* ── Hero text size (scales with panel width) ───────────── */
+  const heroTextClass = getHeroTextClass(width, isFullscreen);
 
   /* ── Don't render if closed or no data ──────────────────── */
   if (!estimation) return null;
@@ -395,11 +413,11 @@ export default function EstimatePanel() {
             <div>
               <div className="space-y-4">
                 {/* Hero row: 3 cards */}
-                <div className={`grid ${isFullscreen ? "grid-cols-3" : "grid-cols-1 sm:grid-cols-3"} gap-4`}>
+                <div className={`grid ${isFullscreen ? "grid-cols-3" : "grid-cols-1 sm:grid-cols-3"} gap-4 min-w-0`}>
                   {/* Tokens card */}
                   <div
                     className={`
-                      rounded-xl border p-5 min-h-[120px] flex flex-col
+                      rounded-xl border p-5 min-h-[120px] flex flex-col min-w-0 overflow-hidden
                       ${isDark ? "bg-muted/50 border-slate-700" : "bg-muted/50 border-gray-200"}
                     `}
                   >
@@ -408,7 +426,7 @@ export default function EstimatePanel() {
                     </p>
                     {estimation.token_range ? (
                       <>
-                        <p className="text-3xl font-bold mt-1 tabular-nums">
+                        <p className={`${heroTextClass} font-bold mt-1 tabular-nums`}>
                           {estimation.token_range.avg.toLocaleString()}
                         </p>
                         <div className={`text-[10px] mt-1 flex gap-3 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
@@ -417,7 +435,7 @@ export default function EstimatePanel() {
                         </div>
                       </>
                     ) : (
-                      <p className="text-3xl font-bold mt-1 tabular-nums">
+                      <p className={`${heroTextClass} font-bold mt-1 tabular-nums`}>
                         {estimation.total_tokens.toLocaleString()}
                       </p>
                     )}
@@ -427,7 +445,7 @@ export default function EstimatePanel() {
                   {/* Cost card */}
                   <div
                     className={`
-                      rounded-xl border p-5 min-h-[120px] flex flex-col
+                      rounded-xl border p-5 min-h-[120px] flex flex-col min-w-0 overflow-hidden
                       ${isDark ? "bg-muted/50 border-slate-700" : "bg-muted/50 border-gray-200"}
                     `}
                   >
@@ -435,11 +453,11 @@ export default function EstimatePanel() {
                       Cost
                     </p>
                     {estimation.cost_range ? (
-                      <p className="text-3xl font-bold mt-1 tabular-nums">
+                      <p className={`${heroTextClass} font-bold mt-1 tabular-nums`}>
                         ${estimation.cost_range.avg.toFixed(4)}
                       </p>
                     ) : (
-                      <p className="text-3xl font-bold mt-1 tabular-nums">
+                      <p className={`${heroTextClass} font-bold mt-1 tabular-nums`}>
                         ${estimation.total_cost.toFixed(4)}
                       </p>
                     )}
@@ -454,7 +472,7 @@ export default function EstimatePanel() {
                   {/* Latency card */}
                   <div
                     className={`
-                      rounded-xl border p-5 min-h-[120px] flex flex-col
+                      rounded-xl border p-5 min-h-[120px] flex flex-col min-w-0 overflow-hidden
                       ${isDark ? "bg-muted/50 border-slate-700" : "bg-muted/50 border-gray-200"}
                     `}
                   >
@@ -463,7 +481,7 @@ export default function EstimatePanel() {
                     </p>
                     {estimation.latency_range ? (
                       <>
-                        <p className="text-3xl font-bold mt-1 tabular-nums">
+                        <p className={`${heroTextClass} font-bold mt-1 tabular-nums`}>
                           {estimation.latency_range.avg.toFixed(2)}s
                         </p>
                         <div className={`text-[10px] mt-1 flex gap-3 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
@@ -472,7 +490,7 @@ export default function EstimatePanel() {
                         </div>
                       </>
                     ) : (
-                      <p className="text-3xl font-bold mt-1 tabular-nums">
+                      <p className={`${heroTextClass} font-bold mt-1 tabular-nums`}>
                         {estimation.total_latency.toFixed(2)}s
                       </p>
                     )}
