@@ -13,8 +13,6 @@ import type {
 import {
   useWorkflowStore,
   useWorkflowNodes,
-  useProviderData,
-  useToolCategoryData,
 } from "@/store/useWorkflowStore";
 
 /* ─── Shared primitives (inline) ──────────────────────────── */
@@ -191,162 +189,6 @@ const COLOR_PRESETS = [
   { border: "#6b7280", bg: "#f9fafb", label: "#6b7280" },
   { border: "#0ea5e9", bg: "#f0f9ff", label: "#0ea5e9" },
 ];
-
-/* ─── Agent Section ───────────────────────────────────────── */
-
-const TASK_TYPES = [
-  { value: "classification", label: "Classification" },
-  { value: "summarization", label: "Summarization" },
-  { value: "code_generation", label: "Code Gen" },
-  { value: "rag_answer", label: "RAG" },
-  { value: "tool_orchestration", label: "Tool Orchestration" },
-  { value: "routing", label: "Routing" },
-];
-
-const OUTPUT_SIZES = [
-  { value: "short", label: "Short" },
-  { value: "medium", label: "Medium" },
-  { value: "long", label: "Long" },
-  { value: "very_long", label: "Very Long" },
-];
-
-function AgentToolbarSection({ node }: { node: Node<WorkflowNodeData> }) {
-  const updateNodeData = useWorkflowStore((s) => s.updateNodeData);
-  const providerData = useProviderData();
-
-  const provider = (node.data.modelProvider as string) ?? "";
-  const model = (node.data.modelName as string) ?? "";
-  const taskType = (node.data.taskType as string) ?? "";
-  const outputSize = (node.data.expectedOutputSize as string) ?? "";
-  const calls = (node.data.expectedCallsPerRun as number | null) ?? null;
-  const context = (node.data.context as string) ?? "";
-
-  const providers = providerData ?? [];
-  const currentProvider = providers.find((p) => p.id === provider);
-  const models = currentProvider?.models ?? [];
-  const selectedModel = models.find((m) => m.id === model);
-
-  return (
-    <>
-      <span className="inline-block w-3 h-3 rounded-sm bg-blue-500 shrink-0" />
-      <ToolbarInput
-        value={node.data.label}
-        onChange={(v) => updateNodeData(node.id, { label: v })}
-        className="w-28"
-        placeholder="Agent name"
-      />
-      <ToolbarDivider />
-      <ToolbarSelect
-        value={provider}
-        onChange={(v) => updateNodeData(node.id, { modelProvider: v, modelName: "" })}
-        options={providers.map((p) => ({ value: p.id, label: p.name }))}
-        placeholder="Provider"
-        className="w-28"
-      />
-      <ToolbarSelect
-        value={model}
-        onChange={(v) => updateNodeData(node.id, { modelName: v })}
-        options={models.map((m) => ({ value: m.id, label: m.display_name }))}
-        placeholder="Model"
-        className="w-32"
-      />
-      {selectedModel && (
-        <span className="text-[9px] font-mono text-stone-500 dark:text-slate-500 shrink-0 whitespace-nowrap">
-          ${selectedModel.input_per_million.toFixed(2)} / ${selectedModel.output_per_million.toFixed(2)} per 1M
-        </span>
-      )}
-      <ToolbarDivider />
-      <ToolbarSelect
-        value={taskType}
-        onChange={(v) => updateNodeData(node.id, { taskType: v })}
-        options={TASK_TYPES}
-        placeholder="Task"
-        className="w-28"
-      />
-      <ToolbarSelect
-        value={outputSize}
-        onChange={(v) => updateNodeData(node.id, { expectedOutputSize: v })}
-        options={OUTPUT_SIZES}
-        placeholder="Output"
-        className="w-24"
-      />
-      <ToolbarDivider />
-      <input
-        type="number"
-        value={calls ?? ""}
-        onChange={(e) =>
-          updateNodeData(node.id, {
-            expectedCallsPerRun: e.target.value ? Number(e.target.value) : null,
-          })
-        }
-        placeholder="Loops"
-        min={1}
-        max={100}
-        className={cn(
-          "h-7 w-14 rounded border px-1.5 text-xs outline-none shrink-0",
-          "bg-stone-50 border-stone-300 text-stone-800 placeholder:text-stone-400 focus:bg-white focus:ring-1 focus:ring-blue-400 focus:border-blue-400",
-          "dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100 dark:placeholder:text-slate-500"
-        )}
-      />
-      <ToolbarDivider />
-      <div className="relative shrink-0">
-        <ToolbarInput
-          value={context}
-          onChange={(v) => updateNodeData(node.id, { context: v })}
-          placeholder="Context prompt..."
-          className="w-40 pr-8"
-          maxLength={500}
-        />
-        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] text-stone-400 dark:text-slate-500">
-          {context.length}/500
-        </span>
-      </div>
-      <DeleteButton nodeId={node.id} />
-    </>
-  );
-}
-
-/* ─── Tool Section ────────────────────────────────────────── */
-
-function ToolToolbarSection({ node }: { node: Node<WorkflowNodeData> }) {
-  const updateNodeData = useWorkflowStore((s) => s.updateNodeData);
-  const toolCategoryData = useToolCategoryData();
-
-  const category = (node.data.toolCategory as string) ?? "";
-  const toolId = (node.data.toolId as string) ?? "";
-
-  const categories = toolCategoryData ?? [];
-  const currentCat = categories.find((c) => c.id === category);
-  const tools = currentCat?.tools ?? [];
-
-  return (
-    <>
-      <span className="inline-block w-3 h-3 rotate-45 rounded-[2px] bg-orange-500 shrink-0" />
-      <ToolbarInput
-        value={node.data.label}
-        onChange={(v) => updateNodeData(node.id, { label: v })}
-        className="w-28"
-        placeholder="Tool name"
-      />
-      <ToolbarDivider />
-      <ToolbarSelect
-        value={category}
-        onChange={(v) => updateNodeData(node.id, { toolCategory: v, toolId: "" })}
-        options={categories.map((c) => ({ value: c.id, label: c.name }))}
-        placeholder="Category"
-        className="w-32"
-      />
-      <ToolbarSelect
-        value={toolId}
-        onChange={(v) => updateNodeData(node.id, { toolId: v })}
-        options={tools.map((t) => ({ value: t.id, label: t.display_name }))}
-        placeholder="Tool"
-        className="w-36"
-      />
-      <DeleteButton nodeId={node.id} />
-    </>
-  );
-}
 
 /* ─── BlankBox Section ────────────────────────────────────── */
 
@@ -532,7 +374,7 @@ export default function ContextToolbar() {
   const node = nodes.find((n) => n.id === selectedNodeId);
 
   const visible =
-    !!node && !["startNode", "finishNode"].includes(node.type ?? "");
+    !!node && (node.type === "blankBoxNode" || node.type === "textNode");
 
   return (
     <div
@@ -543,8 +385,6 @@ export default function ContextToolbar() {
       )}
     >
       <div className="flex items-center gap-1.5 px-3 h-12 overflow-x-auto overflow-y-hidden scrollbar-hide">
-        {node?.type === "agentNode" && <AgentToolbarSection node={node} />}
-        {node?.type === "toolNode" && <ToolToolbarSection node={node} />}
         {node?.type === "blankBoxNode" && <BlankBoxToolbarSection node={node} />}
         {node?.type === "textNode" && <TextToolbarSection node={node} />}
       </div>

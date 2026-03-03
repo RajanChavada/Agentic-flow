@@ -275,12 +275,25 @@ export interface ToolCategoryDetailed {
   tools: ToolInfoType[];
 }
 
+// ── Canvas types ────────────────────────────────────────────────
+
+/** A canvas container that holds multiple workflows. */
+export interface Canvas {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  workflowCount?: number;
+  thumbnailUrl?: string | null;
+}
+
 // ── Scenario comparison types ──────────────────────────────────
 
 /** A saved workflow scenario for comparison. */
 export interface WorkflowScenario {
   id: string;
   name: string;
+  canvasId?: string;
   createdAt: string;
   updatedAt: string;
   graph: {
@@ -290,6 +303,25 @@ export interface WorkflowScenario {
   };
   /** Populated after estimation runs. */
   estimate?: WorkflowEstimation;
+}
+
+/** Marketplace template (browse, use, publish). */
+export interface WorkflowTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  graph: {
+    nodes: NodeConfigPayload[];
+    edges: EdgeConfigPayload[];
+    recursionLimit?: number;
+  };
+  category: string;
+  is_curated: boolean;
+  use_count?: number;
+  created_at: string;
+  updated_at: string;
+  user_id?: string | null;
+  author_name?: string | null;
 }
 
 /** Summary result for one workflow in a batch response. */

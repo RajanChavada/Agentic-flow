@@ -17,6 +17,10 @@ import {
   Flame,
   Info,
   Radio,
+  ChevronDown,
+  ChevronRight,
+  Activity,
+  TrendingUp,
 } from "lucide-react";
 import {
   useEstimation,
@@ -58,6 +62,80 @@ const DOT_COLOURS: Record<string, string> = {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+const STORAGE_KEY = "estimate-panel-sections";
+
+type SectionId = "health" | "breakdown" | "cycles" | "scaling" | "observability";
+
+function loadSectionState(): Record<SectionId, boolean> {
+  if (typeof window === "undefined") {
+    return { health: true, breakdown: false, cycles: false, scaling: false, observability: false };
+  }
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Record<string, boolean>;
+      return {
+        health: parsed.health ?? true,
+        breakdown: parsed.breakdown ?? false,
+        cycles: parsed.cycles ?? false,
+        scaling: parsed.scaling ?? false,
+        observability: parsed.observability ?? false,
+      };
+    }
+  } catch {
+    // ignore
+  }
+  return { health: true, breakdown: false, cycles: false, scaling: false, observability: false };
+}
+
+function saveSectionState(state: Record<SectionId, boolean>) {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // ignore
+  }
+}
+
+interface DashboardSectionProps {
+  id: SectionId;
+  title: string;
+  icon: React.ReactNode;
+  collapsed: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+  isDark: boolean;
+}
+
+function DashboardSection({ id, title, icon, collapsed, onToggle, children, isDark }: DashboardSectionProps) {
+  return (
+    <div className="space-y-4">
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`
+          w-full flex items-center gap-2 py-2 -mx-1 px-1 rounded-lg transition-colors
+          ${isDark ? "hover:bg-slate-800/60 text-slate-200" : "hover:bg-gray-100 text-gray-700"}
+        `}
+      >
+        {collapsed ? (
+          <ChevronRight className="w-4 h-4 shrink-0" />
+        ) : (
+          <ChevronDown className="w-4 h-4 shrink-0" />
+        )}
+        <span className="w-4 h-4 shrink-0 flex items-center justify-center">{icon}</span>
+        <span className="text-sm font-semibold">{title}</span>
+      </button>
+      <div
+        className="overflow-hidden transition-all duration-300 ease-in-out"
+        style={{ maxHeight: collapsed ? 0 : 2000 }}
+      >
+        <div className="space-y-4">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function EstimatePanel() {
   const estimation = useEstimation();
   const { isEstimatePanelOpen, theme } = useUIState();
@@ -75,6 +153,23 @@ export default function EstimatePanel() {
 
   /* ── Fullscreen (expanded dashboard) mode ──────────────── */
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  /* ── Collapsible section state (persisted in sessionStorage) ── */
+  const [sectionCollapsed, setSectionCollapsed] = useState<Record<SectionId, boolean>>(() =>
+    typeof window !== "undefined" ? loadSectionState() : { health: true, breakdown: false, cycles: false, scaling: false, observability: false }
+  );
+
+  useEffect(() => {
+    setSectionCollapsed(loadSectionState());
+  }, []);
+
+  const toggleSection = useCallback((id: SectionId) => {
+    setSectionCollapsed((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      saveSectionState(next);
+      return next;
+    });
+  }, []);
 
   /* ── Observability paste state ──────────────────────────── */
   const [showActualPaste, setShowActualPaste] = useState(false);
@@ -296,120 +391,135 @@ export default function EstimatePanel() {
             className={`flex-1 overflow-y-auto px-5 py-5 ${isFullscreen ? "max-w-7xl mx-auto w-full" : ""}`}
           >
            <div className={isFullscreen ? "grid grid-cols-2 gap-6" : "space-y-6"}>
-            {/* ── LEFT COLUMN (in fullscreen) / sequential (in sidebar) ── */}
-            <div className="space-y-6">
-            {/* Summary cards */}
-            <div className="grid grid-cols-2 gap-3">
-              {/* Token + Cost card */}
-              <div
-                className={`
-                  rounded-xl border p-4
-                  ${isDark ? "bg-slate-800/60 border-slate-700" : "bg-blue-50/60 border-blue-100"}
-                `}
-              >
-                <p className={`text-xs font-medium ${isDark ? "text-slate-400" : "text-gray-500"}`}>
-                  Estimated Token Usage
-                </p>
-                {estimation.token_range ? (
-                  <>
-                    <p className="text-2xl font-bold mt-1">
-                      {estimation.token_range.avg.toLocaleString()}
-                      <span className="text-sm font-normal ml-1">Tokens</span>
-                      <span className={`text-xs font-normal ml-1 ${isDark ? "text-slate-500" : "text-gray-400"}`}>(avg)</span>
+            {/* ── 1. OVERVIEW (North Star) — always visible ── */}
+            <div className={isFullscreen ? "col-span-2" : ""}>
+              <div className="space-y-4">
+                {/* Hero row: 3 cards */}
+                <div className={`grid ${isFullscreen ? "grid-cols-3" : "grid-cols-1 sm:grid-cols-3"} gap-4`}>
+                  {/* Tokens card */}
+                  <div
+                    className={`
+                      rounded-xl border p-5 min-h-[120px] flex flex-col
+                      ${isDark ? "bg-muted/50 border-slate-700" : "bg-muted/50 border-gray-200"}
+                    `}
+                  >
+                    <p className={`text-xs font-medium ${isDark ? "text-slate-400" : "text-gray-500"}`}>
+                      Token Usage
                     </p>
-                    <div className={`text-[10px] mt-1 flex gap-3 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
-                      <span>Min: {estimation.token_range.min.toLocaleString()}</span>
-                      <span>Max: {estimation.token_range.max.toLocaleString()}</span>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-2xl font-bold mt-1">
-                    {estimation.total_tokens.toLocaleString()}
-                    <span className="text-sm font-normal ml-1">Tokens</span>
-                  </p>
-                )}
-                <p className={`text-xs mt-1 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
-                  Cost:{" "}
-                  {estimation.cost_range ? (
-                    <span className="font-semibold">
-                      ${estimation.cost_range.min.toFixed(4)} – ${estimation.cost_range.max.toFixed(4)}
-                    </span>
-                  ) : (
-                    <span className="font-semibold">${estimation.total_cost.toFixed(4)}</span>
-                  )}
-                </p>
-
-                {/* Mini per-node colour bars */}
-                <div className="flex items-center gap-3 mt-3">
-                  {activeBreakdown.map((b) => (
-                    <div key={b.node_id} className="flex items-center gap-1">
-                      <span
-                        className={`inline-block w-3 h-3 rounded-sm ${DOT_COLOURS[b.nodeType] ?? "bg-blue-500"}`}
-                      />
-                      <span className={`text-[10px] ${isDark ? "text-slate-400" : "text-gray-500"}`}>
-                        {b.node_name}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Latency card */}
-              <div
-                className={`
-                  rounded-xl border p-4
-                  ${isDark ? "bg-slate-800/60 border-slate-700" : "bg-green-50/60 border-green-100"}
-                `}
-              >
-                <p className={`text-xs font-medium ${isDark ? "text-slate-400" : "text-gray-500"}`}>
-                  Estimated Latency
-                </p>
-                {estimation.latency_range ? (
-                  <>
-                    <p className="text-2xl font-bold mt-1">
-                      {estimation.latency_range.avg.toFixed(2)}
-                      <span className="text-sm font-normal ml-1">Seconds</span>
-                      <span className={`text-xs font-normal ml-1 ${isDark ? "text-slate-500" : "text-gray-400"}`}>(avg)</span>
-                    </p>
-                    <div className={`text-[10px] mt-1 flex gap-3 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
-                      <span>Min: {estimation.latency_range.min.toFixed(2)}s</span>
-                      <span>Max: {estimation.latency_range.max.toFixed(2)}s</span>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-2xl font-bold mt-1">
-                    {estimation.total_latency.toFixed(2)}
-                    <span className="text-sm font-normal ml-1">Seconds</span>
-                  </p>
-                )}
-                {estimation.total_tool_latency > 0 && (
-                  <p className={`text-xs mt-1 ${isDark ? "text-amber-400" : "text-amber-600"}`}>
-                    <Wrench className="inline w-3 h-3 mr-0.5" /> Tool latency: {(estimation.total_tool_latency * 1000).toFixed(0)} ms
-                  </p>
-                )}
-                <p className={`text-xs mt-0.5 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
-                  P95 Latency Estimate
-                </p>
-
-                {/* Sparkline */}
-                {latencyData.length > 1 && (
-                  <div className="mt-2 h-10">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={latencyData}>
-                        <Line
-                          type="monotone"
-                          dataKey="latency"
-                          stroke={isDark ? "#60a5fa" : "#3b82f6"}
-                          strokeWidth={2}
-                          dot={false}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
+                    {estimation.token_range ? (
+                      <>
+                        <p className="text-3xl font-bold mt-1 tabular-nums">
+                          {estimation.token_range.avg.toLocaleString()}
+                        </p>
+                        <div className={`text-[10px] mt-1 flex gap-3 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
+                          <span>Min: {estimation.token_range.min.toLocaleString()}</span>
+                          <span>Max: {estimation.token_range.max.toLocaleString()}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-3xl font-bold mt-1 tabular-nums">
+                        {estimation.total_tokens.toLocaleString()}
+                      </p>
+                    )}
+                    <p className={`text-xs mt-auto ${isDark ? "text-slate-500" : "text-gray-400"}`}>Tokens (avg)</p>
                   </div>
-                )}
+
+                  {/* Cost card */}
+                  <div
+                    className={`
+                      rounded-xl border p-5 min-h-[120px] flex flex-col
+                      ${isDark ? "bg-muted/50 border-slate-700" : "bg-muted/50 border-gray-200"}
+                    `}
+                  >
+                    <p className={`text-xs font-medium ${isDark ? "text-slate-400" : "text-gray-500"}`}>
+                      Cost
+                    </p>
+                    {estimation.cost_range ? (
+                      <p className="text-3xl font-bold mt-1 tabular-nums">
+                        ${estimation.cost_range.avg.toFixed(4)}
+                      </p>
+                    ) : (
+                      <p className="text-3xl font-bold mt-1 tabular-nums">
+                        ${estimation.total_cost.toFixed(4)}
+                      </p>
+                    )}
+                    {estimation.cost_range && (
+                      <p className={`text-[10px] mt-1 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
+                        ${estimation.cost_range.min.toFixed(4)} – ${estimation.cost_range.max.toFixed(4)}
+                      </p>
+                    )}
+                    <p className={`text-xs mt-auto ${isDark ? "text-slate-500" : "text-gray-400"}`}>Per run</p>
+                  </div>
+
+                  {/* Latency card */}
+                  <div
+                    className={`
+                      rounded-xl border p-5 min-h-[120px] flex flex-col
+                      ${isDark ? "bg-muted/50 border-slate-700" : "bg-muted/50 border-gray-200"}
+                    `}
+                  >
+                    <p className={`text-xs font-medium ${isDark ? "text-slate-400" : "text-gray-500"}`}>
+                      Latency
+                    </p>
+                    {estimation.latency_range ? (
+                      <>
+                        <p className="text-3xl font-bold mt-1 tabular-nums">
+                          {estimation.latency_range.avg.toFixed(2)}s
+                        </p>
+                        <div className={`text-[10px] mt-1 flex gap-3 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
+                          <span>Min: {estimation.latency_range.min.toFixed(2)}s</span>
+                          <span>Max: {estimation.latency_range.max.toFixed(2)}s</span>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-3xl font-bold mt-1 tabular-nums">
+                        {estimation.total_latency.toFixed(2)}s
+                      </p>
+                    )}
+                    <p className={`text-xs mt-auto ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+                      P95 estimate
+                      {estimation.total_tool_latency > 0 && (
+                        <span className={`ml-1 ${isDark ? "text-amber-400" : "text-amber-600"}`}>
+                          · {(estimation.total_tool_latency * 1000).toFixed(0)} ms tool
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Graph type + Health badge inline */}
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className={`text-xs ${isDark ? "text-slate-400" : "text-gray-500"}`}>
+                    Graph type: <span className="font-semibold">{estimation.graph_type}</span>
+                  </span>
+                  {estimation.health && (
+                    <span
+                      className={`
+                        text-xs px-2.5 py-1 rounded-md font-semibold
+                        ${estimation.health.grade === "A" ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" :
+                          estimation.health.grade === "B" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" :
+                          estimation.health.grade === "C" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300" :
+                          estimation.health.grade === "D" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300" :
+                          "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"}
+                      `}
+                    >
+                      Health: {estimation.health.grade} ({estimation.health.score}/100)
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
+            {/* ── 2. HEALTH & BOTTLENECKS (collapsible) ── */}
+            <div className={isFullscreen ? "col-span-2" : ""}>
+            <DashboardSection
+              id="health"
+              title="Health & Bottlenecks"
+              icon={<Activity className="w-4 h-4" />}
+              collapsed={sectionCollapsed.health}
+              onToggle={() => toggleSection("health")}
+              isDark={isDark}
+            >
             {/* ── Health Score Badge ───────────────────────── */}
             {estimation.health && (
               <div className={`rounded-lg border p-4 ${isDark ? "border-slate-700 bg-slate-800/50" : "border-gray-200 bg-white"}`}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useWorkflowStore, useWorkflowNodes, useWorkflowEdges } from "@/store/useWorkflowStore";
+import { useWorkflowStore, useWorkflowNodes, useWorkflowEdges, useIsDirty } from "@/store/useWorkflowStore";
 import { useUser } from "@/store/useAuthStore";
 
 const DEBOUNCE_MS = 3000;
@@ -14,6 +14,7 @@ const DEBOUNCE_MS = 3000;
 export function useAutoSave() {
   const nodes = useWorkflowNodes();
   const edges = useWorkflowEdges();
+  const isDirty = useIsDirty();
   const user = useUser();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialMount = useRef(true);
@@ -40,5 +41,5 @@ export function useAutoSave() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [nodes, edges, user]);
+  }, [nodes, edges, isDirty, user]);
 }

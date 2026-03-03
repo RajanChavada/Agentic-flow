@@ -228,3 +228,13 @@ Two capabilities:
 | **Phase D** | Milestone 3b: Export PNG/SVG + JSON/MD reports (frontend only) | Small-Medium |
 
 Each phase is independently shippable and builds on the existing codebase without breaking changes.
+
+---
+
+## Canvas UX Features
+
+- [x] Modal popups for agent/tool nodes, toolbar for boxes/text — `.ai/context/features/agentic-node-modals-toolbar-split.md`
+- [x] Canvas Dashboard and Workflow Pull — My Canvases page, plus button, pull from canvas modal, canvas-scoped workflows
+- [ ] Editable canvas/workflow names + workflow thumbnails — `Context/features/canvas-workflow-names-and-thumbnails.md`
+- [ ] Template Preview Modal & Browse Visual Guide — `Context/features/template-preview-modal.md`
+- [x] User Profile Settings & Metrics — `Context/features/user-profile-settings-and-metrics.md`

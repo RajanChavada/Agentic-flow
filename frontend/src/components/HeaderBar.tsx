@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import {
   Sun,
   MoonStar,
@@ -9,11 +10,13 @@ import {
   FilePlus,
   Download,
   LayoutDashboard,
-  LogIn,
-  LogOut,
-  User,
   Check,
   Loader2,
+  LayoutTemplate,
+  UploadCloud,
+  GitBranch,
+  LayoutGrid,
+  Home,
 } from "lucide-react";
 import {
   useWorkflowStore,
@@ -23,8 +26,10 @@ import {
   useCurrentWorkflowId,
   useCurrentWorkflowName,
   useIsDirty,
+  useActiveCanvasId,
 } from "@/store/useWorkflowStore";
 import { useAuthStore, useUser } from "@/store/useAuthStore";
+import NavProfile from "@/components/NavProfile";
 import type {
   NodeConfigPayload,
   EdgeConfigPayload,
@@ -32,7 +37,10 @@ import type {
   EstimateRequestPayload,
 } from "@/types/workflow";
 import ImportWorkflowModal from "./ImportWorkflowModal";
+import PullFromCanvasModal from "./PullFromCanvasModal";
+import ConfirmModal from "./ConfirmModal";
 import ExportDropdown from "./ExportDropdown";
+import PublishModal from "./marketplace/PublishModal";
 import { useAutoLayout } from "@/hooks/useAutoLayout";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -44,12 +52,16 @@ export default function HeaderBar() {
   const { setEstimation, setErrorBanner, toggleTheme } = useWorkflowStore();
   const [loading, setLoading] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isPullOpen, setIsPullOpen] = useState(false);
+  const [isPublishOpen, setIsPublishOpen] = useState(false);
+  const [isNewConfirmOpen, setIsNewConfirmOpen] = useState(false);
+  const activeCanvasId = useActiveCanvasId();
   const isDark = theme === "dark";
   const autoLayout = useAutoLayout();
 
   // Auth
   const user = useUser();
-  const { openAuthModal, signOut } = useAuthStore();
+  const { openAuthModal } = useAuthStore();
 
   // Current workflow tracking
   const currentWorkflowId = useCurrentWorkflowId();
@@ -98,8 +110,14 @@ export default function HeaderBar() {
     if (!user) {
       openAuthModal({
         reason: "Sign in to save your workflow.",
-        onSuccess: () => doSave(),
+        onSuccess: () => useWorkflowStore.getState().setShowNameWorkflowModal(true),
+        postAuthAction: "save",
       });
+      return;
+    }
+    // On guest (no canvas), prompt for name and create new canvas
+    if (!activeCanvasId && nodes.length > 0) {
+      useWorkflowStore.getState().setShowNameWorkflowModal(true);
       return;
     }
     doSave();
@@ -147,6 +165,14 @@ export default function HeaderBar() {
 
   // ── New Workflow ───────────────────────────────────────────
   const handleNew = () => {
+    if (nodes.length > 0) {
+      setIsNewConfirmOpen(true);
+      return;
+    }
+    useWorkflowStore.getState().clearCurrentWorkflow();
+  };
+
+  const handleNewConfirm = () => {
     useWorkflowStore.getState().clearCurrentWorkflow();
   };
 
@@ -233,13 +259,33 @@ export default function HeaderBar() {
     >
       {/* ── Left side: brand + workflow name + status ── */}
       <div className="flex items-center gap-3 min-w-0">
-        <h1
-          className={`text-lg font-bold tracking-tight ${
-            isDark ? "text-slate-100" : "text-gray-800"
+        <Link
+          href="/canvases"
+          className={`inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 -ml-1 transition ${
+            isDark
+              ? "text-slate-100 hover:bg-slate-800 hover:text-white"
+              : "text-gray-800 hover:bg-gray-100 hover:text-gray-900"
           }`}
+          title="Back to My Canvases"
         >
-          Neurovn
-        </h1>
+          <Home className="h-4 w-4 shrink-0" />
+          <span className="text-lg font-bold tracking-tight">Neurovn</span>
+        </Link>
+
+        {activeCanvasId && (
+          <>
+            <span className={`text-sm ${isDark ? "text-slate-600" : "text-gray-300"}`}>/</span>
+            <Link
+              href="/canvases"
+              className={`inline-flex items-center gap-1 text-sm font-medium transition hover:underline ${
+                isDark ? "text-slate-400 hover:text-slate-200" : "text-gray-500 hover:text-gray-800"
+              }`}
+              title="Back to My Canvases"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" /> My Canvases
+            </Link>
+          </>
+        )}
 
         <span className={`text-sm ${isDark ? "text-slate-600" : "text-gray-300"}`}>/</span>
 
@@ -320,6 +366,19 @@ export default function HeaderBar() {
           {isDark ? <><Sun className="inline w-3.5 h-3.5 mr-1" /> Light</> : <><MoonStar className="inline w-3.5 h-3.5 mr-1" /> Dark</>}
         </button>
 
+        {/* Templates */}
+        <Link
+          href="/marketplace"
+          className={`rounded-md border px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${
+            isDark
+              ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+              : "border-gray-300 text-gray-600 hover:bg-gray-100"
+          }`}
+          title="Browse workflow templates"
+        >
+          <LayoutTemplate className="inline w-3.5 h-3.5 mr-1" /> Templates
+        </Link>
+
         {/* New Workflow */}
         <button
           onClick={handleNew}
@@ -332,6 +391,22 @@ export default function HeaderBar() {
         >
           <FilePlus className="inline w-3.5 h-3.5 mr-1" /> New
         </button>
+
+        {/* Publish to Marketplace (only when user has a saved workflow) */}
+        {currentWorkflowId && user && (
+          <button
+            onClick={() => setIsPublishOpen(true)}
+            disabled={nodes.length === 0}
+            className={`rounded-md border px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 ${
+              isDark
+                ? "border-amber-700 text-amber-300 hover:bg-amber-800/40"
+                : "border-amber-300 text-amber-700 hover:bg-amber-50"
+            }`}
+            title="Publish this workflow to the marketplace"
+          >
+            <UploadCloud className="inline w-3.5 h-3.5 mr-1" /> Publish
+          </button>
+        )}
 
         {/* Save */}
         <button
@@ -377,6 +452,21 @@ export default function HeaderBar() {
           <Download className="inline w-3.5 h-3.5 mr-1" /> Import
         </button>
 
+        {/* Pull from canvas */}
+        {activeCanvasId && user && (
+          <button
+            onClick={() => setIsPullOpen(true)}
+            className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
+              isDark
+                ? "border-violet-700 text-violet-300 hover:bg-violet-800/40"
+                : "border-violet-300 text-violet-700 hover:bg-violet-50"
+            }`}
+            title="Pull workflows from another canvas"
+          >
+            <GitBranch className="inline w-3.5 h-3.5 mr-1" /> Pull from canvas
+          </button>
+        )}
+
         {/* Auto-layout */}
         <button
           onClick={() => autoLayout()}
@@ -405,51 +495,35 @@ export default function HeaderBar() {
 
         {/* ── Auth controls ── */}
         <div
-          className={`ml-2 pl-2 border-l flex items-center gap-2 ${
+          className={`ml-2 pl-2 border-l flex items-center ${
             isDark ? "border-slate-700" : "border-gray-200"
           }`}
         >
-          {user ? (
-            <>
-              <span
-                className={`flex items-center gap-1 text-xs truncate max-w-30 ${
-                  isDark ? "text-slate-300" : "text-gray-600"
-                }`}
-                title={user.email ?? "Signed in"}
-              >
-                <User className="w-3.5 h-3.5 shrink-0" />
-                {user.email?.split("@")[0]}
-              </span>
-              <button
-                onClick={signOut}
-                className={`rounded-md border px-2 py-1 text-xs font-medium transition ${
-                  isDark
-                    ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-                    : "border-gray-300 text-gray-600 hover:bg-gray-100"
-                }`}
-                title="Sign out"
-              >
-                <LogOut className="inline w-3 h-3 mr-0.5" /> Out
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => openAuthModal()}
-              className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
-                isDark
-                  ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-                  : "border-gray-300 text-gray-600 hover:bg-gray-100"
-              }`}
-              title="Sign in"
-            >
-              <LogIn className="inline w-3.5 h-3.5 mr-1" /> Sign In
-            </button>
-          )}
+          <NavProfile />
         </div>
       </div>
 
       {/* Import modal */}
       <ImportWorkflowModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} />
+
+      {/* New workflow confirmation */}
+      <ConfirmModal
+        isOpen={isNewConfirmOpen}
+        onClose={() => setIsNewConfirmOpen(false)}
+        onConfirm={handleNewConfirm}
+        title="New workflow"
+        message="Start a new workflow? Your current work will be cleared."
+        confirmLabel="Start new"
+      />
+
+      {/* Pull from canvas modal */}
+      <PullFromCanvasModal isOpen={isPullOpen} onClose={() => setIsPullOpen(false)} />
+
+      {/* Publish modal */}
+      <PublishModal
+        isOpen={isPublishOpen}
+        onClose={() => setIsPublishOpen(false)}
+      />
     </header>
   );
 }

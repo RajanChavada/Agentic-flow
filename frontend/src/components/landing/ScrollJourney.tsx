@@ -152,7 +152,7 @@ function FeatureBlock({
           </FadeIn>
           <FadeIn delay={0.24}>
             <a
-              href="/editor"
+              href="/canvases"
               className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-foreground transition hover:opacity-70 sm:text-base"
             >
               Try it free

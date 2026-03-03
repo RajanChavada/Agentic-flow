@@ -1,17 +1,20 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Copy, Trash2, BarChart3, Save, Cloud, Square, Type } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { Copy, Trash2, BarChart3, Save, Cloud, Square, Type, LayoutTemplate } from "lucide-react";
 import type { WorkflowNodeType, BatchEstimateResponse } from "@/types/workflow";
 import {
   useUIState,
   useScenarios,
   useSelectedForComparison,
   useCurrentWorkflowId,
+  useActiveCanvasId,
   useWorkflowStore,
 } from "@/store/useWorkflowStore";
 import { useUser } from "@/store/useAuthStore";
 import { useAutoLayout } from "@/hooks/useAutoLayout";
+import { supabase } from "@/lib/supabase";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -84,6 +87,7 @@ export default function Sidebar() {
   const scenarios = useScenarios();
   const selectedIds = useSelectedForComparison();
   const currentWorkflowId = useCurrentWorkflowId();
+  const activeCanvasId = useActiveCanvasId();
   const {
     toggleComparisonSelection,
     loadScenario,
@@ -95,23 +99,51 @@ export default function Sidebar() {
     loadWorkflowsFromSupabase,
     deleteWorkflowFromSupabase,
     setCurrentWorkflow,
+    updateWorkflowNameInStore,
   } = useWorkflowStore();
   const applyLayout = useAutoLayout();
   const isDark = theme === "dark";
   const [comparing, setComparing] = useState(false);
+  const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
+  const [editingWorkflowName, setEditingWorkflowName] = useState("");
   const user = useUser();
+
+  const handleUpdateWorkflowName = useCallback(
+    async (workflowId: string, newName: string) => {
+      if (!user) return;
+      const trimmed = newName.trim();
+      if (!trimmed) {
+        setEditingWorkflowId(null);
+        return;
+      }
+
+      const { error } = await supabase
+        .from("workflows")
+        .update({ name: trimmed })
+        .eq("id", workflowId)
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.error("Failed to update workflow name:", error);
+      } else {
+        updateWorkflowNameInStore(workflowId, trimmed);
+      }
+      setEditingWorkflowId(null);
+    },
+    [user, updateWorkflowNameInStore]
+  );
   const supabaseLoading = useWorkflowStore((s) => s.supabaseLoading);
 
-  // Load workflows from Supabase when the user signs in
+  // Load workflows when user signs in and we have a canvas (editor page handles canvas-scoped load)
   useEffect(() => {
-    if (user) {
-      loadWorkflowsFromSupabase();
+    if (user && activeCanvasId) {
+      loadWorkflowsFromSupabase(activeCanvasId);
     }
-  }, [user, loadWorkflowsFromSupabase]);
+  }, [user, activeCanvasId, loadWorkflowsFromSupabase]);
 
-  const scenarioList = Object.values(scenarios).sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  const scenarioList = Object.values(scenarios)
+    .filter((s) => !activeCanvasId || s.canvasId === activeCanvasId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const onDragStart = (
     event: React.DragEvent<HTMLDivElement>,
@@ -251,7 +283,7 @@ export default function Sidebar() {
             isDark ? "text-slate-400" : "text-gray-500"
           }`}
         >
-          Saved Workflows
+          {activeCanvasId ? "Workflows in this canvas" : "Saved Workflows"}
           {scenarioList.length > 0 && (
             <span className="ml-1 font-normal opacity-60">
               ({scenarioList.length})
@@ -307,22 +339,47 @@ export default function Sidebar() {
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => toggleComparisonSelection(sc.id)}
-                    className="accent-blue-500 rounded"
+                    className="accent-blue-500 rounded shrink-0"
                     title="Select for comparison"
                   />
-                  <span
-                    className={`truncate flex-1 cursor-pointer ${
-                      isActive ? "font-bold" : "font-medium"
-                    } ${isDark ? "text-slate-200" : "text-gray-800"}`}
-                    onClick={() => {
-                      loadScenario(sc.id);
-                      setCurrentWorkflow(sc.id, sc.name);
-                      requestAnimationFrame(() => applyLayout());
-                    }}
-                    title={`Load "${sc.name}"`}
-                  >
-                    {sc.name}
-                  </span>
+                  {editingWorkflowId === sc.id ? (
+                    <input
+                      autoFocus
+                      value={editingWorkflowName}
+                      onChange={(e) => setEditingWorkflowName(e.target.value)}
+                      onBlur={() => handleUpdateWorkflowName(sc.id, editingWorkflowName)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleUpdateWorkflowName(sc.id, editingWorkflowName);
+                        if (e.key === "Escape") setEditingWorkflowId(null);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className={`flex-1 min-w-0 rounded border px-1 py-0.5 text-xs ${
+                        isDark
+                          ? "border-slate-600 bg-slate-800 text-slate-100"
+                          : "border-gray-300 bg-white text-gray-800"
+                      }`}
+                    />
+                  ) : (
+                    <span
+                      className={`truncate flex-1 cursor-pointer ${
+                        isActive ? "font-bold" : "font-medium"
+                      } ${isDark ? "text-slate-200" : "text-gray-800"}`}
+                      onClick={() => {
+                        loadScenario(sc.id);
+                        setCurrentWorkflow(sc.id, sc.name);
+                        requestAnimationFrame(() => applyLayout());
+                      }}
+                      onDoubleClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setEditingWorkflowId(sc.id);
+                        setEditingWorkflowName(sc.name);
+                      }}
+                      title={`Load "${sc.name}" (double-click to rename)`}
+                    >
+                      {sc.name}
+                    </span>
+                  )}
                 </div>
 
                 {/* Row 2: metrics pill + actions */}
@@ -392,6 +449,32 @@ export default function Sidebar() {
               : <><BarChart3 className="inline w-3.5 h-3.5 mr-1" /> Compare Selected ({selectedIds.length})</>}
           </button>
         )}
+      </div>
+
+      {/* ── Templates ─────────────────────────────────────── */}
+      <div
+        className={`mt-3 pt-3 border-t ${
+          isDark ? "border-slate-700" : "border-gray-200"
+        }`}
+      >
+        <h2
+          className={`text-xs font-bold uppercase tracking-wide mb-2 ${
+            isDark ? "text-slate-400" : "text-gray-500"
+          }`}
+        >
+          Templates
+        </h2>
+        <Link
+          href="/marketplace"
+          className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs font-medium transition ${
+            isDark
+              ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+              : "border-gray-300 text-gray-600 hover:bg-gray-100"
+          }`}
+        >
+          <LayoutTemplate className="w-3.5 h-3.5" />
+          Browse marketplace
+        </Link>
       </div>
 
       <div className={`mt-auto pt-4 border-t text-[10px] ${isDark ? "border-slate-700 text-slate-500" : "border-gray-200 text-gray-400"}`}>

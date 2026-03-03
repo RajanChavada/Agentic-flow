@@ -72,6 +72,8 @@ export default function Canvas() {
     setEdges,
     addNode,
     setSelectedNodeId,
+    openConfigModal,
+    closeConfigModal,
     restoreFromLocalStorage,
   } = useWorkflowStore();
 
@@ -269,15 +271,19 @@ export default function Canvas() {
   );
 
   const onNodeClick = useCallback(
-    (_event: React.MouseEvent, node: { id: string }) => {
+    (_event: React.MouseEvent, node: { id: string; type?: string }) => {
       setSelectedNodeId(node.id);
+      if (node.type === "agentNode" || node.type === "toolNode") {
+        openConfigModal();
+      }
     },
-    [setSelectedNodeId]
+    [setSelectedNodeId, openConfigModal]
   );
 
   const onPaneClick = useCallback(() => {
     setSelectedNodeId(null);
-  }, [setSelectedNodeId]);
+    closeConfigModal();
+  }, [setSelectedNodeId, closeConfigModal]);
 
   return (
     <div ref={reactFlowWrapper} className="flex-1 h-full">

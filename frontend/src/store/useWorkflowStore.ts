@@ -30,6 +30,7 @@ import type {
 } from "@/types/workflow";
 import { supabase } from "@/lib/supabase";
 import { saveGuestWorkflow, loadGuestWorkflow, clearGuestWorkflow } from "@/lib/guestWorkflow";
+import { getTemplate } from "@/lib/marketplacePersistence";
 
 // ── UI slice ──────────────────────────────────────────────────
 interface UIState {
@@ -37,7 +38,10 @@ interface UIState {
   isEstimatePanelOpen: boolean;
   isComparisonOpen: boolean;
   errorBanner?: string;
+  successMessage?: string;
   theme: "light" | "dark";
+  /** Set when nodes come from import/template/pull; editor runs applyLayout and clears. */
+  needsLayout: boolean;
 }
 
 // ── Scaling / what-if slice ──────────────────────────────────
@@ -67,6 +71,9 @@ interface WorkflowStore {
   currentWorkflowId: string | null;
   currentWorkflowName: string;
   isDirty: boolean;
+
+  activeCanvasId: string | null;
+  setActiveCanvasId: (id: string | null) => void;
 
   // Node / edge actions
   setNodes: (nodes: Node<WorkflowNodeData>[]) => void;
@@ -116,7 +123,12 @@ interface WorkflowStore {
   toggleEstimatePanel: () => void;
   toggleComparisonDrawer: () => void;
   setErrorBanner: (msg?: string) => void;
+  setSuccessMessage: (msg?: string) => void;
   toggleTheme: () => void;
+  setNeedsLayout: (v: boolean) => void;
+
+  // Marketplace
+  loadTemplateOntoCanvas: (templateId: string) => Promise<void>;
 
   // Scaling / what-if
   setRunsPerDay: (rpd: number | null) => void;
@@ -127,12 +139,19 @@ interface WorkflowStore {
   clearActualStats: () => void;
 
   // Supabase persistence
-  saveWorkflowToSupabase: (name: string, description?: string) => Promise<string | null>;
-  loadWorkflowsFromSupabase: () => Promise<void>;
+  saveWorkflowToSupabase: (name: string, description?: string, overrideCanvasId?: string) => Promise<string | null>;
+  loadWorkflowsFromSupabase: (canvasId?: string | null) => Promise<void>;
   deleteWorkflowFromSupabase: (id: string) => Promise<void>;
+  pullWorkflowsFromCanvas: (canvasId: string, workflowIds: string[]) => Promise<void>;
+  updateWorkflowNameInStore: (id: string, name: string) => void;
   supabaseLoading: boolean;
   isSaving: boolean;
   lastSavedAt: Date | null;
+
+  // Thumbnail capture (triggered after save)
+  thumbnailCaptureRequested: string | null;
+  requestThumbnailCapture: (canvasId: string) => void;
+  clearThumbnailCaptureRequest: () => void;
 
   // API cache (providers + tools)
   providerData: ProviderDetailed[] | null;
@@ -145,6 +164,11 @@ interface WorkflowStore {
   // Guest persistence
   snapshotToLocalStorage: () => void;
   restoreFromLocalStorage: () => boolean;
+
+  // Post-auth save flow (modal shown after sign-in for guest workflows)
+  showNameWorkflowModal: boolean;
+  setShowNameWorkflowModal: (v: boolean) => void;
+  createCanvasAndSaveWorkflow: (workflowName: string) => Promise<string | null>;
 }
 
 /** Convert current canvas nodes to backend payload format. */
@@ -184,6 +208,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     isEstimatePanelOpen: false,
     isComparisonOpen: false,
     theme: "light",
+    needsLayout: false,
   },
 
   // Scenarios
@@ -196,6 +221,9 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   currentWorkflowId: null,
   currentWorkflowName: "Untitled Workflow",
   isDirty: false,
+
+  activeCanvasId: null,
+  setActiveCanvasId: (id) => set({ activeCanvasId: id }),
 
   // Scaling
   scalingParams: { runsPerDay: null, loopIntensity: 1.0 },
@@ -421,6 +449,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         edges: rfEdges,
         estimation: null,
         currentScenarioId: null,
+        ui: { ...get().ui, needsLayout: true },
       });
     } else {
       // mode === "scenario" — save as a comparison scenario
@@ -463,6 +492,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       edges: rfEdges,
       estimation: null,
       currentScenarioId: null,
+      ui: { ...get().ui, needsLayout: true },
     });
   },
 
@@ -481,6 +511,8 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     })),
   setErrorBanner: (msg) =>
     set((s) => ({ ui: { ...s.ui, errorBanner: msg } })),
+  setSuccessMessage: (msg) =>
+    set((s) => ({ ui: { ...s.ui, successMessage: msg } })),
   toggleTheme: () =>
     set((s) => {
       const next = s.ui.theme === "light" ? "dark" : "light";
@@ -489,6 +521,8 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       }
       return { ui: { ...s.ui, theme: next } };
     }),
+  setNeedsLayout: (v) =>
+    set((s) => ({ ui: { ...s.ui, needsLayout: v } })),
 
   // ── Scaling / what-if ──────────────────────────────────────
   setRunsPerDay: (rpd) =>
@@ -560,17 +594,85 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     return true;
   },
 
+  showNameWorkflowModal: false,
+  setShowNameWorkflowModal: (v) => set({ showNameWorkflowModal: v }),
+
+  createCanvasAndSaveWorkflow: async (workflowName) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data: newCanvas, error: createErr } = await supabase
+      .from("canvases")
+      .insert({ user_id: user.id, name: workflowName })
+      .select("id")
+      .single();
+
+    if (createErr || !newCanvas) {
+      console.error("Failed to create canvas:", createErr);
+      return null;
+    }
+
+    const workflowId = await get().saveWorkflowToSupabase(workflowName, undefined, newCanvas.id);
+    if (!workflowId) return null;
+
+    set({ activeCanvasId: newCanvas.id });
+    return newCanvas.id;
+  },
+
   // ── Supabase persistence ─────────────────────────────────
   supabaseLoading: false,
   isSaving: false,
   lastSavedAt: null,
+  thumbnailCaptureRequested: null,
 
-  saveWorkflowToSupabase: async (name, description) => {
+  updateWorkflowNameInStore: (id, name) => {
+    set((prev) => {
+      const existing = prev.scenarios[id];
+      if (!existing) return prev;
+      return {
+        scenarios: {
+          ...prev.scenarios,
+          [id]: { ...existing, name },
+        },
+        ...(prev.currentWorkflowId === id ? { currentWorkflowName: name } : {}),
+      };
+    });
+  },
+
+  requestThumbnailCapture: (canvasId) => set({ thumbnailCaptureRequested: canvasId }),
+  clearThumbnailCaptureRequest: () => set({ thumbnailCaptureRequested: null }),
+
+  saveWorkflowToSupabase: async (name, description, overrideCanvasId) => {
     const s = get();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
     set({ isSaving: true });
+
+    // Resolve canvas_id so workflow always appears in My Canvases
+    let canvasId: string | null = overrideCanvasId ?? s.activeCanvasId;
+    if (!canvasId) {
+      const { data: canvases } = await supabase
+        .from("canvases")
+        .select("id")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      if (canvases?.length) {
+        canvasId = canvases[0].id;
+      } else {
+        const { data: newCanvas, error: createErr } = await supabase
+          .from("canvases")
+          .insert({ user_id: user.id, name: "My Workflows" })
+          .select("id")
+          .single();
+        if (createErr || !newCanvas) {
+          console.error("Failed to create default canvas:", createErr);
+        } else {
+          canvasId = newCanvas.id;
+        }
+      }
+    }
 
     const graph = {
       nodes: nodesToPayload(s.nodes),
@@ -581,7 +683,13 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     if (s.currentWorkflowId) {
       const { error } = await supabase
         .from("workflows")
-        .update({ name, description: description ?? null, graph, last_estimate: s.estimation })
+        .update({
+          name,
+          description: description ?? null,
+          graph,
+          last_estimate: s.estimation,
+          canvas_id: canvasId,
+        })
         .eq("id", s.currentWorkflowId)
         .eq("user_id", user.id);
       if (error) {
@@ -597,6 +705,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
           [s.currentWorkflowId!]: {
             ...(existing ?? { id: s.currentWorkflowId!, createdAt: now, graph }),
             name,
+            canvasId: canvasId ?? undefined,
             updatedAt: now,
             graph,
             estimate: s.estimation ?? undefined,
@@ -607,6 +716,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         isSaving: false,
         lastSavedAt: new Date(),
       }));
+      if (canvasId) get().requestThumbnailCapture(canvasId);
       return s.currentWorkflowId;
     } else {
       const id = uuid();
@@ -614,6 +724,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       const { error } = await supabase.from("workflows").insert({
         id,
         user_id: user.id,
+        canvas_id: canvasId,
         name,
         description: description ?? null,
         graph,
@@ -627,6 +738,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       const scenario: WorkflowScenario = {
         id,
         name,
+        canvasId: canvasId ?? undefined,
         createdAt: now,
         updatedAt: now,
         graph,
@@ -641,20 +753,27 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         isSaving: false,
         lastSavedAt: new Date(),
       }));
+      if (canvasId) get().requestThumbnailCapture(canvasId);
       return id;
     }
   },
 
-  loadWorkflowsFromSupabase: async () => {
+  loadWorkflowsFromSupabase: async (canvasId) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     set({ supabaseLoading: true });
-    const { data, error } = await supabase
+    let query = supabase
       .from("workflows")
       .select("*")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false });
+
+    if (canvasId) {
+      query = query.eq("canvas_id", canvasId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Supabase load error:", error);
@@ -667,6 +786,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       loaded[row.id] = {
         id: row.id,
         name: row.name,
+        canvasId: row.canvas_id ?? undefined,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         graph: row.graph as WorkflowScenario["graph"],
@@ -674,10 +794,90 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       };
     }
 
-    // Merge with any local-only scenarios (keep both)
     set((prev) => ({
       scenarios: { ...prev.scenarios, ...loaded },
       supabaseLoading: false,
+    }));
+  },
+
+  pullWorkflowsFromCanvas: async (canvasId, workflowIds) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || workflowIds.length === 0) return;
+
+    const { data: rows, error } = await supabase
+      .from("workflows")
+      .select("*")
+      .eq("canvas_id", canvasId)
+      .eq("user_id", user.id)
+      .in("id", workflowIds);
+
+    if (error || !rows?.length) return;
+
+    const s = get();
+    let offsetX = 0;
+    let offsetY = 0;
+    for (const n of s.nodes) {
+      const x = (n.position?.x ?? 0) + (typeof n.width === "number" ? n.width : 220);
+      const y = (n.position?.y ?? 0) + (typeof n.height === "number" ? n.height : 100);
+      if (x > offsetX) offsetX = x;
+      if (y > offsetY) offsetY = y;
+    }
+    offsetX += 200;
+    if (offsetX < 200) offsetX = 200;
+
+    const idMap: Record<string, string> = {};
+    const newNodes: Node<WorkflowNodeData>[] = [];
+    const newEdges: Edge[] = [];
+
+    for (let wi = 0; wi < rows.length; wi++) {
+      const row = rows[wi];
+      const graph = row.graph as { nodes: NodeConfigPayload[]; edges: EdgeConfigPayload[] };
+      const wOffsetX = offsetX + wi * 300;
+      const wOffsetY = offsetY;
+
+      for (let i = 0; i < (graph.nodes ?? []).length; i++) {
+        const n = graph.nodes[i];
+        const newId = `${n.id}-${uuid().slice(0, 8)}`;
+        idMap[n.id] = newId;
+        newNodes.push({
+          id: newId,
+          type: n.type as WorkflowNodeType,
+          position: { x: wOffsetX + (i % 3) * 280, y: wOffsetY + Math.floor(i / 3) * 180 },
+          data: {
+            label: n.label ?? n.type,
+            type: n.type,
+            modelProvider: n.model_provider,
+            modelName: n.model_name,
+            context: n.context,
+            toolId: n.tool_id,
+            toolCategory: n.tool_category,
+            maxSteps: n.max_steps,
+            taskType: n.task_type ?? undefined,
+            expectedOutputSize: n.expected_output_size ?? undefined,
+            expectedCallsPerRun: n.expected_calls_per_run ?? undefined,
+          },
+        });
+      }
+
+      for (const e of graph.edges ?? []) {
+        const src = idMap[e.source];
+        const tgt = idMap[e.target];
+        if (src && tgt) {
+          newEdges.push({
+            id: `e-${uuid()}`,
+            source: src,
+            target: tgt,
+          });
+        }
+      }
+      offsetY += 400;
+    }
+
+    set((prev) => ({
+      nodes: [...prev.nodes, ...newNodes],
+      edges: [...prev.edges, ...newEdges],
+      isDirty: true,
+      ui: { ...prev.ui, needsLayout: true },
     }));
   },
 
@@ -697,6 +897,55 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       };
     });
   },
+
+  loadTemplateOntoCanvas: async (templateId: string) => {
+    clearGuestWorkflow();
+    const template = await getTemplate(templateId);
+    if (!template?.graph) return;
+
+    const nodes = template.graph.nodes;
+    const edges = template.graph.edges;
+
+    const rfNodes: Node<WorkflowNodeData>[] = nodes.map((n, i) => ({
+      id: n.id,
+      type: n.type,
+      position: { x: 200 + (i % 3) * 280, y: 100 + Math.floor(i / 3) * 180 },
+      data: {
+        label: n.label ?? n.type,
+        type: n.type,
+        modelProvider: n.model_provider,
+        modelName: n.model_name,
+        context: n.context,
+        toolId: n.tool_id,
+        toolCategory: n.tool_category,
+        maxSteps: n.max_steps,
+        taskType: n.task_type ?? undefined,
+        expectedOutputSize: n.expected_output_size ?? undefined,
+        expectedCallsPerRun: n.expected_calls_per_run ?? undefined,
+      },
+    }));
+
+    const rfEdges: Edge[] = edges.map((e) => ({
+      id: e.id ?? `e-${uuid()}`,
+      source: e.source,
+      target: e.target,
+    }));
+
+    set({
+      nodes: rfNodes,
+      edges: rfEdges,
+      estimation: null,
+      currentScenarioId: null,
+      currentWorkflowId: null,
+      currentWorkflowName: `${template.name} (copy)`,
+      isDirty: true,
+      ui: { ...get().ui, successMessage: "Template copied! Start customizing.", needsLayout: true },
+    });
+
+    setTimeout(() => {
+      set((s) => ({ ui: { ...s.ui, successMessage: undefined } }));
+    }, 3000);
+  },
 }));
 
 // ── Selector hooks (fine‑grained subscriptions) ──────────────
@@ -715,3 +964,4 @@ export const useToolCategoryData = () => useWorkflowStore((s) => s.toolCategoryD
 export const useCurrentWorkflowId = () => useWorkflowStore((s) => s.currentWorkflowId);
 export const useCurrentWorkflowName = () => useWorkflowStore((s) => s.currentWorkflowName);
 export const useIsDirty = () => useWorkflowStore((s) => s.isDirty);
+export const useActiveCanvasId = () => useWorkflowStore((s) => s.activeCanvasId);

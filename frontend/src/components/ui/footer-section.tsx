@@ -54,7 +54,7 @@ function FooterSection() {
             </h3>
             <nav className="space-y-2.5 text-sm">
               <a
-                href="/editor"
+                href="/canvases"
                 className="block transition-colors hover:text-foreground text-muted-foreground"
               >
                 Launch Canvas

@@ -21,6 +21,9 @@ Use today's date. Create the file if it does not exist.
 ### Root causes fixed (if bug fix)
 - [cause] in [file]
 
+### Research / sources (if applicable)
+- [Article title](URL) — [key takeaway used]
+
 ### Next steps
 - [ ] [anything left to do]
 ```
@@ -34,6 +37,18 @@ Only if a non-obvious decision or lesson was learned:
 **Don't repeat:** [what NOT to do next time]
 ```
 
+### 3. Key findings from research (articles, web)
+When research yields actionable insights (e.g. MLP best practices, UX patterns, framework docs):
+- Add to `AGENT_MEMORY.md` with **source links** so future agents can reference
+- Use Exa MCP (`web_search_exa`) per `.cursor/MCP_GUIDE.md` for live research
+- Example format:
+```markdown
+## [Topic] — [YYYY-MM-DD]
+**Source:** [Article title](URL)
+**Key finding:** [1–2 sentence takeaway]
+**Apply when:** [when to use this]
+```
+
 ## When NOT to update AGENT_MEMORY.md
 - Routine feature implementation with no surprises → skip
-- Only update for: non-obvious bugs, architectural pivots, "I wish I knew this earlier" moments
+- Only update for: non-obvious bugs, architectural pivots, "I wish I knew this earlier" moments, **actionable research findings with article references**

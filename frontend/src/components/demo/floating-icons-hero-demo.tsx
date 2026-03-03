@@ -31,7 +31,7 @@ export default function FloatingIconsHeroDemo() {
       title="Craft Intelligent Workflows."
       subtitle="The minimalist canvas for AI workflows. Visualize, estimate, and optimize — before you ship."
       ctaText="Launch Canvas"
-      ctaHref="/editor"
+      ctaHref="/canvases"
       secondaryCtaText="Learn More"
       secondaryCtaHref="#features"
       icons={demoIcons}

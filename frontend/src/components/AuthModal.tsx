@@ -8,8 +8,7 @@
 
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect } from "react";
 import {
   X,
   LogIn,
@@ -59,14 +58,18 @@ const OAUTH_PROVIDERS: ProviderButton[] = [
 ];
 
 export default function AuthModal() {
-  const router = useRouter();
   const open = useAuthModalOpen();
   const reason = useAuthModalReason();
+  const initialMode = useAuthStore((s) => s.authModalInitialMode);
   const closeAuthModal = useAuthStore((s) => s.closeAuthModal);
   const { theme } = useUIState();
   const isDark = theme === "dark";
 
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup">(initialMode);
+
+  useEffect(() => {
+    if (open) setMode(initialMode);
+  }, [open, initialMode]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -96,8 +99,7 @@ export default function AuthModal() {
           password,
         });
         if (signInError) throw signInError;
-        router.push("/editor");
-        closeAuthModal();
+        // Auth state change listener will fire callback and close modal; do not redirect
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Authentication failed");
@@ -112,10 +114,15 @@ export default function AuthModal() {
     setOauthLoading(provider);
     try {
       useWorkflowStore.getState().snapshotToLocalStorage();
+      const postAuthAction = useAuthStore.getState().postAuthAction;
+      if (postAuthAction) {
+        localStorage.setItem("postAuthAction", postAuthAction);
+      }
+      const next = encodeURIComponent(window.location.pathname || "/editor/guest");
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${next}`,
         },
       });
       if (oauthError) throw oauthError;

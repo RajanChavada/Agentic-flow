@@ -5,6 +5,7 @@ import { motion, useInView } from "framer-motion";
 import {
   ArrowRight,
   Github,
+  LayoutTemplate,
 } from "lucide-react";
 import { ReactFlowProvider } from "@xyflow/react";
 import InfiniteGrid from "@/components/ui/infinite-grid";
@@ -16,6 +17,7 @@ import {
 } from "@/components/landing/ScrollJourney";
 import { useAuthStore } from "@/store/useAuthStore";
 import AuthModal from "@/components/AuthModal";
+import NavProfile from "@/components/NavProfile";
 import { FooterSection } from "@/components/ui/footer-section";
 
 /* Lazy-load the heavy playground (React Flow) so it doesn't block FCP */
@@ -76,12 +78,15 @@ export default function LandingPage() {
       {/* ── Navbar ──────────────────────────────────────── */}
       <nav className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-lg">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <a href="/" className="flex items-center gap-2.5 font-semibold tracking-tight">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-[10px] font-bold text-background">
-              NV
-            </div>
-            <span className="hidden sm:inline">Neurovn</span>
-          </a>
+          <div className="flex items-center gap-4">
+            <a href="/" className="flex items-center gap-2.5 font-semibold tracking-tight">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-[10px] font-bold text-background">
+                NV
+              </div>
+              <span className="hidden sm:inline">Neurovn</span>
+            </a>
+            <NavProfile />
+          </div>
 
           <div className="flex items-center gap-5 text-sm">
             <a href="#features" className="hidden text-muted-foreground transition hover:text-foreground sm:inline">
@@ -100,7 +105,7 @@ export default function LandingPage() {
               GitHub
             </a>
             <a
-              href="/editor"
+              href="/canvases"
               className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-4 py-1.5 text-sm font-medium text-background transition hover:opacity-90"
             >
               Launch Canvas
@@ -148,11 +153,18 @@ export default function LandingPage() {
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <a
-              href="/editor"
+              href="/canvases"
               className="inline-flex items-center gap-2 rounded-lg bg-foreground px-7 py-2.5 text-sm font-medium text-background shadow-sm transition hover:opacity-90"
             >
               Get Started — It&apos;s Free
               <ArrowRight className="h-4 w-4" />
+            </a>
+            <a
+              href="/marketplace"
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-7 py-2.5 text-sm font-medium text-foreground shadow-sm transition hover:bg-secondary"
+            >
+              <LayoutTemplate className="h-4 w-4" />
+              Browse templates
             </a>
             <a
               href="#how-it-works"
@@ -183,7 +195,7 @@ export default function LandingPage() {
           </ReactFlowProvider>
           <p className="mt-3 text-center text-xs text-muted-foreground">
             Drag nodes around and hit <strong>Run Estimate</strong> — this is a live demo.{" "}
-            <a href="/editor" className="underline underline-offset-2 transition hover:text-foreground">
+            <a href="/canvases" className="underline underline-offset-2 transition hover:text-foreground">
               Open the full editor →
             </a>
           </p>
@@ -222,7 +234,7 @@ export default function LandingPage() {
             Start designing AI workflows in seconds — no sign-up required.
           </p>
           <a
-            href="/editor"
+            href="/canvases"
             className="mt-8 inline-flex items-center gap-2 rounded-lg bg-foreground px-8 py-3 text-base font-medium text-background shadow-sm transition hover:opacity-90 sm:text-lg"
           >
             Launch Canvas

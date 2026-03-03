@@ -503,7 +503,7 @@ export function CauseAndEffect() {
         transition={{ delay: 0.2 }}
       >
         <a
-          href="/editor"
+          href="/canvases"
           className="inline-flex items-center gap-2 text-sm font-medium text-foreground transition hover:opacity-70"
         >
           Try it yourself on the canvas

@@ -16,6 +16,16 @@ const SUPABASE_URL =
 const SUPABASE_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "placeholder";
 
+/** True if Supabase is configured with real credentials (not placeholder). */
+export const isSupabaseConfigured =
+  !SUPABASE_URL.includes("placeholder") && SUPABASE_KEY !== "placeholder";
+
+if (!isSupabaseConfigured && typeof window !== "undefined") {
+  console.warn(
+    "[Supabase] Not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY in .env.local (or Vercel env vars)."
+  );
+}
+
 /**
  * Single shared Supabase client for the browser.
  * Safe to import from any client component.

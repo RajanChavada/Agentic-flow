@@ -1,0 +1,54 @@
+---
+description: Build lovable products from the start. Use when planning features, shipping, or evaluating UX. References MLP philosophy and research.
+globs: 
+alwaysApply: true
+---
+
+# Minimum Lovable Product (MLP)
+
+> "If it's not lovable, it's not viable in the market anymore." — [Elena Verna, The Minimum Lovable Product Era](https://www.elenaverna.com/p/the-minimum-lovable-product-era)
+
+We build **Minimum Lovable Products**, not MVPs. MVPs ship skeletons people tolerate. MLPs ship the earliest version that makes people say *"This is actually nice."*
+
+## Why MLP Matters
+
+- **AI has commoditized functionality** — basic software is cheap to build; differentiation comes from emotional connection
+- **Lovability is a defensible moat** — AI can match features; it can't yet replicate the emotional relationship users have with your product
+- **Growth comes from love** — emotionally connected users have higher retention, LTV, and word-of-mouth
+
+## Hierarchy of SaaS Needs (Elena Verna)
+
+| Level | Question |
+|-------|----------|
+| **Functional** | Does it work? Load, not crash, do what it promises? |
+| **Reliable** | Is it secure and dependable? |
+| **Usable** | Is it easy and intuitive? Can I figure it out? |
+| **Lovable** | Does it delight me? Does interacting leave me with a positive feeling? |
+
+**Our bar:** Don't stop at functional or usable. Aim for lovable.
+
+## What Lovable Looks Like
+
+- **Fast, obvious, opinionated** — a "wait, this is actually nice" moment
+- **Love marks** — unexpected, delightful moments of humanity (easter eggs, personality, celebration of wins)
+- **Human connection** — how the product talks, handles errors, celebrates success
+
+## Before Shipping: Ask
+
+> "Is this lovable?" — Not "does it work" or "is it ready."
+
+## Practical Guidelines for Agentic Flow
+
+1. **Start with the customer, not the feature list** — Pick a segment, talk to them, find what would make them fall in love
+2. **Build lovemarks into the roadmap** — Delight moments, personality in small interactions. Where does the product celebrate a win? Show humor? Feel human-made?
+3. **Use AI to get there faster** — Prompt: "How can I make this interaction more lovable?" Use component libraries for polish (hover states, transitions, animations)
+4. **Keep it minimal** — MLP ≠ gold-plating. What's the simplest thing that creates a genuine emotional moment?
+
+## References
+
+- [The Minimum Lovable Product Era](https://www.elenaverna.com/p/the-minimum-lovable-product-era) — Elena Verna (Feb 2026)
+- [The Minimum Lovable Product (Forget the MVP)](https://aha.io/blog/the-minimum-lovable-product-forget-the-mvp) — Brian de Haaff, Aha!
+- [What is a Minimum Lovable Product?](https://www.aha.io/roadmapping/guide/plans/what-is-a-minimum-lovable-product) — Aha! Roadmapping Guide
+- [MLP vs MVP — LogRocket](https://blog.logrocket.com/product-management/what-is-a-minimum-lovable-product-mlp-how-to-build)
+
+**Research:** Use Exa MCP (`web_search_exa`) for MLP best practices when planning features. See `.cursor/MCP_GUIDE.md`.
