@@ -23,6 +23,7 @@ Maps programmer intent to Cursor rules, Context docs, and feature files. Use thi
 | frontend-impl | `frontend-impl.mdc` | Editing `frontend/src/**/*.{ts,tsx}`. Enforces architecture, Tailwind v4, task_plan. |
 | backend-impl | `backend-impl.mdc` | Editing `backend/**/*.py`. FastAPI, Pydantic, registries. |
 | new-node-type | `new-node-type.mdc` | Adding a new node type to the canvas. All 8 files. |
+| canvas-workflow-layout | `canvas-workflow-layout.mdc` | Adding features that load workflows onto the canvas. Always preformat with dagre layout via `needsLayout`. |
 | supabase-db | `supabase-db.mdc` | Supabase, migrations, `frontend/src/lib/supabase*`, `supabase/**/*`. |
 | log-update | `log-update.mdc` | After EVERY completed task. Append to logs, optionally AGENT_MEMORY. |
 | min-lovable-product | `min-lovable-product.mdc` | UX, lovability, delight. MLP over MVP. (Often always-applied.) |
@@ -96,6 +97,12 @@ Maps programmer intent to Cursor rules, Context docs, and feature files. Use thi
 ### New node type
 1. `.cursor/rules/new-node-type.mdc`
 2. All 8 files listed in the rule (read before editing)
+
+### Canvas workflow load (import, template, pull, etc.)
+1. `.cursor/rules/canvas-workflow-layout.mdc`
+2. `frontend/src/store/useWorkflowStore.ts` — set `needsLayout: true` in the load action
+3. `frontend/src/hooks/useAutoLayout.ts` — layout logic
+4. `frontend/src/app/editor/[canvasId]/page.tsx` — layout effect
 
 ### Database / Supabase
 1. `.cursor/rules/supabase-db.mdc`

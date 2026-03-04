@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:clear": "node scripts/clear-supabase-data.mjs"
+    "db:clear": "node scripts/clear-supabase-data.mjs",
+    "db:delete-users": "node scripts/delete-all-users.mjs"
   },
   "dependencies": {
     "@dagrejs/dagre": "^2.0.4",

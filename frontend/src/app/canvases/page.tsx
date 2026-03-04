@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Plus, LayoutGrid, Loader2, LogIn, UserPlus, Trash2 } from "lucide-react";
+import { Plus, LayoutGrid, Loader2, LogIn, UserPlus, Trash2, Info, Share2 } from "lucide-react";
 import { useAuthStore, useUser } from "@/store/useAuthStore";
 import AuthModal from "@/components/AuthModal";
+import CanvasesInfoModal from "@/components/CanvasesInfoModal";
+import ShareWorkflowModal from "@/components/ShareWorkflowModal";
 import NavProfile from "@/components/NavProfile";
 import { supabase } from "@/lib/supabase";
 import type { Canvas } from "@/types/workflow";
@@ -33,6 +35,8 @@ export default function CanvasesPage() {
   const [editingCanvasId, setEditingCanvasId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [deletingCanvasId, setDeletingCanvasId] = useState<string | null>(null);
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
+  const [shareCanvas, setShareCanvas] = useState<Canvas | null>(null);
 
   useEffect(() => {
     useAuthStore.getState().init();
@@ -200,7 +204,16 @@ export default function CanvasesPage() {
 
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight">My Canvases</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight">My Canvases</h1>
+            <button
+              onClick={() => setIsInfoOpen(true)}
+              title="What are canvases?"
+              className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            >
+              <Info className="h-5 w-5" />
+            </button>
+          </div>
           {user && (
             <div className="flex items-center gap-2">
               <input
@@ -374,6 +387,7 @@ export default function CanvasesPage() {
             ))}
           </div>
         )}
+        <CanvasesInfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
       </div>
     </main>
   );

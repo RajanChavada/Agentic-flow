@@ -238,3 +238,6 @@ Each phase is independently shippable and builds on the existing codebase withou
 - [ ] Editable canvas/workflow names + workflow thumbnails — `Context/features/canvas-workflow-names-and-thumbnails.md`
 - [ ] Template Preview Modal & Browse Visual Guide — `Context/features/template-preview-modal.md`
 - [x] User Profile Settings & Metrics — `Context/features/user-profile-settings-and-metrics.md`
+- [x] Profile Sleek Metrics Dashboard — `.ai/context/features/profile-sleek-metrics-dashboard.md`
+- [ ] New User Profile Onboarding Modal — `.ai/context/features/new-user-profile-onboarding-modal.md`
+- [x] Canvases Info Modal — `.ai/context/features/canvases-info-modal.md`

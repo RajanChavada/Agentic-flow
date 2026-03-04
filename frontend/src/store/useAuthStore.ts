@@ -16,6 +16,9 @@ interface AuthState {
   session: Session | null;
   loading: boolean;
 
+  /** true when new user (no profile) should see profile onboarding modal */
+  needsProfileOnboarding: boolean;
+
   /** Brief message shown after sign out (e.g. "Signed out") */
   signOutMessage: string | null;
 
@@ -32,6 +35,7 @@ interface AuthState {
 
   // Actions
   setAuth: (user: User | null, session: Session | null) => void;
+  setNeedsProfileOnboarding: (value: boolean) => void;
   openAuthModal: (opts?: { reason?: string; onSuccess?: () => void; mode?: "signin" | "signup"; postAuthAction?: "save" | "saveAs" | "import" }) => void;
   closeAuthModal: () => void;
   signOut: () => Promise<void>;
@@ -44,6 +48,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   session: null,
   loading: true,
+  needsProfileOnboarding: false,
   signOutMessage: null,
   authModalOpen: false,
   authModalReason: null,
@@ -52,6 +57,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   postAuthAction: null,
 
   setAuth: (user, session) => set({ user, session, loading: false }),
+
+  setNeedsProfileOnboarding: (value) => set({ needsProfileOnboarding: value }),
 
   openAuthModal: (opts) =>
     set({
@@ -73,7 +80,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signOut: async () => {
     await supabase.auth.signOut();
     useProfileStore.getState().clear();
-    set({ user: null, session: null, signOutMessage: "Signed out" });
+    set({ user: null, session: null, needsProfileOnboarding: false, signOutMessage: "Signed out" });
   },
 
   clearSignOutMessage: () => set({ signOutMessage: null }),
@@ -87,9 +94,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         loading: false,
       });
       if (session?.user) {
-        useProfileStore.getState().hydrate(session.user.id, session.user.email ?? undefined);
+        useProfileStore.getState().hydrate(session.user.id, session.user.email ?? undefined, {
+          onComplete: (needs) => set({ needsProfileOnboarding: needs }),
+        });
       } else {
         useProfileStore.getState().clear();
+        set({ needsProfileOnboarding: false });
       }
     });
 
@@ -102,9 +112,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Hydrate profile when user signs in
       if (session?.user) {
-        useProfileStore.getState().hydrate(session.user.id, session.user.email ?? undefined);
+        useProfileStore.getState().hydrate(session.user.id, session.user.email ?? undefined, {
+          onComplete: (needs) => set({ needsProfileOnboarding: needs }),
+        });
       } else {
         useProfileStore.getState().clear();
+        set({ needsProfileOnboarding: false });
       }
 
       // If the modal triggered a sign-in and we now have a user, fire the callback or handle OAuth return
@@ -138,3 +151,4 @@ export const useUser = () => useAuthStore((s) => s.user);
 export const useAuthLoading = () => useAuthStore((s) => s.loading);
 export const useAuthModalOpen = () => useAuthStore((s) => s.authModalOpen);
 export const useAuthModalReason = () => useAuthStore((s) => s.authModalReason);
+export const useNeedsProfileOnboarding = () => useAuthStore((s) => s.needsProfileOnboarding);

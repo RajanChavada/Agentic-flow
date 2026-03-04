@@ -4,15 +4,10 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  User,
   Loader2,
   Check,
   ArrowLeft,
-  Workflow,
-  LayoutGrid,
-  UploadCloud,
   Activity,
-  BarChart3,
 } from "lucide-react";
 import { useAuthStore, useUser } from "@/store/useAuthStore";
 import {
@@ -25,6 +20,8 @@ import { useUIState } from "@/store/useWorkflowStore";
 import { fetchUserMetrics } from "@/lib/userMetrics";
 import type { UserMetrics } from "@/types/profile";
 import AvatarPicker from "@/components/profile/AvatarPicker";
+import MetricGauge from "@/components/profile/MetricGauge";
+import ActivityDonutChart from "@/components/profile/ActivityDonutChart";
 import AuthModal from "@/components/AuthModal";
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,30}$/;
@@ -214,7 +211,7 @@ export default function ProfileSettingsPage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <nav className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-lg">
-        <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4 sm:px-6">
+        <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4 sm:px-6">
           <Link
             href="/canvases"
             className={`flex items-center gap-2 text-sm font-medium transition ${isDark ? "text-slate-400 hover:text-slate-100" : "text-gray-500 hover:text-gray-900"}`}
@@ -227,7 +224,7 @@ export default function ProfileSettingsPage() {
         </div>
       </nav>
 
-      <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
         {profileLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -360,38 +357,63 @@ export default function ProfileSettingsPage() {
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : metrics ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  <MetricCard
-                    icon={Workflow}
-                    label="Workflows"
-                    value={metrics.workflows_count}
-                    isDark={isDark}
-                  />
-                  <MetricCard
-                    icon={LayoutGrid}
-                    label="Canvases"
-                    value={metrics.canvases_count}
-                    isDark={isDark}
-                  />
-                  <MetricCard
-                    icon={UploadCloud}
-                    label="Templates"
-                    value={metrics.templates_published}
-                    isDark={isDark}
-                  />
-                  <MetricCard
-                    icon={BarChart3}
-                    label="Estimates run"
-                    value={metrics.estimates_run}
-                    isDark={isDark}
-                  />
-                  <MetricCard
-                    icon={Activity}
-                    label="Last active"
-                    value={formatLastActive(metrics.last_active_at)}
-                    isDark={isDark}
-                    isText
-                  />
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <MetricGauge
+                      label="Workflows"
+                      value={metrics.workflows_count}
+                      max={50}
+                      isDark={isDark}
+                    />
+                    <MetricGauge
+                      label="Canvases"
+                      value={metrics.canvases_count}
+                      max={50}
+                      isDark={isDark}
+                    />
+                    <MetricGauge
+                      label="Templates"
+                      value={metrics.templates_published}
+                      max={20}
+                      isDark={isDark}
+                    />
+                    <MetricGauge
+                      label="Estimates run"
+                      value={metrics.estimates_run}
+                      max={100}
+                      isDark={isDark}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                      <p className={`text-xs font-medium mb-2 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
+                        Content distribution
+                      </p>
+                      <ActivityDonutChart
+                        data={[
+                          { name: "Workflows", value: metrics.workflows_count },
+                          { name: "Canvases", value: metrics.canvases_count },
+                          { name: "Templates", value: metrics.templates_published },
+                        ]}
+                        isDark={isDark}
+                      />
+                    </div>
+                    <div
+                      className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${
+                        isDark ? "border-slate-600 bg-slate-800/60" : "border-gray-200 bg-gray-50"
+                      }`}
+                    >
+                      <Activity className={`h-5 w-5 shrink-0 ${isDark ? "text-slate-400" : "text-gray-500"}`} />
+                      <div>
+                        <p className={`text-xs ${isDark ? "text-slate-400" : "text-gray-500"}`}>
+                          Last active
+                        </p>
+                        <p className={`text-sm font-semibold ${isDark ? "text-slate-200" : "text-gray-800"}`}>
+                          {formatLastActive(metrics.last_active_at)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
@@ -415,30 +437,3 @@ export default function ProfileSettingsPage() {
   );
 }
 
-function MetricCard({
-  icon: Icon,
-  label,
-  value,
-  isDark,
-  isText = false,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: number | string;
-  isDark: boolean;
-  isText?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-lg border p-4 ${isDark ? "border-slate-700 bg-slate-800/30" : "border-gray-200 bg-gray-50"}`}
-    >
-      <Icon
-        className={`h-4 w-4 mb-2 ${isDark ? "text-slate-400" : "text-gray-500"}`}
-      />
-      <p className="text-2xl font-semibold">{value}</p>
-      <p className={`text-xs ${isDark ? "text-slate-400" : "text-gray-500"}`}>
-        {label}
-      </p>
-    </div>
-  );
-}

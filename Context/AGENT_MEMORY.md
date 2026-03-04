@@ -1852,3 +1852,19 @@ The modal was `position: fixed` and placed next to the selected node via `flowTo
 
 **Next Steps**:
 1. **User verification** — Load a saved workflow, verify it layouts cleanly. Verify blankBoxNode/textNode positions preserved.
+
+---
+
+### Update 39 — Profile Sleek Metrics Dashboard (Feature Plan) (2026-03-03)
+
+**Context**: User requested a sleeker profile UI with dynamic graphs and dials for metrics. Research was done via web search (Exa MCP unavailable) for React dashboard components.
+
+**Decision**: Use **@tremor/react** for profile metrics visualization. Tremor provides ProgressCircle (circular gauges), DonutChart (distribution), BarChart — built on Recharts (already in project), Tailwind-native, dark-mode ready. Alternative considered: React Gauge Kit (SVG + Framer Motion) — more custom but heavier. Tremor fits our stack and is purpose-built for dashboards.
+
+**Apply when**: Implementing profile page metrics redesign. See `.ai/context/features/profile-sleek-metrics-dashboard.md`.
+
+**Implementation note (2026-03-03)**: Tremor has React 18 peer dep; project uses React 19. Used Recharts (already in project) directly — RadialBarChart for gauges, PieChart for donut. No new deps.
+
+**Sources**:
+- [Tremor](https://www.tremor.so/) — Dashboard components
+- [Tremor NPM](https://npm.tremor.so/) — ProgressCircle, DonutChart docs
