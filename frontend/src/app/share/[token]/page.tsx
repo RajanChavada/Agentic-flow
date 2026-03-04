@@ -267,6 +267,7 @@ function SharePageContent() {
             zoomOnScroll
             fitView
             fitViewOptions={{ padding: 0.2 }}
+            proOptions={{ hideAttribution: true }}
           >
             <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
             <Controls />

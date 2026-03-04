@@ -301,6 +301,7 @@ export default function Canvas() {
         edgeTypes={edgeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
         fitView
+        proOptions={{ hideAttribution: true }}
         className={theme === "dark" ? "bg-slate-800" : "bg-gray-50"}
       >
         <Background
@@ -313,6 +314,7 @@ export default function Canvas() {
         <MiniMap
           pannable
           zoomable
+          style={{ minWidth: 120, minHeight: 80 }}
           className={theme === "dark" ? "bg-slate-700!" : "bg-white!"}
           nodeColor={(n) => {
             switch (n.type) {

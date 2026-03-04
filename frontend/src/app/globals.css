@@ -89,6 +89,10 @@ html.dark .react-flow {
 html.dark .react-flow__minimap {
   background: #1c1917 !important;
 }
+.react-flow__minimap {
+  min-width: 120px !important;
+  min-height: 80px !important;
+}
 html.dark .react-flow__controls button {
   background: #292524 !important;
   color: #e7e5e4 !important;
