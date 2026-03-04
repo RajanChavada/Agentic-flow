@@ -1886,3 +1886,12 @@ The modal was `position: fixed` and placed next to the selected node via `flowTo
 - Share token: 12 hex chars from `crypto.getRandomValues`
 
 **Files**: `supabase/migrations/006_workflow_shares.sql`, `frontend/src/lib/shareWorkflows.ts`, `ShareWorkflowModal.tsx`, `/share/[token]/page.tsx`, Share buttons on canvases page + HeaderBar.
+
+---
+
+### Update 41 — OAuth: force account selection (2026-03-04)
+
+**Context**: Users couldn't switch to a different Google/GitHub account when signing in; the provider auto-signed in with the previously used account.
+**Source**: [Using Google Oauth with supabase, can't login with different account](https://stackoverflow.com/questions/77141752/using-google-oauth-with-supabase-cant-login-with-different-account)
+**Decision**: Add `queryParams: { prompt: "select_account" }` to `signInWithOAuth` options in AuthModal. This forces Google and GitHub to show the account picker every time.
+**Don't repeat**: When using Supabase OAuth, include `prompt: "select_account"` if users need to choose a different account.

@@ -161,10 +161,10 @@ export default function ShareWorkflowModal({
   }, [userId, shareType, workflowId, canvasId, workflowName, canvasName, nodes, edges]);
 
   useEffect(() => {
-    if (isOpen && shareUrl === null && !loading) {
+    if (isOpen && shareUrl === null && !loading && !error) {
       createShareRecord();
     }
-  }, [isOpen, shareUrl, loading, createShareRecord]);
+  }, [isOpen, shareUrl, loading, error, createShareRecord]);
 
   // Reset when modal closes (including loading so reopen can retry)
   useEffect(() => {

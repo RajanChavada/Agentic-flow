@@ -123,6 +123,9 @@ export default function AuthModal() {
         provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=${next}`,
+          queryParams: {
+            prompt: "select_account",
+          },
         },
       });
       if (oauthError) throw oauthError;
