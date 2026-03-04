@@ -166,12 +166,13 @@ export default function ShareWorkflowModal({
     }
   }, [isOpen, shareUrl, loading, createShareRecord]);
 
-  // Reset when modal closes
+  // Reset when modal closes (including loading so reopen can retry)
   useEffect(() => {
     if (!isOpen) {
       setShareUrl(null);
       setError(null);
       setCopied(false);
+      setLoading(false);
     }
   }, [isOpen]);
 
