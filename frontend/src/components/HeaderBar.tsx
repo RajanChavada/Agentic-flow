@@ -17,6 +17,8 @@ import {
   GitBranch,
   LayoutGrid,
   Home,
+  Share2,
+  ChevronDown,
 } from "lucide-react";
 import {
   useWorkflowStore,
@@ -41,6 +43,7 @@ import PullFromCanvasModal from "./PullFromCanvasModal";
 import ConfirmModal from "./ConfirmModal";
 import ExportDropdown from "./ExportDropdown";
 import PublishModal from "./marketplace/PublishModal";
+import ShareWorkflowModal from "./ShareWorkflowModal";
 import { useAutoLayout } from "@/hooks/useAutoLayout";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -55,6 +58,9 @@ export default function HeaderBar() {
   const [isPullOpen, setIsPullOpen] = useState(false);
   const [isPublishOpen, setIsPublishOpen] = useState(false);
   const [isNewConfirmOpen, setIsNewConfirmOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [shareMode, setShareMode] = useState<"workflow" | "canvas" | null>(null);
+  const shareDropdownRef = React.useRef<HTMLDivElement>(null);
   const activeCanvasId = useActiveCanvasId();
   const isDark = theme === "dark";
   const autoLayout = useAutoLayout();
@@ -408,6 +414,61 @@ export default function HeaderBar() {
           </button>
         )}
 
+        {/* Share (workflow or canvas) */}
+        {activeCanvasId && user && (
+          <div className="relative" ref={shareDropdownRef}>
+            <button
+              onClick={() => setIsShareOpen((o) => !o)}
+              className={`rounded-md border px-3 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 ${
+                isDark
+                  ? "border-sky-700 text-sky-300 hover:bg-sky-800/40"
+                  : "border-sky-300 text-sky-700 hover:bg-sky-50"
+              }`}
+              title="Share workflow or canvas"
+            >
+              <Share2 className="inline w-3.5 h-3.5" /> Share <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+            {isShareOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setIsShareOpen(false)}
+                  aria-hidden
+                />
+                <div
+                  className={`absolute right-0 top-full mt-1 z-50 min-w-48 rounded-md border py-1 shadow-lg ${
+                    isDark ? "border-slate-600 bg-slate-900" : "border-gray-200 bg-white"
+                  }`}
+                >
+                  <button
+                    onClick={() => {
+                      setShareMode("workflow");
+                      setIsShareOpen(false);
+                    }}
+                    disabled={nodes.length === 0}
+                    className={`w-full px-3 py-2 text-left text-sm transition disabled:opacity-40 ${
+                      isDark ? "hover:bg-slate-800" : "hover:bg-gray-100"
+                    }`}
+                  >
+                    Share this workflow
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShareMode("canvas");
+                      setIsShareOpen(false);
+                    }}
+                    className={`w-full px-3 py-2 text-left text-sm transition ${
+                      isDark ? "hover:bg-slate-800" : "hover:bg-gray-100"
+                    }`}
+                  >
+                    Share this canvas
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Save */}
         <button
           onClick={handleSave}
@@ -524,6 +585,22 @@ export default function HeaderBar() {
         isOpen={isPublishOpen}
         onClose={() => setIsPublishOpen(false)}
       />
+
+      {/* Share modal */}
+      {user && (
+        <ShareWorkflowModal
+          isOpen={shareMode !== null}
+          onClose={() => setShareMode(null)}
+          shareType={shareMode ?? "workflow"}
+          workflowId={currentWorkflowId ?? undefined}
+          canvasId={activeCanvasId ?? undefined}
+          workflowName={currentWorkflowName}
+          canvasName={undefined}
+          nodes={shareMode === "workflow" ? nodes : undefined}
+          edges={shareMode === "workflow" ? edges : undefined}
+          userId={user.id}
+        />
+      )}
     </header>
   );
 }

@@ -80,6 +80,16 @@ export default function ShareWorkflowModal({
           setLoading(false);
           return;
         }
+        let canvasNameToUse = canvasName ?? "Shared Canvas";
+        if (!canvasName) {
+          const { data: c } = await supabase
+            .from("canvases")
+            .select("name")
+            .eq("id", canvasId)
+            .eq("user_id", userId)
+            .single();
+          canvasNameToUse = c?.name ?? "Shared Canvas";
+        }
         const { data: workflows, error: fetchErr } = await supabase
           .from("workflows")
           .select("id, name, graph")
@@ -95,9 +105,9 @@ export default function ShareWorkflowModal({
 
         const workflowSnapshots: WorkflowSnapshot[] = workflows.map((row) => {
           const g = row.graph as { nodes?: unknown[]; edges?: { id?: string; source: string; target: string }[]; recursionLimit?: number };
-          const rawNodes = g?.nodes ?? [];
-          const rawEdges = g?.edges ?? [];
-          const rfNodes: Node<WorkflowNodeData>[] = rawNodes.map((n: Record<string, unknown>, i: number) => ({
+          const rawNodes: Record<string, unknown>[] = Array.isArray(g?.nodes) ? (g.nodes as Record<string, unknown>[]) : [];
+          const rawEdges = (g?.edges ?? []) as { id?: string; source: string; target: string }[];
+          const rfNodes: Node<WorkflowNodeData>[] = rawNodes.map((n, i) => ({
             id: String(n.id ?? `n-${i}`),
             type: (n.type as string) ?? "agentNode",
             position: { x: 200 + (i % 3) * 280, y: 100 + Math.floor(i / 3) * 180 },
@@ -130,7 +140,7 @@ export default function ShareWorkflowModal({
 
         const snapshot: CanvasShareSnapshot = {
           workflows: workflowSnapshots,
-          canvasName: canvasName ?? "Shared Canvas",
+          canvasName: canvasNameToUse,
         };
 
         const result = await createShare(userId, "canvas", snapshot, {

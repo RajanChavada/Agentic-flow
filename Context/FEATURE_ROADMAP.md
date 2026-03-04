@@ -241,3 +241,4 @@ Each phase is independently shippable and builds on the existing codebase withou
 - [x] Profile Sleek Metrics Dashboard — `.ai/context/features/profile-sleek-metrics-dashboard.md`
 - [ ] New User Profile Onboarding Modal — `.ai/context/features/new-user-profile-onboarding-modal.md`
 - [x] Canvases Info Modal — `.ai/context/features/canvases-info-modal.md`
+- [x] Workflow Share Links — `.ai/context/features/workflow-share-links.md`

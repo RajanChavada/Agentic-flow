@@ -346,22 +346,35 @@ export default function CanvasesPage() {
                       </h3>
                     )}
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleDeleteCanvas(canvas);
-                    }}
-                    disabled={deletingCanvasId === canvas.id}
-                    title="Delete canvas and its workflows"
-                    className="shrink-0 rounded p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
-                  >
-                    {deletingCanvasId === canvas.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </button>
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShareCanvas(canvas);
+                      }}
+                      title="Share canvas"
+                      className="rounded p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDeleteCanvas(canvas);
+                      }}
+                      disabled={deletingCanvasId === canvas.id}
+                      title="Delete canvas and its workflows"
+                      className="rounded p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                    >
+                      {deletingCanvasId === canvas.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <Link
                   href={`/editor/${canvas.id}`}
@@ -388,6 +401,16 @@ export default function CanvasesPage() {
           </div>
         )}
         <CanvasesInfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
+        {user && (
+          <ShareWorkflowModal
+            isOpen={!!shareCanvas}
+            onClose={() => setShareCanvas(null)}
+            shareType="canvas"
+            canvasId={shareCanvas?.id}
+            canvasName={shareCanvas?.name}
+            userId={user.id}
+          />
+        )}
       </div>
     </main>
   );

@@ -104,6 +104,12 @@ Maps programmer intent to Cursor rules, Context docs, and feature files. Use thi
 3. `frontend/src/hooks/useAutoLayout.ts` — layout logic
 4. `frontend/src/app/editor/[canvasId]/page.tsx` — layout effect
 
+### Share workflow / share canvas
+1. `.ai/context/features/workflow-share-links.md`
+2. `frontend/src/lib/shareWorkflows.ts` — createShare, getShareByToken, copyWorkflowToCanvas
+3. `frontend/src/components/ShareWorkflowModal.tsx`
+4. `Context/supabase.md` — workflow_shares schema
+
 ### Database / Supabase
 1. `.cursor/rules/supabase-db.mdc`
 2. `Context/supabase.md`

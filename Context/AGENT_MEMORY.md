@@ -1868,3 +1868,21 @@ The modal was `position: fixed` and placed next to the selected node via `flowTo
 **Sources**:
 - [Tremor](https://www.tremor.so/) — Dashboard components
 - [Tremor NPM](https://npm.tremor.so/) — ProgressCircle, DonutChart docs
+
+---
+
+### Update 40 — Workflow Share Links (2026-03-03)
+
+**Task Description**: Implement shareable links for workflows and canvases so logged-in users can share via email or copy-link. Recipients open a public view and can copy the workflow to their own canvas.
+
+**Approach and Methodology**:
+- **Supabase-only** — No FastAPI; `workflow_shares` table with RLS. Public read by token via RPC `get_share_by_token(token)` (anon + authenticated).
+- **Frozen snapshot** — Share link captures workflow state at creation; edits to original do not update the shared link (Pipedream-style).
+- **Copy-to-own** — Recipients clone workflow into their canvas; credentials/API keys never shared.
+
+**Decisions**:
+- Share links use Supabase-only (no backend API)
+- RPC for anon fetch by token (RLS blocks direct table read for anon)
+- Share token: 12 hex chars from `crypto.getRandomValues`
+
+**Files**: `supabase/migrations/006_workflow_shares.sql`, `frontend/src/lib/shareWorkflows.ts`, `ShareWorkflowModal.tsx`, `/share/[token]/page.tsx`, Share buttons on canvases page + HeaderBar.
