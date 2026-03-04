@@ -10,6 +10,7 @@ import {
   uploadAvatar as persistUploadAvatar,
   checkUsernameAvailable,
 } from "@/lib/profilePersistence";
+import { supabase } from "@/lib/supabase";
 import type { Profile } from "@/types/profile";
 
 export function defaultHandle(userId: string): string {
@@ -138,6 +139,8 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   completeOnboarding: async (userId, username_handle, avatar_url, avatar_type) => {
     set({ error: null });
     try {
+      // Ensure session is fresh (helps new OAuth users where auth.uid() may not be ready yet)
+      await supabase.auth.refreshSession();
       const profile = await upsertProfile(userId, {
         username_handle,
         avatar_url: avatar_url ?? null,
@@ -155,6 +158,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   skipOnboarding: async (userId) => {
     set({ error: null });
     try {
+      await supabase.auth.refreshSession();
       const profile = await upsertProfile(userId, {
         username_handle: defaultHandle(userId),
       });

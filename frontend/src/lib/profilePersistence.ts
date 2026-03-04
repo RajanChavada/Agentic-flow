@@ -15,6 +15,17 @@ function formatSupabaseError(err: unknown): string {
   return String(err);
 }
 
+/** Thrown by upsertProfile; preserves Supabase error code for user-friendly messages. */
+export class ProfileError extends Error {
+  constructor(
+    message: string,
+    public readonly code?: string
+  ) {
+    super(message);
+    this.name = "ProfileError";
+  }
+}
+
 export async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from("profiles")
@@ -71,7 +82,8 @@ export async function upsertProfile(
       .select("id, username_handle, avatar_url, avatar_type, created_at, updated_at")
       .single();
 
-    if (error) throw new Error(formatSupabaseError(error));
+    if (error)
+      throw new ProfileError(formatSupabaseError(error), (error as { code?: string }).code);
 
     return {
       id: row.id,
@@ -98,7 +110,8 @@ export async function upsertProfile(
       .select("id, username_handle, avatar_url, avatar_type, created_at, updated_at")
       .single();
 
-    if (error) throw new Error(formatSupabaseError(error));
+    if (error)
+      throw new ProfileError(formatSupabaseError(error), (error as { code?: string }).code);
 
     return {
       id: row.id,
@@ -120,7 +133,8 @@ export async function upsertProfile(
     .select("id, username_handle, avatar_url, avatar_type, created_at, updated_at")
     .single();
 
-  if (error) throw new Error(formatSupabaseError(error));
+  if (error)
+    throw new ProfileError(formatSupabaseError(error), (error as { code?: string }).code);
 
   return {
     id: row.id,

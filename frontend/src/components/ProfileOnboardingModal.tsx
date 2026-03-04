@@ -12,6 +12,7 @@ import { useAuthStore, useUser } from "@/store/useAuthStore";
 import { useProfileStore } from "@/store/useProfileStore";
 import { useUIState } from "@/store/useWorkflowStore";
 import AvatarPicker from "@/components/profile/AvatarPicker";
+import { ProfileError } from "@/lib/profilePersistence";
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,30}$/;
 
@@ -84,8 +85,14 @@ export default function ProfileOnboardingModal({ open, onComplete }: ProfileOnbo
       useAuthStore.getState().setNeedsProfileOnboarding(false);
       onComplete();
       router.push("/canvases");
-    } catch {
-      setHandleError("Failed to create profile. Please try again.");
+    } catch (err) {
+      console.error("[ProfileOnboarding] create failed:", err);
+      let msg = "Failed to create profile. Please try again.";
+      if (err instanceof ProfileError) {
+        if (err.code === "23505") msg = "Username already taken.";
+        else if (err.code === "42501") msg = "Session expired. Please sign in again.";
+      }
+      setHandleError(msg);
     } finally {
       setSubmitting(false);
     }
