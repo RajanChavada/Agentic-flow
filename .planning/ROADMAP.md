@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 0: Foundation** - Refactor store, EstimatePanel, and add test framework
 - [ ] **Phase 1: Condition Node** - Binary branching with probability sliders
 - [x] **Phase 2: Canvas Metadata** - Real-time graph analysis and risk scoring (completed 2026-03-05)
-- [ ] **Phase 3: Ideal State Node** - NL-to-schema success criteria definition
+- [x] **Phase 3: Ideal State Node** - NL-to-schema success criteria definition
 - [ ] **Phase 4: Probability-Weighted Estimation** - Cost ranges across conditional branches
 
 ## Phase Details
@@ -78,10 +78,12 @@ Plans:
   3. User sees generated JSON schema with required fields, type constraints, and performance bounds
   4. User can manually edit generated schema after generation
   5. Invalid schemas are rejected by backend validation before returning to frontend
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] TBD
+- [x] 03-1-PLAN.md — Frontend foundation (types, IdealStateNode component, Canvas/Sidebar/MiniMap registration)
+- [x] 03-2-PLAN.md — Backend NL-to-schema (schema_generator.py, API endpoints, validation)
+- [x] 03-3-PLAN.md — Schema UI & Integration (NodeConfigModal section, ContextToolbar, backend wiring)
 
 ### Phase 4: Probability-Weighted Estimation
 **Goal**: Users see cost and latency ranges reflecting branch probabilities across conditional paths
@@ -106,5 +108,5 @@ Phases execute in numeric order: 0 -> 1 -> 2 -> 3 -> 4
 | 0. Foundation | 3/3 | Complete | 2026-03-05 |
 | 1. Condition Node | 2/3 | In Progress|  |
 | 2. Canvas Metadata | 2/2 | Complete   | 2026-03-05 |
-| 3. Ideal State Node | 0/TBD | Not started | - |
+| 3. Ideal State Node | 3/3 | Complete | 2026-03-05 |
 | 4. Probability-Weighted Estimation | 0/TBD | Not started | - |
