@@ -17,9 +17,9 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [x] **COND-01**: User can add a Condition Node to the canvas via drag-and-drop from the toolbar
 - [x] **COND-02**: Condition Node has two output handles: True (green) and False (red) with visual labels
-- [ ] **COND-03**: User can enter a condition expression (text field) in the node configuration
-- [ ] **COND-04**: User can set branch probability via slider (0-100%) where True + False always sums to 100%
-- [ ] **COND-05**: Deleting a Condition Node removes all connected edges (cascade deletion)
+- [x] **COND-03**: User can enter a condition expression (text field) in the node configuration
+- [x] **COND-04**: User can set branch probability via slider (0-100%) where True + False always sums to 100%
+- [x] **COND-05**: Deleting a Condition Node removes all connected edges (cascade deletion)
 - [ ] **COND-06**: Backend recognizes `conditionNode` type and routes estimation through both branches
 
 ### Ideal State Node
@@ -90,9 +90,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FNDX-03 | Phase 0 | Pending |
 | COND-01 | Phase 1 | Complete |
 | COND-02 | Phase 1 | Complete |
-| COND-03 | Phase 1 | Pending |
-| COND-04 | Phase 1 | Pending |
-| COND-05 | Phase 1 | Pending |
+| COND-03 | Phase 1 | Complete |
+| COND-04 | Phase 1 | Complete |
+| COND-05 | Phase 1 | Complete |
 | COND-06 | Phase 1 | Pending |
 | IDST-01 | Phase 3 | Pending |
 | IDST-02 | Phase 3 | Pending |

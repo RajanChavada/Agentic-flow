@@ -104,7 +104,7 @@ Phases execute in numeric order: 0 -> 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Foundation | 0/3 | Planned | - |
-| 1. Condition Node | 0/3 | Planned | - |
+| 1. Condition Node | 2/3 | In Progress|  |
 | 2. Canvas Metadata | 1/2 | In Progress | 2026-03-05 |
 | 3. Ideal State Node | 0/TBD | Not started | - |
 | 4. Probability-Weighted Estimation | 0/TBD | Not started | - |
