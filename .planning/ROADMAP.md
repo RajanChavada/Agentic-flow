@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 0: Foundation** - Refactor store, EstimatePanel, and add test framework
 - [ ] **Phase 1: Condition Node** - Binary branching with probability sliders
-- [ ] **Phase 2: Canvas Metadata** - Real-time graph analysis and risk scoring
+- [x] **Phase 2: Canvas Metadata** - Real-time graph analysis and risk scoring (completed 2026-03-05)
 - [ ] **Phase 3: Ideal State Node** - NL-to-schema success criteria definition
 - [ ] **Phase 4: Probability-Weighted Estimation** - Cost ranges across conditional branches
 
@@ -105,6 +105,6 @@ Phases execute in numeric order: 0 -> 1 -> 2 -> 3 -> 4
 |-------|----------------|--------|-----------|
 | 0. Foundation | 3/3 | Complete | 2026-03-05 |
 | 1. Condition Node | 2/3 | In Progress|  |
-| 2. Canvas Metadata | 1/2 | In Progress | 2026-03-05 |
+| 2. Canvas Metadata | 2/2 | Complete   | 2026-03-05 |
 | 3. Ideal State Node | 0/TBD | Not started | - |
 | 4. Probability-Weighted Estimation | 0/TBD | Not started | - |

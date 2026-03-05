@@ -38,8 +38,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [x] **META-02**: Overlay shows tool risk surface breakdown (count of read/write/exec/network tools)
 - [x] **META-03**: Overlay shows canvas risk score (low/medium/high) computed from tool tiers + loop depth + graph complexity
 - [x] **META-04**: Overlay shows Ideal State reachability flag (reachable/not reachable from Start)
-- [ ] **META-05**: All metadata updates in real-time as user adds/removes/connects nodes (frontend-only computation, no API call)
-- [ ] **META-06**: Metadata computation does not cause visible UI jank during node drag operations
+- [x] **META-05**: All metadata updates in real-time as user adds/removes/connects nodes (frontend-only computation, no API call)
+- [x] **META-06**: Metadata computation does not cause visible UI jank during node drag operations
 
 ### Estimation Enhancement
 
@@ -105,8 +105,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | META-02 | Phase 2 | Complete |
 | META-03 | Phase 2 | Complete |
 | META-04 | Phase 2 | Complete |
-| META-05 | Phase 2 | Pending |
-| META-06 | Phase 2 | Pending |
+| META-05 | Phase 2 | Complete |
+| META-06 | Phase 2 | Complete |
 | ESTM-01 | Phase 4 | Pending |
 | ESTM-02 | Phase 4 | Pending |
 | ESTM-03 | Phase 4 | Pending |
