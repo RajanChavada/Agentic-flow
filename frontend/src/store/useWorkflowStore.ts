@@ -186,6 +186,8 @@ function nodesToPayload(nodes: Node<WorkflowNodeData>[]): NodeConfigPayload[] {
     task_type: (n.data.taskType as string | undefined) ?? null,
     expected_output_size: (n.data.expectedOutputSize as string | undefined) ?? null,
     expected_calls_per_run: (n.data.expectedCallsPerRun as number | null | undefined) ?? null,
+    condition_expression: (n.data.conditionExpression as string | undefined) ?? null,
+    probability: (n.data.probability as number | undefined) ?? null,
   }));
 }
 
@@ -194,6 +196,7 @@ function edgesToPayload(edges: Edge[]): EdgeConfigPayload[] {
     id: e.id,
     source: e.source,
     target: e.target,
+    source_handle: e.sourceHandle ?? null,
   }));
 }
 
