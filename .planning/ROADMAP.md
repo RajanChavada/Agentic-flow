@@ -28,10 +28,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. User can add/remove nodes without visible UI lag (store subscriptions are efficient)
   2. Developer can run frontend tests via npm and backend tests via pytest
   3. User viewing EstimatePanel sees organized sub-sections instead of single monolithic view
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] TBD
+- [ ] 00-1-PLAN.md - Test framework setup (Vitest + pytest with smoke tests)
+- [ ] 00-2-PLAN.md - Zustand store splitting (4 domain slices)
+- [ ] 00-3-PLAN.md - EstimatePanel decomposition (6 sub-components)
 
 ### Phase 1: Condition Node
 **Goal**: Users can model conditional branching in workflows with simulation probabilities
@@ -58,10 +60,11 @@ Plans:
   3. User creates complex graph and sees risk score indicator (low/medium/high)
   4. User adds Ideal State Node and sees reachability flag showing whether workflow can reach it from Start
   5. User drags nodes rapidly and experiences no visible UI jank or lag
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] TBD
+- [ ] 02-01-PLAN.md — Graph analysis utilities (TDD: BFS depth, DFS cycle detection, risk scoring, reachability)
+- [ ] 02-02-PLAN.md — Canvas metadata overlay component (frosted glass HUD + Canvas integration)
 
 ### Phase 3: Ideal State Node
 **Goal**: Users can define workflow success criteria in natural language and get structured schemas
@@ -94,12 +97,12 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
+Phases execute in numeric order: 0 -> 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 0. Foundation | 0/TBD | Not started | - |
+| 0. Foundation | 0/3 | Planned | - |
 | 1. Condition Node | 0/TBD | Not started | - |
-| 2. Canvas Metadata | 0/TBD | Not started | - |
+| 2. Canvas Metadata | 0/2 | Planned | - |
 | 3. Ideal State Node | 0/TBD | Not started | - |
 | 4. Probability-Weighted Estimation | 0/TBD | Not started | - |
