@@ -8,7 +8,7 @@ import Sidebar from "@/components/Sidebar";
 import Canvas from "@/components/Canvas";
 import HeaderBar from "@/components/HeaderBar";
 import ContextToolbar from "@/components/ContextToolbar";
-import EstimatePanel from "@/components/EstimatePanel";
+import EstimatePanel from "@/components/estimate/EstimatePanel";
 import NodeConfigModal from "@/components/NodeConfigModal";
 import ErrorBanner from "@/components/ErrorBanner";
 import SuccessBanner from "@/components/SuccessBanner";
