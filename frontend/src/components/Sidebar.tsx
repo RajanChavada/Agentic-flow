@@ -21,7 +21,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 interface PaletteItem {
   type: WorkflowNodeType;
   label: string;
-  shape: "circle" | "rectangle" | "diamond" | "octagon";
+  shape: "circle" | "rectangle" | "diamond" | "octagon" | "hexagon";
   colour: string;
   darkColour: string;
   shapeColour: string;
@@ -47,10 +47,18 @@ const PALETTE: PaletteItem[] = [
   {
     type: "toolNode",
     label: "Tool",
-    shape: "diamond",
+    shape: "hexagon",
     colour: "bg-orange-50 border-orange-500 text-orange-900",
     darkColour: "bg-orange-900/30 border-orange-400 text-orange-100",
     shapeColour: "bg-orange-500",
+  },
+  {
+    type: "conditionNode",
+    label: "Condition",
+    shape: "diamond",
+    colour: "bg-purple-50 border-purple-500 text-purple-900",
+    darkColour: "bg-purple-900/30 border-purple-400 text-purple-100",
+    shapeColour: "bg-purple-500",
   },
   {
     type: "finishNode",
@@ -70,6 +78,13 @@ function ShapeIndicator({ shape, color }: { shape: string; color: string }) {
       return <span className={`inline-block w-4 h-4 rounded-sm ${color}`} />;
     case "diamond":
       return <span className={`inline-block w-3.5 h-3.5 rotate-45 rounded-[2px] ${color}`} />;
+    case "hexagon":
+      return (
+        <span
+          className={`inline-block w-4 h-4 ${color}`}
+          style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
+        />
+      );
     case "octagon":
       return (
         <span

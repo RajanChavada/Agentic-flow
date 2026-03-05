@@ -23,7 +23,7 @@ const STYLE: Record<
     darkBg: string;
     darkBorder: string;
     shapeColour: string;
-    shape: "circle" | "rectangle" | "diamond" | "octagon";
+    shape: "circle" | "rectangle" | "diamond" | "octagon" | "hexagon";
   }
 > = {
   startNode: {
@@ -48,7 +48,7 @@ const STYLE: Record<
     darkBg: "bg-orange-900/30",
     darkBorder: "border-orange-400",
     shapeColour: "bg-orange-500",
-    shape: "diamond",
+    shape: "hexagon",
   },
   finishNode: {
     bg: "bg-red-50",
@@ -82,6 +82,13 @@ function NodeShape({ shape, color }: { shape: string; color: string }) {
       return <span className={`inline-block w-3.5 h-3.5 rounded-sm ${color}`} />;
     case "diamond":
       return <span className={`inline-block w-3 h-3 rotate-45 rounded-[2px] ${color}`} />;
+    case "hexagon":
+      return (
+        <span
+          className={`inline-block w-3.5 h-3.5 ${color}`}
+          style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
+        />
+      );
     case "octagon":
       return (
         <span
