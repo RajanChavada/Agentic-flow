@@ -12,7 +12,7 @@ Transform Neurovn from a static workflow designer into an intelligent control sy
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 0: Foundation** - Refactor store, EstimatePanel, and add test framework
+- [x] **Phase 0: Foundation** - Refactor store, EstimatePanel, and add test framework
 - [ ] **Phase 1: Condition Node** - Binary branching with probability sliders
 - [ ] **Phase 2: Canvas Metadata** - Real-time graph analysis and risk scoring
 - [ ] **Phase 3: Ideal State Node** - NL-to-schema success criteria definition
@@ -31,9 +31,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 00-1-PLAN.md - Test framework setup (Vitest + pytest with smoke tests)
-- [ ] 00-2-PLAN.md - Zustand store splitting (4 domain slices)
-- [ ] 00-3-PLAN.md - EstimatePanel decomposition (6 sub-components)
+- [x] 00-1-PLAN.md - Test framework setup (Vitest + pytest with smoke tests)
+- [x] 00-2-PLAN.md - Zustand store splitting (4 domain slices)
+- [x] 00-3-PLAN.md - EstimatePanel decomposition (6 sub-components)
 
 ### Phase 1: Condition Node
 **Goal**: Users can model conditional branching in workflows with simulation probabilities
@@ -103,7 +103,7 @@ Phases execute in numeric order: 0 -> 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 0. Foundation | 0/3 | Planned | - |
+| 0. Foundation | 3/3 | Complete | 2026-03-05 |
 | 1. Condition Node | 2/3 | In Progress|  |
 | 2. Canvas Metadata | 1/2 | In Progress | 2026-03-05 |
 | 3. Ideal State Node | 0/TBD | Not started | - |
