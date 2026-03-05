@@ -176,6 +176,8 @@ export interface NodeEstimation {
   latency_share: number;
   /** Bottleneck severity: "low" | "medium" | "high". */
   bottleneck_severity: "low" | "medium" | "high" | null;
+  /** Expected execution probability for condition-branch nodes (0.0–1.0). */
+  branch_probability?: number | null;
 }
 
 /** Detected cycle (SCC) in the workflow graph. */

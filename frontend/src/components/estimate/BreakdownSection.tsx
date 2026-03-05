@@ -285,7 +285,16 @@ export default function BreakdownSection({
                           }`}
                         />
                         <div>
-                          <div className="font-medium">{b.node_name}</div>
+                          <div className="font-medium flex items-center">
+                            {b.node_name}
+                            {b.branch_probability != null && b.branch_probability < 1.0 && (
+                              <span className={`text-[10px] ml-1.5 px-1.5 py-0.5 rounded font-medium ${
+                                isDark ? 'bg-slate-700 text-slate-400' : 'bg-gray-100 text-gray-500'
+                              }`}>
+                                ~{Math.round(b.branch_probability * 100)}%
+                              </span>
+                            )}
+                          </div>
                           {b.model_provider && b.model_name && (
                             <div className={`text-[10px] ${isDark ? "text-slate-500" : "text-gray-400"}`}>
                               {b.model_provider} / {b.model_name}

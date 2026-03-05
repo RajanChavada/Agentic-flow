@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict, deque
 from typing import Dict, List, Set, Tuple
 
-from models import EdgeConfig
+from models import EdgeConfig, NodeConfig
 
 
 class CycleGroup:
@@ -19,6 +19,27 @@ class CycleGroup:
 
     def __repr__(self) -> str:
         return f"CycleGroup(nodes={self.node_ids}, back_edges={self.back_edges})"
+
+
+class BranchPath:
+    """A single execution path through condition branches."""
+
+    __slots__ = ("path_id", "probability", "node_ids", "condition_values")
+
+    def __init__(
+        self,
+        path_id: str,
+        probability: float,
+        node_ids: Set[str],
+        condition_values: Dict[str, bool],
+    ) -> None:
+        self.path_id = path_id
+        self.probability = probability
+        self.node_ids = node_ids
+        self.condition_values = condition_values
+
+    def __repr__(self) -> str:
+        return f"BranchPath(id={self.path_id}, prob={self.probability:.3f}, nodes={len(self.node_ids)})"
 
 
 class GraphAnalyzer:
@@ -280,3 +301,132 @@ class GraphAnalyzer:
         """Return node ids that are NOT part of any cycle."""
         in_cycle = self.get_nodes_in_cycles()
         return [nid for nid in self.node_ids if nid not in in_cycle]
+
+    # ── Condition branch enumeration ─────────────────────────────
+
+    def get_condition_branches(
+        self, node_map: Dict[str, NodeConfig]
+    ) -> Dict[str, Tuple[Set[str], Set[str]]]:
+        """For each condition node, find true-branch and false-branch target nodes.
+
+        Inspects ``source_handle`` on each edge:
+          • handle containing ``"right"`` → True branch target
+          • handle containing ``"bottom"`` → False branch target
+
+        Returns:
+            ``{condition_id: (true_target_ids, false_target_ids)}``
+        """
+        branches: Dict[str, Tuple[Set[str], Set[str]]] = {}
+
+        for edge in self.edges:
+            src_node = node_map.get(edge.source)
+            if src_node is None or src_node.type != "conditionNode":
+                continue
+
+            if edge.source not in branches:
+                branches[edge.source] = (set(), set())
+
+            handle = edge.source_handle or ""
+            if "right" in handle:
+                branches[edge.source][0].add(edge.target)
+            elif "bottom" in handle:
+                branches[edge.source][1].add(edge.target)
+
+        return branches
+
+    def enumerate_branch_paths(
+        self,
+        condition_probs: Dict[str, float],
+        node_map: Dict[str, NodeConfig],
+    ) -> List[BranchPath]:
+        """Enumerate all valid execution paths through condition branches.
+
+        For each combination of True/False choices across all condition
+        nodes, builds a filtered adjacency list and BFS-walks from start
+        nodes to discover which nodes are reachable on that path.
+
+        Args:
+            condition_probs: ``{condition_id: probability}`` where
+                probability is on the **0–100** scale (True-branch %).
+            node_map: ``{node_id: NodeConfig}``
+
+        Returns:
+            List of :class:`BranchPath` objects, or **empty list** if
+            there are no condition branches or > 32 possible paths
+            (more than 5 binary conditions).
+        """
+        branches = self.get_condition_branches(node_map)
+        if not branches:
+            return []
+
+        condition_ids = list(branches.keys())
+
+        # Cap at 32 paths (5 binary conditions)
+        if len(condition_ids) > 5:
+            return []
+
+        # Find start nodes (in_degree == 0)
+        start_nodes = [nid for nid, deg in self.in_degree.items() if deg == 0]
+        if not start_nodes:
+            start_nodes = self.node_ids[:1]  # fallback
+
+        paths: List[BranchPath] = []
+
+        for combo_idx in range(2 ** len(condition_ids)):
+            # Determine which branch to take for each condition
+            condition_values: Dict[str, bool] = {}
+            for i, cid in enumerate(condition_ids):
+                condition_values[cid] = bool((combo_idx >> i) & 1)
+
+            # Build filtered adjacency: for condition nodes, only follow
+            # the edges matching the chosen branch direction.
+            filtered_adj: Dict[str, List[str]] = defaultdict(list)
+            for edge in self.edges:
+                src_node = node_map.get(edge.source)
+                if (
+                    src_node is not None
+                    and src_node.type == "conditionNode"
+                    and edge.source in condition_values
+                ):
+                    handle = edge.source_handle or ""
+                    chosen_true = condition_values[edge.source]
+                    if chosen_true and "right" in handle:
+                        filtered_adj[edge.source].append(edge.target)
+                    elif not chosen_true and "bottom" in handle:
+                        filtered_adj[edge.source].append(edge.target)
+                    # Skip edges for the non-chosen branch
+                else:
+                    filtered_adj[edge.source].append(edge.target)
+
+            # BFS from start nodes using filtered adjacency
+            visited: Set[str] = set()
+            queue: deque[str] = deque()
+            for sn in start_nodes:
+                if sn not in visited:
+                    visited.add(sn)
+                    queue.append(sn)
+
+            while queue:
+                node = queue.popleft()
+                for neighbor in filtered_adj.get(node, []):
+                    if neighbor not in visited:
+                        visited.add(neighbor)
+                        queue.append(neighbor)
+
+            # Compute probability as product of condition-branch choices
+            probability = 1.0
+            for cid, is_true in condition_values.items():
+                p = condition_probs.get(cid, 50.0) / 100.0
+                if is_true:
+                    probability *= p
+                else:
+                    probability *= (1.0 - p)
+
+            paths.append(BranchPath(
+                path_id=f"path_{combo_idx}",
+                probability=probability,
+                node_ids=visited,
+                condition_values=dict(condition_values),
+            ))
+
+        return paths

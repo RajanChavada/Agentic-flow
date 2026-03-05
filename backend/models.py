@@ -162,6 +162,8 @@ class NodeEstimation(BaseModel):
     bottleneck_severity: Optional[str] = None
     # Annotation flag: True for blankBoxNode, textNode — excluded from bottleneck/health scoring
     is_annotation: bool = False
+    # Branch probability: expected execution probability (0-1) based on condition paths
+    branch_probability: Optional[float] = None
 
 
 class CycleInfo(BaseModel):

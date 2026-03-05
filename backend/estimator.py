@@ -25,6 +25,13 @@ agent's estimation.
       - avg  = ceil(max_iterations / 2)
       - max  = max_iterations (from node.max_steps or graph recursion_limit)
   • DAG-zone nodes are always single-pass and added to all three.
+
+**Branch-aware estimation (v3)**:
+  • Enumerates all execution paths through condition nodes.
+  • Each path has a probability derived from condition True-branch %.
+  • Per-path cost/latency computed by summing only reachable nodes.
+  • Ranges: min = cheapest path, max = most expensive, avg = E[cost].
+  • Per-node branch_probability = sum of path probs containing that node.
 """
 
 from __future__ import annotations
@@ -48,7 +55,7 @@ from models import (
     WorkflowEstimation,
     EdgeConfig,
 )
-from graph_analyzer import GraphAnalyzer
+from graph_analyzer import GraphAnalyzer, BranchPath
 from pricing_registry import registry
 from tool_registry import tool_registry
 
@@ -208,6 +215,34 @@ def estimate_tool_node(node: NodeConfig, in_cycle: bool = False) -> NodeEstimati
         tool_schema_tokens=0,
         tool_response_tokens=(tool_def.avg_response_tokens if tool_def else _DEFAULT_TOOL_RESPONSE_TOKENS),
         tool_latency=round(exec_latency, 3),
+        in_cycle=in_cycle,
+    )
+
+
+def estimate_condition_node(node: NodeConfig, in_cycle: bool = False) -> NodeEstimation:
+    """Return estimation for a condition node.
+
+    Condition nodes are routing-only: zero LLM tokens, zero cost.
+    They branch the graph into True/False paths. Phase 4 will add
+    probability-weighted cost aggregation across branches.
+    """
+    return NodeEstimation(
+        node_id=node.id,
+        node_name=node.label or "Condition",
+        tokens=0,
+        input_tokens=0,
+        output_tokens=0,
+        cost=0.0,
+        input_cost=0.0,
+        output_cost=0.0,
+        latency=0.0,
+        model_provider=None,
+        model_name=None,
+        tool_id=None,
+        tool_impacts=None,
+        tool_schema_tokens=0,
+        tool_response_tokens=0,
+        tool_latency=0.0,
         in_cycle=in_cycle,
     )
 
@@ -634,6 +669,8 @@ def estimate_workflow(
             breakdown.append(estimate_agent_node(node, connected_tools, in_cycle))
         elif node.type == "toolNode":
             breakdown.append(estimate_tool_node(node, in_cycle))
+        elif node.type == "conditionNode":
+            breakdown.append(estimate_condition_node(node, in_cycle))
         else:
             breakdown.append(estimate_node(node, in_cycle))
 
@@ -682,6 +719,30 @@ def estimate_workflow(
     total_cost = round(sum(b.cost for b in breakdown), 8)
     total_latency = round(sum(b.latency for b in breakdown), 3)
     total_tool_latency = round(sum(b.tool_latency for b in breakdown), 3)
+
+    # ── Branch probability enumeration ────────────────────────────
+    condition_probs: Dict[str, float] = {}
+    for n in nodes:
+        if n.type == "conditionNode" and n.probability is not None:
+            condition_probs[n.id] = n.probability
+
+    branch_paths: List[BranchPath] = []
+    has_branches = False
+    if condition_probs and not is_cyclic:
+        branch_paths = analyzer.enumerate_branch_paths(condition_probs, node_map)
+        has_branches = len(branch_paths) > 1
+
+    # Compute per-node branch_probability: sum of path probabilities
+    # for every path that includes the node.
+    if has_branches:
+        breakdown_map_bp: Dict[str, NodeEstimation] = {b.node_id: b for b in breakdown}
+        for b in breakdown:
+            prob_sum = 0.0
+            for bp in branch_paths:
+                if b.node_id in bp.node_ids:
+                    prob_sum += bp.probability
+            # Clamp to [0, 1] — rounding can push slightly above 1.0
+            b.branch_probability = round(min(prob_sum, 1.0), 4)
 
     # ── Compute min / avg / max ranges ──────────────────────────
     token_range: Optional[EstimationRange] = None
@@ -756,6 +817,48 @@ def estimate_workflow(
         total_cost = round(cost_range.avg, 8)
         total_latency = round(latency_range.avg, 3)
 
+    elif has_branches and branch_paths:
+        # ── Branch-based range computation ────────────────────────
+        # Each BranchPath has a probability and a set of reachable node_ids.
+        # Per-path cost = sum of node costs for nodes in that path.
+        breakdown_by_id: Dict[str, NodeEstimation] = {b.node_id: b for b in breakdown}
+
+        path_metrics: List[dict] = []
+        for bp in branch_paths:
+            p_tokens = sum(breakdown_by_id[nid].tokens for nid in bp.node_ids if nid in breakdown_by_id)
+            p_cost = sum(breakdown_by_id[nid].cost for nid in bp.node_ids if nid in breakdown_by_id)
+            p_latency = sum(breakdown_by_id[nid].latency for nid in bp.node_ids if nid in breakdown_by_id)
+            path_metrics.append({
+                "probability": bp.probability,
+                "tokens": p_tokens,
+                "cost": p_cost,
+                "latency": p_latency,
+            })
+
+        if path_metrics:
+            # min = cheapest path, max = most expensive path
+            # avg = expected value = sum(prob_i * cost_i)
+            token_range = EstimationRange(
+                min=round(min(pm["tokens"] for pm in path_metrics)),
+                avg=round(sum(pm["probability"] * pm["tokens"] for pm in path_metrics)),
+                max=round(max(pm["tokens"] for pm in path_metrics)),
+            )
+            cost_range = EstimationRange(
+                min=round(min(pm["cost"] for pm in path_metrics), 6),
+                avg=round(sum(pm["probability"] * pm["cost"] for pm in path_metrics), 6),
+                max=round(max(pm["cost"] for pm in path_metrics), 6),
+            )
+            latency_range = EstimationRange(
+                min=round(min(pm["latency"] for pm in path_metrics), 3),
+                avg=round(sum(pm["probability"] * pm["latency"] for pm in path_metrics), 3),
+                max=round(max(pm["latency"] for pm in path_metrics), 3),
+            )
+
+            # Update totals to represent the expected (average) case
+            total_tokens = int(token_range.avg)
+            total_cost = round(cost_range.avg, 8)
+            total_latency = round(latency_range.avg, 3)
+
     # ── Bottleneck analysis: cost_share, latency_share, severity ──
     _compute_bottleneck_shares(breakdown, total_cost, total_latency)
 
@@ -805,7 +908,7 @@ def estimate_workflow(
 
     # ── Sensitivity readout (cost / latency across min/avg/max) ──
     sensitivity: Optional[SensitivityReadout] = None
-    if is_cyclic and cost_range and latency_range:
+    if cost_range and latency_range:
         sensitivity = SensitivityReadout(
             cost_min=cost_range.min,
             cost_avg=cost_range.avg,
