@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-stopped_at: Completed Phase 3 (Ideal State Node)
-last_updated: "2026-03-05T19:30:00.000Z"
-last_activity: 2026-03-05 — Completed Phase 3 Ideal State Node (all 3 plans)
+stopped_at: Completed Phase 4 (Probability-Weighted Estimation)
+last_updated: "2026-03-05T21:00:00.000Z"
+last_activity: 2026-03-05 — Completed Phase 4 Probability-Weighted Estimation (2 plans)
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 11
-  completed_plans: 11
-  percent: 80
+  completed_phases: 5
+  total_plans: 13
+  completed_plans: 13
+  percent: 100
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** Users can define what "done" looks like for a workflow and see, before any execution, whether their graph can reach that goal, how much it will cost across different branches, and where the risk surfaces are.
-**Current focus:** Phase 4: Probability-Weighted Estimation (next unfinished phase)
+**Current focus:** All phases complete. Phase 1 has 2/3 plans in ROADMAP (code appears complete).
 
 ## Current Position
 
-Phase: 3 of 5 (Ideal State Node) - Completed
-Plan: 3 of 3 plans completed
-Status: Phase complete, ready for Phase 4 (Probability-Weighted Estimation)
-Last activity: 2026-03-05 — Completed Phase 3 Ideal State Node
+Phase: 4 of 5 (Probability-Weighted Estimation) - Completed
+Plan: 2 of 2 plans completed
+Status: All milestone phases complete
+Last activity: 2026-03-05 — Completed Phase 4 Probability-Weighted Estimation
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Total execution time: ~1.5 hours
+- Total plans completed: 13
+- Total execution time: ~2 hours
 
 **By Phase:**
 
@@ -46,7 +46,7 @@ Progress: [████████░░] 80%
 | 01    | 2/2   | Complete |
 | 02    | 2/2   | Complete |
 | 03    | 3/3   | Complete |
-| 04    | 0/TBD | Not started |
+| 04    | 2/2   | Complete |
 
 ## Accumulated Context
 
@@ -66,10 +66,14 @@ Recent decisions affecting current work:
 - [Phase 03]: NL-to-schema uses OpenAI API with fallback template schema when no API key configured
 - [Phase 03]: Schema validation checks root type, properties structure, and required field references
 - [Phase 03]: Fixed Python 3.9 compat: use Optional[str] instead of str | None in config.py
+- [Phase 04]: Branch enumeration uses combinatorial BFS — 2^N paths for N conditions, capped at 32 (5 conditions)
+- [Phase 04]: Branch ranges: min = cheapest path, max = most expensive, avg = E[cost] (probability-weighted)
+- [Phase 04]: Per-node branch_probability = sum of path probabilities containing that node
+- [Phase 04]: Sensitivity readout updated to use ranges from both cycles AND branches (was cycle-only)
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
@@ -78,6 +82,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-05T19:30:00.000Z
-Stopped at: Completed Phase 3 (Ideal State Node)
+Last session: 2026-03-05T21:00:00.000Z
+Stopped at: Completed Phase 4 (Probability-Weighted Estimation)
 Resume file: None
