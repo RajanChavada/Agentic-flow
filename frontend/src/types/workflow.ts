@@ -8,7 +8,8 @@ export type WorkflowNodeType =
   | "finishNode"
   | "blankBoxNode"
   | "textNode"
-  | "conditionNode";
+  | "conditionNode"
+  | "idealStateNode";
 
 /** 9 anchor points for label placement inside a BlankBoxNode. */
 export type LabelPosition =
@@ -47,6 +48,9 @@ export type WorkflowNodeData = {
   /** Condition node fields. */
   conditionExpression?: string;
   probability?: number;
+  /** Ideal State node fields. */
+  idealStateDescription?: string;
+  idealStateSchema?: Record<string, unknown> | null;
   /** BlankBoxNode styling. */
   blankBoxStyle?: BlankBoxStyle;
   /** TextNode styling. */
@@ -78,6 +82,9 @@ export interface NodeConfigPayload {
   /** Condition node fields. */
   condition_expression?: string | null;
   probability?: number | null;
+  /** Ideal State node fields. */
+  ideal_state_description?: string | null;
+  ideal_state_schema?: Record<string, unknown> | null;
 }
 
 /** Shape of an edge sent to the backend. */

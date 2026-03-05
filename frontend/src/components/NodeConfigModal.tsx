@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useReactFlow } from "@xyflow/react";
-import { BrainCircuit } from "lucide-react";
+import { BrainCircuit, Target, Loader2 } from "lucide-react";
 import {
   useWorkflowStore,
   useSelectedNodeId,
@@ -45,6 +45,26 @@ export default function NodeConfigModal() {
     (node?.data?.expectedCallsPerRun as number | null | undefined) ?? null
   );
 
+  // ── Condition node state ─────────────────────────────────
+  const [conditionExpression, setConditionExpression] = useState(
+    (node?.data?.conditionExpression as string | undefined) ?? ""
+  );
+  const [probability, setProbability] = useState<number>(
+    (node?.data?.probability as number | undefined) ?? 50
+  );
+
+  // ── Ideal state node state ─────────────────────────────
+  const [idealStateDescription, setIdealStateDescription] = useState(
+    (node?.data?.idealStateDescription as string | undefined) ?? ""
+  );
+  const [idealStateSchema, setIdealStateSchema] = useState<Record<string, unknown> | null>(
+    (node?.data?.idealStateSchema as Record<string, unknown> | null | undefined) ?? null
+  );
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isEditingSchema, setIsEditingSchema] = useState(false);
+  const [schemaEditText, setSchemaEditText] = useState("");
+  const [schemaErrors, setSchemaErrors] = useState<string[]>([]);
+
   const [modalPos, setModalPos] = useState<{ top: number; left: number; maxHeight: number } | null>(null);
 
   // ── Dragging state ───────────────────────────────────────
@@ -60,6 +80,8 @@ export default function NodeConfigModal() {
 
   const isDark = theme === "dark";
   const isToolNode = node?.type === "toolNode";
+  const isConditionNode = node?.type === "conditionNode";
+  const isIdealStateNode = node?.type === "idealStateNode";
 
   // ── Drag-to-move handlers ────────────────────────────────
   const onDragStart = useCallback((e: React.MouseEvent) => {
@@ -162,11 +184,17 @@ export default function NodeConfigModal() {
       setTaskType(node.data.taskType ?? "");
       setExpectedOutputSize(node.data.expectedOutputSize ?? "");
       setExpectedCallsPerRun((node.data.expectedCallsPerRun as number | null | undefined) ?? null);
+      setConditionExpression((node.data.conditionExpression as string | undefined) ?? "");
+      setProbability((node.data.probability as number | undefined) ?? 50);
+      setIdealStateDescription((node.data.idealStateDescription as string | undefined) ?? "");
+      setIdealStateSchema((node.data.idealStateSchema as Record<string, unknown> | null | undefined) ?? null);
+      setIsEditingSchema(false);
+      setSchemaErrors([]);
     }
   }, [node]);
 
   // Modal only for agent and tool nodes
-  if (!isConfigModalOpen || !node || (node.type !== "agentNode" && node.type !== "toolNode")) {
+  if (!isConfigModalOpen || !node || (node.type !== "agentNode" && node.type !== "toolNode" && node.type !== "conditionNode" && node.type !== "idealStateNode")) {
     return null;
   }
 
@@ -176,6 +204,16 @@ export default function NodeConfigModal() {
         toolCategory,
         toolId,
         label: selectedTool?.display_name || node.data.label,
+      });
+    } else if (isConditionNode) {
+      updateNodeData(node.id, {
+        conditionExpression,
+        probability,
+      });
+    } else if (isIdealStateNode) {
+      updateNodeData(node.id, {
+        idealStateDescription,
+        idealStateSchema,
       });
     } else {
       updateNodeData(node.id, {
@@ -264,7 +302,270 @@ export default function NodeConfigModal() {
         {/* ── Scrollable body ──────────────────────────── */}
         <div className="flex-1 min-h-0 px-5 pt-4 pb-5 overflow-y-auto">
 
-        {isToolNode ? (
+        {isIdealStateNode ? (
+          /* ═══════════════ IDEAL STATE NODE CONFIG ═══════════════ */
+          <>
+            {/* NL Success Description */}
+            <label
+              className={`block text-xs font-medium mb-1 ${
+                isDark ? "text-slate-400" : "text-gray-600"
+              }`}
+            >
+              Success Description
+            </label>
+            <p className={`text-[10px] mb-1.5 ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+              Describe what a successful workflow output looks like
+            </p>
+            <textarea
+              value={idealStateDescription}
+              onChange={(e) =>
+                e.target.value.length <= 500 && setIdealStateDescription(e.target.value)
+              }
+              rows={3}
+              className={`w-full rounded border px-3 py-2 text-sm mb-3 resize-none ${
+                isDark
+                  ? "bg-slate-700 border-slate-500 text-slate-100 placeholder-slate-500"
+                  : "bg-white border-gray-300 text-gray-800 placeholder-gray-400"
+              }`}
+              placeholder="e.g., The workflow produces a summary with sentiment score > 0.7 and key topics extracted"
+            />
+
+            {/* Generate Schema Button */}
+            <button
+              onClick={async () => {
+                if (!idealStateDescription.trim()) return;
+                setIsGenerating(true);
+                setSchemaErrors([]);
+                try {
+                  const res = await fetch("http://localhost:8000/api/generate-schema", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ description: idealStateDescription }),
+                  });
+                  if (!res.ok) {
+                    const err = await res.json().catch(() => ({ detail: "Schema generation failed" }));
+                    setSchemaErrors([err.detail || "Schema generation failed"]);
+                    return;
+                  }
+                  const data = await res.json();
+                  setIdealStateSchema(data.schema);
+                  setIsEditingSchema(false);
+                } catch {
+                  setSchemaErrors(["Failed to connect to backend"]);
+                } finally {
+                  setIsGenerating(false);
+                }
+              }}
+              disabled={isGenerating || !idealStateDescription.trim()}
+              className={`w-full rounded-md px-3 py-2 text-sm font-medium transition mb-3 flex items-center justify-center gap-2 ${
+                isGenerating || !idealStateDescription.trim()
+                  ? isDark
+                    ? "bg-slate-700 text-slate-500 cursor-not-allowed"
+                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-teal-600 text-white hover:bg-teal-700"
+              }`}
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Target className="w-4 h-4" />
+                  Generate Schema
+                </>
+              )}
+            </button>
+
+            {/* Schema errors */}
+            {schemaErrors.length > 0 && (
+              <div className={`rounded border p-2 mb-3 text-xs ${
+                isDark ? "bg-red-900/30 border-red-800 text-red-300" : "bg-red-50 border-red-200 text-red-600"
+              }`}>
+                {schemaErrors.map((err, i) => (
+                  <p key={i}>{err}</p>
+                ))}
+              </div>
+            )}
+
+            {/* Schema display / editor */}
+            {idealStateSchema && (
+              <div className="mb-3">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className={`text-xs font-medium ${isDark ? "text-slate-400" : "text-gray-600"}`}>
+                    Schema
+                  </label>
+                  <button
+                    onClick={() => {
+                      if (!isEditingSchema) {
+                        setSchemaEditText(JSON.stringify(idealStateSchema, null, 2));
+                      }
+                      setIsEditingSchema(!isEditingSchema);
+                      setSchemaErrors([]);
+                    }}
+                    className={`text-[10px] font-medium px-2 py-0.5 rounded transition ${
+                      isDark
+                        ? "text-teal-400 hover:bg-slate-700"
+                        : "text-teal-600 hover:bg-teal-50"
+                    }`}
+                  >
+                    {isEditingSchema ? "Cancel Edit" : "Edit Schema"}
+                  </button>
+                </div>
+
+                {isEditingSchema ? (
+                  <>
+                    <textarea
+                      value={schemaEditText}
+                      onChange={(e) => setSchemaEditText(e.target.value)}
+                      rows={8}
+                      className={`w-full rounded border px-3 py-2 text-xs font-mono mb-2 resize-none ${
+                        isDark
+                          ? "bg-slate-700 border-slate-500 text-slate-100"
+                          : "bg-white border-gray-300 text-gray-800"
+                      }`}
+                    />
+                    <button
+                      onClick={async () => {
+                        setSchemaErrors([]);
+                        try {
+                          const parsed = JSON.parse(schemaEditText);
+                          const res = await fetch("http://localhost:8000/api/validate-schema", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ schema: parsed }),
+                          });
+                          const data = await res.json();
+                          if (data.valid) {
+                            setIdealStateSchema(parsed);
+                            setIsEditingSchema(false);
+                          } else {
+                            setSchemaErrors(data.errors || ["Invalid schema"]);
+                          }
+                        } catch {
+                          setSchemaErrors(["Invalid JSON"]);
+                        }
+                      }}
+                      className="w-full rounded-md bg-teal-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-700 transition"
+                    >
+                      Validate & Apply
+                    </button>
+                  </>
+                ) : (
+                  <pre
+                    className={`rounded border p-3 text-[10px] font-mono leading-relaxed overflow-auto max-h-48 ${
+                      isDark
+                        ? "bg-slate-900/50 border-slate-600 text-slate-300"
+                        : "bg-gray-50 border-gray-200 text-gray-700"
+                    }`}
+                  >
+                    {JSON.stringify(idealStateSchema, null, 2)}
+                  </pre>
+                )}
+              </div>
+            )}
+          </>
+        ) : isConditionNode ? (
+          /* ═══════════════ CONDITION NODE CONFIG ═══════════════ */
+          <>
+            {/* Condition Expression */}
+            <label
+              className={`block text-xs font-medium mb-1 ${
+                isDark ? "text-slate-400" : "text-gray-600"
+              }`}
+            >
+              Condition
+            </label>
+            <p className={`text-[10px] mb-1.5 ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+              Human-readable branch logic
+            </p>
+            <input
+              type="text"
+              value={conditionExpression}
+              onChange={(e) => setConditionExpression(e.target.value)}
+              placeholder="e.g., sentiment > 0.7"
+              className={`w-full rounded border px-3 py-2 text-sm mb-4 ${
+                isDark
+                  ? "bg-slate-700 border-slate-500 text-slate-100 placeholder-slate-500"
+                  : "bg-white border-gray-300 text-gray-800 placeholder-gray-400"
+              }`}
+            />
+
+            {/* Probability Slider */}
+            <div className="flex items-center gap-1.5 mb-2">
+              <label
+                className={`block text-xs font-medium ${
+                  isDark ? "text-slate-400" : "text-gray-600"
+                }`}
+              >
+                Branch Probability
+              </label>
+              <div className="relative group">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className={`w-3.5 h-3.5 cursor-help ${isDark ? "text-slate-500" : "text-gray-400"}`}
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0ZM8.94 6.94a.75.75 0 1 1-1.061-1.061 3 3 0 1 1 2.871 5.026v.345a.75.75 0 0 1-1.5 0v-.5c0-.72.57-1.172 1.081-1.287A1.5 1.5 0 1 0 8.94 6.94ZM10 15a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <div
+                  className={`
+                    absolute left-1/2 -translate-x-1/2 top-full mt-1.5 w-56 px-3 py-2 rounded-lg shadow-lg
+                    text-[11px] leading-relaxed pointer-events-none
+                    opacity-0 group-hover:opacity-100 transition-opacity z-50
+                    ${isDark ? "bg-slate-700 text-slate-200 border border-slate-600" : "bg-white text-gray-700 border border-gray-200"}
+                  `}
+                >
+                  Sets the estimated likelihood each branch is taken during a workflow run. Used for cost and latency projections -- not runtime routing. A 70/30 split means the estimator weights the True path at 70% probability.
+                </div>
+              </div>
+            </div>
+
+            {/* Probability display */}
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-green-600 dark:text-green-400">
+                True: {probability}%
+              </span>
+              <span className="text-xs font-semibold text-red-600 dark:text-red-400">
+                False: {100 - probability}%
+              </span>
+            </div>
+
+            {/* Visual probability bar */}
+            <div className="relative h-8 rounded-lg border overflow-hidden mb-3 ${isDark ? 'border-slate-600' : 'border-gray-300'}">
+              <div
+                className="absolute inset-y-0 left-0 bg-green-500/30 dark:bg-green-600/30 transition-all"
+                style={{ width: `${probability}%` }}
+              />
+              <div
+                className="absolute inset-y-0 right-0 bg-red-500/30 dark:bg-red-600/30 transition-all"
+                style={{ width: `${100 - probability}%` }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className={`text-xs font-medium ${isDark ? 'text-slate-100' : 'text-gray-800'}`}>
+                  {probability}% / {100 - probability}%
+                </span>
+              </div>
+            </div>
+
+            {/* Range slider */}
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={probability}
+              onChange={(e) => setProbability(Number(e.target.value))}
+              className="w-full h-2 accent-purple-500 cursor-pointer"
+            />
+          </>
+        ) : isToolNode ? (
           /* ═══════════════ TOOL NODE CONFIG ═══════════════ */
           <>
             {/* Tool Category */}

@@ -1,6 +1,7 @@
 """Application configuration – reads from environment variables."""
 
 import os
+from typing import Optional
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -14,3 +15,7 @@ FRONTEND_ORIGINS: list[str] = [o.strip() for o in _raw_origins.split(",") if o.s
 # Uvicorn defaults
 HOST: str = os.getenv("HOST", "0.0.0.0")
 PORT: int = int(os.getenv("PORT", "8000"))
+
+# LLM configuration for NL-to-schema generation
+OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
+SCHEMA_GEN_MODEL: str = os.getenv("SCHEMA_GEN_MODEL", "gpt-4o-mini")

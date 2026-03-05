@@ -21,6 +21,7 @@ import WorkflowNode from "@/components/nodes/WorkflowNode";
 import BlankBoxNode from "@/components/nodes/BlankBoxNode";
 import TextNode from "@/components/nodes/TextNode";
 import ConditionNode from "@/components/nodes/ConditionNode";
+import IdealStateNode from "@/components/nodes/IdealStateNode";
 import AnnotationEdge from "@/components/edges/AnnotationEdge";
 import { CanvasMetadataOverlay } from "@/components/CanvasMetadataOverlay";
 import {
@@ -39,6 +40,7 @@ const nodeTypes = {
   toolNode: WorkflowNode,
   finishNode: WorkflowNode,
   conditionNode: ConditionNode,
+  idealStateNode: IdealStateNode,
   blankBoxNode: BlankBoxNode,
   textNode: TextNode,
 };
@@ -226,6 +228,14 @@ export default function Canvas() {
 
       if (!type) return;
 
+      // One-per-canvas enforcement: only one ideal state node allowed
+      if (type === "idealStateNode") {
+        const currentNodes = useWorkflowStore.getState().nodes;
+        if (currentNodes.some(n => n.type === "idealStateNode")) {
+          return;
+        }
+      }
+
       const position = screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
@@ -262,6 +272,11 @@ export default function Canvas() {
         baseData.probability = 50;
       }
 
+      if (type === "idealStateNode") {
+        baseData.idealStateDescription = "";
+        baseData.idealStateSchema = null;
+      }
+
       const newNode: Parameters<typeof addNode>[0] = {
         id: uuid(),
         type,
@@ -281,7 +296,7 @@ export default function Canvas() {
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: { id: string; type?: string }) => {
       setSelectedNodeId(node.id);
-      if (node.type === "agentNode" || node.type === "toolNode" || node.type === "conditionNode") {
+      if (node.type === "agentNode" || node.type === "toolNode" || node.type === "conditionNode" || node.type === "idealStateNode") {
         openConfigModal();
       }
     },
@@ -331,6 +346,7 @@ export default function Canvas() {
               case "toolNode": return "#f97316";
               case "finishNode": return "#ef4444";
               case "conditionNode": return "#8b5cf6";
+              case "idealStateNode": return "#14b8a6";
               case "blankBoxNode": return "#94a3b8";
               case "textNode": return "#8b5cf6";
               default: return "#6b7280";

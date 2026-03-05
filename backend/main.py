@@ -20,11 +20,16 @@ from models import (
     ToolCategoryDetailedInfo,
     ExternalWorkflowImportRequest,
     ImportedWorkflow,
+    SchemaGenerateRequest,
+    SchemaGenerateResponse,
+    SchemaValidateRequest,
+    SchemaValidateResponse,
 )
 from estimator import estimate_workflow
 from pricing_registry import registry
 from tool_registry import tool_registry
 from import_adapters import get_adapter
+from schema_generator import generate_schema, validate_schema
 
 app = FastAPI(
     title="Neurovn",
@@ -111,6 +116,22 @@ async def import_workflow(request: ExternalWorkflowImportRequest):
             status_code=400,
             detail=f"Failed to import workflow: {exc}",
         )
+
+
+# ── Schema Generation ──────────────────────────────────────────
+
+@app.post("/api/generate-schema", response_model=SchemaGenerateResponse)
+async def generate_schema_endpoint(request: SchemaGenerateRequest):
+    """Generate a JSON schema from a natural language success description."""
+    schema = generate_schema(request.description, context=request.context)
+    return SchemaGenerateResponse(schema=schema, description=request.description)
+
+
+@app.post("/api/validate-schema", response_model=SchemaValidateResponse)
+async def validate_schema_endpoint(request: SchemaValidateRequest):
+    """Validate a JSON schema for correctness."""
+    is_valid, errors = validate_schema(request.schema_obj)
+    return SchemaValidateResponse(valid=is_valid, errors=errors)
 
 
 # ── Provider & Model Registry ──────────────────────────────────

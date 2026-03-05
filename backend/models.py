@@ -28,6 +28,7 @@ class NodeConfig(BaseModel):
     type: Literal[
         "startNode", "agentNode", "toolNode", "finishNode",
         "blankBoxNode", "textNode",
+        "conditionNode", "idealStateNode",
     ]
     label: Optional[str] = None
     model_provider: Optional[str] = Field(
@@ -65,12 +66,37 @@ class NodeConfig(BaseModel):
         le=50,
         description="Expected number of LLM calls this agent makes per workflow run (for orchestrators)",
     )
+    # ── Condition node fields ─────────────────────────────────────
+    condition_expression: Optional[str] = Field(
+        default=None,
+        description="Human-readable condition expression (e.g., 'sentiment > 0.7')",
+    )
+    probability: Optional[float] = Field(
+        default=None,
+        ge=0,
+        le=100,
+        description="True branch probability 0-100%. False = 100 - probability.",
+    )
+    # ── Ideal State node fields ──────────────────────────────────
+    ideal_state_description: Optional[str] = Field(
+        default=None,
+        max_length=2000,
+        description="Natural language success criteria description",
+    )
+    ideal_state_schema: Optional[dict] = Field(
+        default=None,
+        description="Generated JSON schema for success criteria",
+    )
 
 
 class EdgeConfig(BaseModel):
     id: Optional[str] = None
     source: str
     target: str
+    source_handle: Optional[str] = Field(
+        default=None,
+        description="React Flow source handle ID (e.g., 's-right-true', 's-bottom-false')",
+    )
 
 
 class WorkflowRequest(BaseModel):
@@ -311,6 +337,41 @@ class BatchEstimateResult(BaseModel):
 class BatchEstimateResponse(BaseModel):
     """Response from POST /api/estimate/batch."""
     results: List[BatchEstimateResult]
+
+
+# ── Schema generation models ─────────────────────────────────
+
+class SchemaGenerateRequest(BaseModel):
+    """POST /api/generate-schema - NL to JSON schema."""
+    description: str = Field(
+        ..., min_length=10, max_length=2000,
+        description="Natural language success criteria description",
+    )
+    context: Optional[str] = Field(
+        default=None, max_length=500,
+        description="Optional workflow context for better generation",
+    )
+
+
+class SchemaGenerateResponse(BaseModel):
+    """Response from POST /api/generate-schema."""
+    schema_obj: dict = Field(..., alias="schema", description="Generated JSON schema")
+    description: str
+
+    model_config = {"populate_by_name": True}
+
+
+class SchemaValidateRequest(BaseModel):
+    """POST /api/validate-schema - validate a JSON schema."""
+    schema_obj: dict = Field(..., alias="schema", description="JSON schema to validate")
+
+    model_config = {"populate_by_name": True}
+
+
+class SchemaValidateResponse(BaseModel):
+    """Response from POST /api/validate-schema."""
+    valid: bool
+    errors: List[str] = []
 
 
 # ── Import / export models ─────────────────────────────────────

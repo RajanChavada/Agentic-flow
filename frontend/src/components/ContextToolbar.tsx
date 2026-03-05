@@ -2,7 +2,7 @@
 "use no memo";
 
 import React from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, GitBranch, Target, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Node } from "@xyflow/react";
 import type {
@@ -366,6 +366,71 @@ function TextToolbarSection({ node }: { node: Node<WorkflowNodeData> }) {
   );
 }
 
+/* ─── Condition Section ───────────────────────────────────── */
+
+function ConditionToolbarSection({ node }: { node: Node<WorkflowNodeData> }) {
+  const deleteNode = useWorkflowStore((s) => s.deleteNode);
+
+  const conditionExpression = (node.data.conditionExpression as string | undefined) ?? "";
+  const probability = (node.data.probability as number | undefined) ?? 50;
+
+  // Truncate expression if too long
+  const displayExpression = conditionExpression.length > 30
+    ? conditionExpression.slice(0, 30) + "..."
+    : conditionExpression || "No condition set";
+
+  return (
+    <>
+      <GitBranch className="w-4 h-4 text-purple-500 dark:text-purple-400 shrink-0" />
+      <span className="text-xs text-stone-600 dark:text-slate-300 shrink-0 max-w-48 truncate">
+        {displayExpression}
+      </span>
+      <ToolbarDivider />
+      <span className="text-xs font-semibold text-green-600 dark:text-green-400 shrink-0">
+        {probability}%
+      </span>
+      <span className="text-xs text-stone-500 dark:text-slate-500 shrink-0">/</span>
+      <span className="text-xs font-semibold text-red-600 dark:text-red-400 shrink-0">
+        {100 - probability}%
+      </span>
+      <DeleteButton nodeId={node.id} />
+    </>
+  );
+}
+
+/* ─── Ideal State Section ─────────────────────────────────── */
+
+function IdealStateToolbarSection({ node }: { node: Node<WorkflowNodeData> }) {
+  const deleteNode = useWorkflowStore((s) => s.deleteNode);
+
+  const description = (node.data.idealStateDescription as string | undefined) ?? "";
+  const hasSchema = Boolean(node.data.idealStateSchema);
+
+  const displayDescription = description.length > 40
+    ? description.slice(0, 40) + "..."
+    : description || "No description set";
+
+  return (
+    <>
+      <Target className="w-4 h-4 text-teal-500 dark:text-teal-400 shrink-0" />
+      <span className="text-xs text-stone-600 dark:text-slate-300 shrink-0 max-w-56 truncate">
+        {displayDescription}
+      </span>
+      <ToolbarDivider />
+      <span className={cn(
+        "flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0",
+        hasSchema
+          ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
+          : "bg-stone-100 text-stone-500 dark:bg-slate-700 dark:text-slate-400"
+      )}>
+        {hasSchema && <CheckCircle2 className="w-3 h-3" />}
+        {hasSchema ? "Schema ready" : "No schema"}
+      </span>
+      <DeleteButton nodeId={node.id} />
+    </>
+  );
+}
+
 /* ─── Main Toolbar ────────────────────────────────────────── */
 
 export default function ContextToolbar() {
@@ -374,7 +439,7 @@ export default function ContextToolbar() {
   const node = nodes.find((n) => n.id === selectedNodeId);
 
   const visible =
-    !!node && (node.type === "blankBoxNode" || node.type === "textNode");
+    !!node && (node.type === "blankBoxNode" || node.type === "textNode" || node.type === "conditionNode" || node.type === "idealStateNode");
 
   return (
     <div
@@ -387,6 +452,8 @@ export default function ContextToolbar() {
       <div className="flex items-center gap-1.5 px-3 h-12 overflow-x-auto overflow-y-hidden scrollbar-hide">
         {node?.type === "blankBoxNode" && <BlankBoxToolbarSection node={node} />}
         {node?.type === "textNode" && <TextToolbarSection node={node} />}
+        {node?.type === "conditionNode" && <ConditionToolbarSection node={node} />}
+        {node?.type === "idealStateNode" && <IdealStateToolbarSection node={node} />}
       </div>
     </div>
   );

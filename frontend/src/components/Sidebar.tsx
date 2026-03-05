@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Copy, Trash2, BarChart3, Save, Cloud, Square, Type, LayoutTemplate } from "lucide-react";
+import { Copy, Trash2, BarChart3, Save, Cloud, Square, Type, LayoutTemplate, Target } from "lucide-react";
 import type { WorkflowNodeType, BatchEstimateResponse } from "@/types/workflow";
 import {
   useUIState,
@@ -21,7 +21,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 interface PaletteItem {
   type: WorkflowNodeType;
   label: string;
-  shape: "circle" | "rectangle" | "diamond" | "octagon" | "hexagon";
+  shape: "circle" | "rectangle" | "diamond" | "octagon" | "hexagon" | "pill";
   colour: string;
   darkColour: string;
   shapeColour: string;
@@ -68,6 +68,14 @@ const PALETTE: PaletteItem[] = [
     darkColour: "bg-red-900/30 border-red-400 text-red-100",
     shapeColour: "bg-red-500",
   },
+  {
+    type: "idealStateNode",
+    label: "Ideal State",
+    shape: "pill",
+    colour: "bg-teal-50 border-teal-500 text-teal-900",
+    darkColour: "bg-teal-900/30 border-teal-400 text-teal-100",
+    shapeColour: "bg-teal-500",
+  },
 ];
 
 function ShapeIndicator({ shape, color }: { shape: string; color: string }) {
@@ -92,6 +100,8 @@ function ShapeIndicator({ shape, color }: { shape: string; color: string }) {
           style={{ clipPath: "polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)" }}
         />
       );
+    case "pill":
+      return <span className={`inline-block w-5 h-3 rounded-full ${color}`} />;
     default:
       return <span className={`inline-block w-4 h-4 rounded ${color}`} />;
   }
@@ -227,22 +237,38 @@ export default function Sidebar() {
         Nodes
       </h2>
 
-      {PALETTE.map((item) => (
-        <div
-          key={item.type}
-          draggable
-          onDragStart={(e) => onDragStart(e, item.type, item.label)}
-          className={`
-            flex items-center gap-2.5 cursor-grab active:cursor-grabbing
-            rounded-md border px-3 py-2.5 text-sm font-medium
-            hover:shadow-md transition-all
-            ${isDark ? item.darkColour : item.colour}
-          `}
-        >
-          <ShapeIndicator shape={item.shape} color={item.shapeColour} />
-          <span>{item.label}</span>
-        </div>
-      ))}
+      {PALETTE.map((item) => {
+        // One-per-canvas: grey out Ideal State if already on canvas
+        const isDisabled =
+          item.type === "idealStateNode" &&
+          useWorkflowStore.getState().nodes.some((n) => n.type === "idealStateNode");
+
+        return (
+          <div
+            key={item.type}
+            draggable={!isDisabled}
+            onDragStart={(e) => {
+              if (isDisabled) {
+                e.preventDefault();
+                return;
+              }
+              onDragStart(e, item.type, item.label);
+            }}
+            className={`
+              flex items-center gap-2.5
+              rounded-md border px-3 py-2.5 text-sm font-medium
+              transition-all
+              ${isDisabled
+                ? "opacity-50 cursor-not-allowed"
+                : "cursor-grab active:cursor-grabbing hover:shadow-md"}
+              ${isDark ? item.darkColour : item.colour}
+            `}
+          >
+            <ShapeIndicator shape={item.shape} color={item.shapeColour} />
+            <span>{item.label}</span>
+          </div>
+        );
+      })}
 
       {/* ── Canvas Authoring ──────────────────────────────── */}
       <div

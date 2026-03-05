@@ -22,6 +22,8 @@ export function nodesToPayload(nodes: Node<WorkflowNodeData>[]): NodeConfigPaylo
     expected_calls_per_run: (n.data.expectedCallsPerRun as number | null | undefined) ?? null,
     condition_expression: (n.data.conditionExpression as string | undefined) ?? null,
     probability: (n.data.probability as number | undefined) ?? null,
+    ideal_state_description: (n.data.idealStateDescription as string | undefined) ?? null,
+    ideal_state_schema: (n.data.idealStateSchema as Record<string, unknown> | null | undefined) ?? null,
   }));
 }
 

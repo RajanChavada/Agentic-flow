@@ -297,8 +297,8 @@ function checkIdealStateReachability(
   nodes: Node<WorkflowNodeData>[],
   edges: Edge[]
 ): boolean | null {
-  // Find ideal state node (identified by id "idealState")
-  const idealStateNode = nodes.find((n) => n.id === "idealState");
+  // Find ideal state node (by type or legacy id fallback)
+  const idealStateNode = nodes.find((n) => n.type === "idealStateNode" || n.id === "idealState");
   if (!idealStateNode) {
     return null;
   }
