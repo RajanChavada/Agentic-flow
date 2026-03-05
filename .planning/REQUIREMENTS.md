@@ -34,10 +34,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Canvas Metadata
 
-- [ ] **META-01**: Canvas displays a corner overlay showing real-time graph metrics (node count, max depth, loop count)
-- [ ] **META-02**: Overlay shows tool risk surface breakdown (count of read/write/exec/network tools)
-- [ ] **META-03**: Overlay shows canvas risk score (low/medium/high) computed from tool tiers + loop depth + graph complexity
-- [ ] **META-04**: Overlay shows Ideal State reachability flag (reachable/not reachable from Start)
+- [x] **META-01**: Canvas displays a corner overlay showing real-time graph metrics (node count, max depth, loop count)
+- [x] **META-02**: Overlay shows tool risk surface breakdown (count of read/write/exec/network tools)
+- [x] **META-03**: Overlay shows canvas risk score (low/medium/high) computed from tool tiers + loop depth + graph complexity
+- [x] **META-04**: Overlay shows Ideal State reachability flag (reachable/not reachable from Start)
 - [ ] **META-05**: All metadata updates in real-time as user adds/removes/connects nodes (frontend-only computation, no API call)
 - [ ] **META-06**: Metadata computation does not cause visible UI jank during node drag operations
 
@@ -46,7 +46,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [ ] **ESTM-01**: Backend estimation handles Condition Node branches with probability-weighted cost calculation
 - [ ] **ESTM-02**: Estimation returns min/expected/max cost ranges when workflow contains condition nodes
 - [ ] **ESTM-03**: EstimatePanel displays cost/token/latency as ranges (min-expected-max) instead of single values for branching workflows
-- [ ] **ESTM-04**: Reachability analysis (BFS from Start to Ideal State) is computed and shown in metadata overlay
+- [x] **ESTM-04**: Reachability analysis (BFS from Start to Ideal State) is computed and shown in metadata overlay
 
 ## v2 Requirements
 
@@ -101,16 +101,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | IDST-05 | Phase 3 | Pending |
 | IDST-06 | Phase 3 | Pending |
 | IDST-07 | Phase 3 | Pending |
-| META-01 | Phase 2 | Pending |
-| META-02 | Phase 2 | Pending |
-| META-03 | Phase 2 | Pending |
-| META-04 | Phase 2 | Pending |
+| META-01 | Phase 2 | Complete |
+| META-02 | Phase 2 | Complete |
+| META-03 | Phase 2 | Complete |
+| META-04 | Phase 2 | Complete |
 | META-05 | Phase 2 | Pending |
 | META-06 | Phase 2 | Pending |
 | ESTM-01 | Phase 4 | Pending |
 | ESTM-02 | Phase 4 | Pending |
 | ESTM-03 | Phase 4 | Pending |
-| ESTM-04 | Phase 2 | Pending |
+| ESTM-04 | Phase 2 | Complete |
 
 **Coverage:**
 - v1 requirements: 26 total
