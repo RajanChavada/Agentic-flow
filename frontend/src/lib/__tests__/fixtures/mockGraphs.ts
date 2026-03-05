@@ -29,7 +29,7 @@ export function singleStartNode(): { nodes: MockNode[]; edges: MockEdge[] } {
   };
 }
 
-/** Linear chain: start -> n1 -> ... -> finish */
+/** Linear chain: start -> n1 -> ... -> finish (length = total number of nodes) */
 export function linearChain(length: number): { nodes: MockNode[]; edges: MockEdge[] } {
   const nodes: MockNode[] = [
     {
@@ -42,7 +42,8 @@ export function linearChain(length: number): { nodes: MockNode[]; edges: MockEdg
 
   const edges: MockEdge[] = [];
 
-  for (let i = 1; i < length; i++) {
+  // Create intermediate nodes (length - 2, since we have start and finish)
+  for (let i = 1; i < length - 1; i++) {
     const prevId = i === 1 ? "start" : `node-${i - 1}`;
     const nodeId = `node-${i}`;
     nodes.push({
@@ -59,12 +60,12 @@ export function linearChain(length: number): { nodes: MockNode[]; edges: MockEdg
   }
 
   // Add finish node
-  const lastNodeId = length === 1 ? "start" : `node-${length - 1}`;
+  const lastNodeId = length === 2 ? "start" : `node-${length - 2}`;
   nodes.push({
     id: "finish",
     type: "finishNode",
     data: { label: "Finish", type: "finishNode" },
-    position: { x: length * 100, y: 0 },
+    position: { x: (length - 1) * 100, y: 0 },
   });
   edges.push({
     id: `e-${lastNodeId}-finish`,
