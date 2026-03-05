@@ -7,7 +7,8 @@ export type WorkflowNodeType =
   | "toolNode"
   | "finishNode"
   | "blankBoxNode"
-  | "textNode";
+  | "textNode"
+  | "conditionNode";
 
 /** 9 anchor points for label placement inside a BlankBoxNode. */
 export type LabelPosition =
@@ -43,6 +44,9 @@ export type WorkflowNodeData = {
   taskType?: string;
   expectedOutputSize?: string;
   expectedCallsPerRun?: number | null;
+  /** Condition node fields. */
+  conditionExpression?: string;
+  probability?: number;
   /** BlankBoxNode styling. */
   blankBoxStyle?: BlankBoxStyle;
   /** TextNode styling. */
@@ -71,6 +75,9 @@ export interface NodeConfigPayload {
   task_type?: string | null;
   expected_output_size?: string | null;
   expected_calls_per_run?: number | null;
+  /** Condition node fields. */
+  condition_expression?: string | null;
+  probability?: number | null;
 }
 
 /** Shape of an edge sent to the backend. */
@@ -78,6 +85,7 @@ export interface EdgeConfigPayload {
   id?: string;
   source: string;
   target: string;
+  source_handle?: string | null;
 }
 
 /** Shape of the full estimation request. */
