@@ -45,10 +45,12 @@ Plans:
   3. User can enter condition expression and adjust probability slider (0-100%) where True + False = 100%
   4. User deletes Condition Node and all connected edges are removed automatically
   5. User clicks "Get Estimate" and backend recognizes condition branches
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] TBD
+- [ ] 01-01-PLAN.md — Frontend type contracts, ConditionNode component, toolNode hexagon swap
+- [ ] 01-02-PLAN.md — Canvas integration, config modal, edge coloring, ContextToolbar
+- [ ] 01-03-PLAN.md — Backend conditionNode recognition, estimator routing, sourceHandle wiring
 
 ### Phase 2: Canvas Metadata
 **Goal**: Users see real-time graph health, risk assessment, and reachability feedback as they design
@@ -102,7 +104,7 @@ Phases execute in numeric order: 0 -> 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Foundation | 0/3 | Planned | - |
-| 1. Condition Node | 0/TBD | Not started | - |
+| 1. Condition Node | 0/3 | Planned | - |
 | 2. Canvas Metadata | 0/2 | Planned | - |
 | 3. Ideal State Node | 0/TBD | Not started | - |
 | 4. Probability-Weighted Estimation | 0/TBD | Not started | - |
