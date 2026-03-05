@@ -85,38 +85,45 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FNDX-01 | Phase [TBD] | Pending |
-| FNDX-02 | Phase [TBD] | Pending |
-| FNDX-03 | Phase [TBD] | Pending |
-| COND-01 | Phase [TBD] | Pending |
-| COND-02 | Phase [TBD] | Pending |
-| COND-03 | Phase [TBD] | Pending |
-| COND-04 | Phase [TBD] | Pending |
-| COND-05 | Phase [TBD] | Pending |
-| COND-06 | Phase [TBD] | Pending |
-| IDST-01 | Phase [TBD] | Pending |
-| IDST-02 | Phase [TBD] | Pending |
-| IDST-03 | Phase [TBD] | Pending |
-| IDST-04 | Phase [TBD] | Pending |
-| IDST-05 | Phase [TBD] | Pending |
-| IDST-06 | Phase [TBD] | Pending |
-| IDST-07 | Phase [TBD] | Pending |
-| META-01 | Phase [TBD] | Pending |
-| META-02 | Phase [TBD] | Pending |
-| META-03 | Phase [TBD] | Pending |
-| META-04 | Phase [TBD] | Pending |
-| META-05 | Phase [TBD] | Pending |
-| META-06 | Phase [TBD] | Pending |
-| ESTM-01 | Phase [TBD] | Pending |
-| ESTM-02 | Phase [TBD] | Pending |
-| ESTM-03 | Phase [TBD] | Pending |
-| ESTM-04 | Phase [TBD] | Pending |
+| FNDX-01 | Phase 0 | Pending |
+| FNDX-02 | Phase 0 | Pending |
+| FNDX-03 | Phase 0 | Pending |
+| COND-01 | Phase 1 | Pending |
+| COND-02 | Phase 1 | Pending |
+| COND-03 | Phase 1 | Pending |
+| COND-04 | Phase 1 | Pending |
+| COND-05 | Phase 1 | Pending |
+| COND-06 | Phase 1 | Pending |
+| IDST-01 | Phase 3 | Pending |
+| IDST-02 | Phase 3 | Pending |
+| IDST-03 | Phase 3 | Pending |
+| IDST-04 | Phase 3 | Pending |
+| IDST-05 | Phase 3 | Pending |
+| IDST-06 | Phase 3 | Pending |
+| IDST-07 | Phase 3 | Pending |
+| META-01 | Phase 2 | Pending |
+| META-02 | Phase 2 | Pending |
+| META-03 | Phase 2 | Pending |
+| META-04 | Phase 2 | Pending |
+| META-05 | Phase 2 | Pending |
+| META-06 | Phase 2 | Pending |
+| ESTM-01 | Phase 4 | Pending |
+| ESTM-02 | Phase 4 | Pending |
+| ESTM-03 | Phase 4 | Pending |
+| ESTM-04 | Phase 2 | Pending |
 
 **Coverage:**
 - v1 requirements: 26 total
-- Mapped to phases: 0
-- Unmapped: 26 (pending roadmap creation)
+- Mapped to phases: 26
+- Unmapped: 0 ✓
+
+**Phase breakdown:**
+- Phase 0: 3 requirements (Foundation)
+- Phase 1: 6 requirements (Condition Node)
+- Phase 2: 7 requirements (Canvas Metadata + Reachability)
+- Phase 3: 7 requirements (Ideal State Node)
+- Phase 4: 3 requirements (Probability-Weighted Estimation)
 
 ---
 *Requirements defined: 2026-03-04*
-*Last updated: 2026-03-04 after initial definition*
+*Last updated: 2026-03-04 after roadmap creation*
