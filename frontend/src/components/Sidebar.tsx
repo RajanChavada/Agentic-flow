@@ -3,7 +3,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Copy, Trash2, BarChart3, Save, Cloud, Square, Type, LayoutTemplate, Target, X as XIcon } from "lucide-react";
-import type { WorkflowNodeType, BatchEstimateResponse } from "@/types/workflow";
+import { useReactFlow } from "@xyflow/react";
+import { v4 as uuid } from "uuid";
+import type { WorkflowNodeType, WorkflowNodeData, BatchEstimateResponse } from "@/types/workflow";
 import {
   useUIState,
   useScenarios,
@@ -133,6 +135,8 @@ export default function Sidebar() {
   } = useWorkflowStore();
   const applyLayout = useAutoLayout();
   const isDark = theme === "dark";
+  const { screenToFlowPosition, getViewport } = useReactFlow();
+  const addNode = useWorkflowStore((s) => s.addNode);
   const [comparing, setComparing] = useState(false);
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [editingWorkflowName, setEditingWorkflowName] = useState("");
@@ -189,6 +193,75 @@ export default function Sidebar() {
     event.dataTransfer.setData("application/reactflow-label", label);
     event.dataTransfer.effectAllowed = "move";
   };
+
+  // ── Click-to-add: create node at viewport centre ──────
+  const handleClickAdd = useCallback(
+    (nodeType: WorkflowNodeType, label: string) => {
+      // One-per-canvas enforcement
+      if (nodeType === "idealStateNode") {
+        if (useWorkflowStore.getState().nodes.some((n) => n.type === "idealStateNode")) return;
+      }
+
+      // Place at centre of the visible viewport
+      const vp = getViewport();
+      const cx = (window.innerWidth / 2 - vp.x) / vp.zoom;
+      const cy = (window.innerHeight / 2 - vp.y) / vp.zoom;
+      const position = { x: cx, y: cy };
+
+      const baseData: WorkflowNodeData = { label, type: nodeType };
+
+      if (nodeType === "blankBoxNode") {
+        baseData.blankBoxStyle = {
+          label: "Group",
+          labelPosition: "top-left",
+          labelColor: "#3b82f6",
+          labelBackground: "none",
+          borderStyle: "dashed",
+          borderColor: "#3b82f6",
+          borderWidth: 2,
+          backgroundColor: "#eff6ff",
+          backgroundOpacity: 40,
+          connectable: true,
+        };
+      }
+
+      if (nodeType === "textNode") {
+        baseData.textNodeStyle = {
+          content: "Text",
+          fontSize: "md",
+          color: "#374151",
+          background: "none",
+        };
+      }
+
+      if (nodeType === "conditionNode") {
+        baseData.conditionExpression = "";
+        baseData.probability = 50;
+      }
+
+      if (nodeType === "idealStateNode") {
+        baseData.idealStateDescription = "";
+        baseData.idealStateSchema = null;
+      }
+
+      const newNode: Parameters<typeof addNode>[0] = {
+        id: uuid(),
+        type: nodeType,
+        position,
+        data: baseData,
+        ...(nodeType === "blankBoxNode" && {
+          style: { width: 320, height: 220 },
+          zIndex: -1,
+        }),
+      };
+
+      addNode(newNode);
+
+      // On mobile, close sidebar to reveal the newly added node
+      if (isMobile) setSidebarOpen(false);
+    },
+    [addNode, getViewport, isMobile, setSidebarOpen]
+  );
 
   // ── Compare handler ─────────────────────────────────────
   const handleCompare = async () => {
@@ -291,10 +364,14 @@ export default function Sidebar() {
               }
               onDragStart(e, item.type, item.label);
             }}
+            onClick={() => {
+              if (isDisabled) return;
+              handleClickAdd(item.type, item.label);
+            }}
             className={`
               flex items-center gap-2.5
               rounded-md border px-3 py-2.5 text-sm font-medium
-              transition-all
+              transition-all select-none
               ${isDisabled
                 ? "opacity-50 cursor-not-allowed"
                 : "cursor-grab active:cursor-grabbing hover:shadow-md"}
@@ -325,7 +402,8 @@ export default function Sidebar() {
           <div
             draggable
             onDragStart={(e) => onDragStart(e, "blankBoxNode" as WorkflowNodeType, "Group")}
-            className={`flex items-center gap-2.5 cursor-grab active:cursor-grabbing rounded-md border px-3 py-2.5 text-sm font-medium hover:shadow-md transition-all ${
+            onClick={() => handleClickAdd("blankBoxNode" as WorkflowNodeType, "Group")}
+            className={`flex items-center gap-2.5 cursor-grab active:cursor-grabbing rounded-md border px-3 py-2.5 text-sm font-medium hover:shadow-md transition-all select-none ${
               isDark
                 ? "bg-slate-800/40 border-slate-600 text-slate-300"
                 : "bg-gray-50 border-gray-300 text-gray-700"
@@ -338,7 +416,8 @@ export default function Sidebar() {
           <div
             draggable
             onDragStart={(e) => onDragStart(e, "textNode" as WorkflowNodeType, "Text")}
-            className={`flex items-center gap-2.5 cursor-grab active:cursor-grabbing rounded-md border px-3 py-2.5 text-sm font-medium hover:shadow-md transition-all ${
+            onClick={() => handleClickAdd("textNode" as WorkflowNodeType, "Text")}
+            className={`flex items-center gap-2.5 cursor-grab active:cursor-grabbing rounded-md border px-3 py-2.5 text-sm font-medium hover:shadow-md transition-all select-none ${
               isDark
                 ? "bg-violet-900/20 border-violet-700 text-violet-300"
                 : "bg-violet-50 border-violet-300 text-violet-700"
@@ -556,7 +635,7 @@ export default function Sidebar() {
       </div>
 
       <div className={`mt-auto pt-4 border-t text-[10px] ${isDark ? "border-slate-700 text-slate-500" : "border-gray-200 text-gray-400"}`}>
-        Drag a node onto the canvas
+        Drag or click a node to add it
       </div>
     </aside>
     </>
