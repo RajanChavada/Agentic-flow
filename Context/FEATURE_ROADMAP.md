@@ -243,3 +243,7 @@ Each phase is independently shippable and builds on the existing codebase withou
 - [x] Canvases Info Modal — `.ai/context/features/canvases-info-modal.md`
 - [x] Workflow Share Links — `.ai/context/features/workflow-share-links.md`
 - [ ] Stripe Integration & Subscription Tiers — `Context/features/stripe-integration-subscription-tiers.md`
+
+## Security & Production Hardening
+
+- [ ] Security Guardrails & Production Hardening — `Context/features/security-guardrails-production-hardening.md`

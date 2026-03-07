@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Copy, Trash2, BarChart3, Save, Cloud, Square, Type, LayoutTemplate, Target } from "lucide-react";
+import { Copy, Trash2, BarChart3, Save, Cloud, Square, Type, LayoutTemplate, Target, X as XIcon } from "lucide-react";
 import type { WorkflowNodeType, BatchEstimateResponse } from "@/types/workflow";
 import {
   useUIState,
@@ -11,9 +11,11 @@ import {
   useCurrentWorkflowId,
   useActiveCanvasId,
   useWorkflowStore,
+  useSidebarOpen,
 } from "@/store/useWorkflowStore";
 import { useUser } from "@/store/useAuthStore";
 import { useAutoLayout } from "@/hooks/useAutoLayout";
+import { useIsMobile } from "@/hooks/useBreakpoint";
 import { supabase } from "@/lib/supabase";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -109,6 +111,9 @@ function ShapeIndicator({ shape, color }: { shape: string; color: string }) {
 
 export default function Sidebar() {
   const { theme } = useUIState();
+  const isSidebarOpen = useSidebarOpen();
+  const isMobile = useIsMobile();
+  const { setSidebarOpen } = useWorkflowStore();
   const scenarios = useScenarios();
   const selectedIds = useSelectedForComparison();
   const currentWorkflowId = useCurrentWorkflowId();
@@ -132,6 +137,11 @@ export default function Sidebar() {
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [editingWorkflowName, setEditingWorkflowName] = useState("");
   const user = useUser();
+
+  // Auto-close sidebar on mobile
+  useEffect(() => {
+    if (isMobile) setSidebarOpen(false);
+  }, [isMobile, setSidebarOpen]);
 
   const handleUpdateWorkflowName = useCallback(
     async (workflowId: string, newName: string) => {
@@ -221,13 +231,40 @@ export default function Sidebar() {
   };
 
   return (
-    <aside
-      className={`w-52 shrink-0 border-r p-4 flex flex-col gap-3 overflow-y-auto ${
-        isDark
-          ? "border-slate-600 bg-slate-900"
-          : "border-gray-200 bg-gray-50"
-      }`}
-    >
+    <>
+      {/* Mobile overlay backdrop */}
+      {isSidebarOpen && isMobile && (
+        <div
+          className="fixed inset-0 z-30 bg-black/30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <aside
+        className={`
+          ${isMobile
+            ? `fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-200 ease-in-out ${
+                isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+              }`
+            : `w-52 shrink-0 transition-all duration-200 ${
+                isSidebarOpen ? "" : "hidden"
+              }`
+          }
+          border-r p-4 flex flex-col gap-3 overflow-y-auto
+          ${isDark ? "border-slate-600 bg-slate-900" : "border-gray-200 bg-gray-50"}
+        `}
+      >
+        {/* Close button on mobile */}
+        {isMobile && (
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className={`self-end rounded-md p-1.5 transition ${
+              isDark ? "hover:bg-slate-800 text-slate-400" : "hover:bg-gray-100 text-gray-400"
+            }`}
+          >
+            <XIcon className="h-4 w-4" />
+          </button>
+        )}
       {/* ── Node palette ──────────────────────────────────── */}
       <h2
         className={`text-xs font-bold uppercase tracking-wide mb-1 ${

@@ -23,6 +23,8 @@ export interface UISlice {
   setSuccessMessage: (msg?: string) => void;
   toggleTheme: () => void;
   setNeedsLayout: (v: boolean) => void;
+  toggleSidebar: () => void;
+  setSidebarOpen: (v: boolean) => void;
 }
 
 type CombinedState = WorkflowSlice & EstimationSlice & UISlice & PersistenceSlice;
@@ -34,6 +36,7 @@ export const createUISlice: StateCreator<CombinedState, [], [], UISlice> = (set)
     isComparisonOpen: false,
     theme: 'light',
     needsLayout: false,
+    isSidebarOpen: true,
   },
 
   openConfigModal: () =>
@@ -62,4 +65,8 @@ export const createUISlice: StateCreator<CombinedState, [], [], UISlice> = (set)
     }),
   setNeedsLayout: (v) =>
     set((s) => ({ ui: { ...s.ui, needsLayout: v } })),
+  toggleSidebar: () =>
+    set((s) => ({ ui: { ...s.ui, isSidebarOpen: !s.ui.isSidebarOpen } })),
+  setSidebarOpen: (v) =>
+    set((s) => ({ ui: { ...s.ui, isSidebarOpen: v } })),
 });

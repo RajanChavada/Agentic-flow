@@ -12,10 +12,19 @@ import { createServerClient } from "@supabase/ssr";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/canvases";
+
+  // Read return path: prefer query param, fall back to cookie set before OAuth
+  let next = searchParams.get("next");
+  if (!next) {
+    const cookieVal = request.cookies.get("auth_return_path")?.value;
+    next = cookieVal ? decodeURIComponent(cookieVal) : "/canvases";
+  }
 
   if (code) {
     const response = NextResponse.redirect(`${origin}${next}`);
+
+    // Clear the return-path cookie now that we've consumed it
+    response.cookies.set("auth_return_path", "", { path: "/", maxAge: 0 });
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

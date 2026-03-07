@@ -25,6 +25,7 @@ export interface UIState {
   successMessage?: string;
   theme: 'light' | 'dark';
   needsLayout: boolean;
+  isSidebarOpen: boolean;
 }
 
 // Scaling params for what-if analysis

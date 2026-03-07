@@ -42,3 +42,4 @@ export const useCurrentWorkflowId = () => useWorkflowStore((s) => s.currentWorkf
 export const useCurrentWorkflowName = () => useWorkflowStore((s) => s.currentWorkflowName);
 export const useIsDirty = () => useWorkflowStore((s) => s.isDirty);
 export const useActiveCanvasId = () => useWorkflowStore((s) => s.activeCanvasId);
+export const useSidebarOpen = () => useWorkflowStore((s) => s.ui.isSidebarOpen);

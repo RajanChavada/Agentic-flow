@@ -118,7 +118,11 @@ export default function AuthModal() {
       if (postAuthAction) {
         localStorage.setItem("postAuthAction", postAuthAction);
       }
-      const next = encodeURIComponent(window.location.pathname || "/editor/guest");
+      // Store return path in a cookie so the server-side callback can read it
+      // (query params are stripped by OAuth providers during redirect)
+      const returnPath = window.location.pathname || "/editor/guest";
+      document.cookie = `auth_return_path=${encodeURIComponent(returnPath)};path=/;max-age=600;SameSite=Lax`;
+      const next = encodeURIComponent(returnPath);
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider,
         options: {

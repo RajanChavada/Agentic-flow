@@ -6,6 +6,8 @@ import {
   ArrowRight,
   Github,
   LayoutTemplate,
+  Menu,
+  X,
 } from "lucide-react";
 import { ReactFlowProvider } from "@xyflow/react";
 import InfiniteGrid from "@/components/ui/infinite-grid";
@@ -68,6 +70,8 @@ function Counter({
 
 /* ── Page ─────────────────────────────────────────────────── */
 export default function LandingPage() {
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
   useEffect(() => {
     const unsub = useAuthStore.getState().init();
     return unsub;
@@ -88,7 +92,7 @@ export default function LandingPage() {
             <NavProfile />
           </div>
 
-          <div className="flex items-center gap-5 text-sm">
+          <div className="flex items-center gap-3 sm:gap-5 text-sm">
             <a href="#features" className="hidden text-muted-foreground transition hover:text-foreground sm:inline">
               Features
             </a>
@@ -111,8 +115,47 @@ export default function LandingPage() {
               Launch Canvas
               <ArrowRight className="h-3.5 w-3.5" />
             </a>
+            <button
+              onClick={() => setMobileNavOpen((v) => !v)}
+              className="rounded-md p-1.5 transition hover:bg-muted/50 sm:hidden"
+              aria-label="Toggle menu"
+            >
+              {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile nav drawer */}
+        {mobileNavOpen && (
+          <div className="border-t border-border/60 bg-background px-4 py-3 sm:hidden">
+            <div className="flex flex-col gap-1">
+              <a
+                href="#features"
+                onClick={() => setMobileNavOpen(false)}
+                className="rounded-md px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              >
+                Features
+              </a>
+              <a
+                href="#how-it-works"
+                onClick={() => setMobileNavOpen(false)}
+                className="rounded-md px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              >
+                How It Works
+              </a>
+              <a
+                href="https://github.com/RajanChavada/neurovn"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMobileNavOpen(false)}
+                className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              >
+                <Github className="h-3.5 w-3.5" />
+                GitHub
+              </a>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* ── Hero (infinite grid bg) + playground ───────── */}

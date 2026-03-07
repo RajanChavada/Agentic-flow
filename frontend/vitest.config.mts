@@ -8,7 +8,7 @@ export default defineConfig({
     react(),          // Enables JSX/TSX transformation
   ],
   test: {
-    environment: 'jsdom',  // Browser-like environment for React
+    environment: 'happy-dom',  // Browser-like environment for React (avoids jsdom ESM compat issues)
     globals: true,         // No need to import describe/test/expect
   },
 });
