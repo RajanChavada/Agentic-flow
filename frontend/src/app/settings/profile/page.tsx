@@ -242,17 +242,17 @@ export default function ProfileSettingsPage() {
             {/* Avatar section */}
             <section className={`rounded-xl border p-6 ${cardClass}`}>
               <h2 className="text-sm font-semibold mb-4">Avatar</h2>
-              <div className="flex items-start gap-6">
+              <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
                 <div className="shrink-0">
                   {profile?.avatar_url ? (
                     <img
                       src={profile.avatar_url}
                       alt="Avatar"
-                      className="h-24 w-24 rounded-full object-cover border-2 border-gray-200 dark:border-slate-600"
+                      className="h-20 w-20 sm:h-24 sm:w-24 rounded-full object-cover border-2 border-gray-200 dark:border-slate-600"
                     />
                   ) : (
                     <div
-                      className={`flex h-24 w-24 items-center justify-center rounded-full border-2 ${borderClass} ${isDark ? "bg-slate-800 text-slate-400" : "bg-gray-100 text-gray-500"}`}
+                      className={`flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full border-2 ${borderClass} ${isDark ? "bg-slate-800 text-slate-400" : "bg-gray-100 text-gray-500"}`}
                     >
                       <span className="text-2xl font-bold">
                         {getInitials(

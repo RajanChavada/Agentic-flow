@@ -559,5 +559,6 @@ export default function Sidebar() {
         Drag a node onto the canvas
       </div>
     </aside>
+    </>
   );
 }

@@ -20,6 +20,8 @@ import {
   Share2,
   ChevronDown,
   HelpCircle,
+  PanelLeft,
+  MoreHorizontal,
 } from "lucide-react";
 import {
   useWorkflowStore,
@@ -66,6 +68,8 @@ export default function HeaderBar() {
   const activeCanvasId = useActiveCanvasId();
   const isDark = theme === "dark";
   const autoLayout = useAutoLayout();
+  const [overflowOpen, setOverflowOpen] = useState(false);
+  const overflowRef = useRef<HTMLDivElement>(null);
 
   // Auth
   const user = useUser();
@@ -262,14 +266,14 @@ export default function HeaderBar() {
 
   return (
     <header
-      className={`flex items-center justify-between border-b px-6 h-14 shrink-0 transition-colors ${
+      className={`flex items-center justify-between border-b px-3 sm:px-6 h-14 shrink-0 transition-colors ${
         isDark
           ? "border-slate-700 bg-slate-900"
           : "border-gray-200 bg-white"
       }`}
     >
       {/* ── Left side: brand + workflow name + status ── */}
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
         <Link
           href="/canvases"
           className={`inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 -ml-1 transition ${
@@ -284,7 +288,7 @@ export default function HeaderBar() {
         </Link>
 
         {activeCanvasId && (
-          <>
+          <span className="hidden sm:contents">
             <span className={`text-sm ${isDark ? "text-slate-600" : "text-gray-300"}`}>/</span>
             <Link
               href="/canvases"
@@ -295,7 +299,7 @@ export default function HeaderBar() {
             >
               <LayoutGrid className="h-3.5 w-3.5" /> My Canvases
             </Link>
-          </>
+          </span>
         )}
 
         <span className={`text-sm ${isDark ? "text-slate-600" : "text-gray-300"}`}>/</span>
@@ -311,7 +315,7 @@ export default function HeaderBar() {
               if (e.key === "Enter") commitName();
               if (e.key === "Escape") setEditingName(false);
             }}
-            className={`text-sm font-medium px-1.5 py-0.5 rounded border outline-none w-48 ${
+            className={`text-sm font-medium px-1.5 py-0.5 rounded border outline-none w-24 sm:w-48 ${
               isDark
                 ? "bg-slate-800 border-slate-600 text-slate-100 focus:border-blue-500"
                 : "bg-white border-gray-300 text-gray-800 focus:border-blue-500"
@@ -320,7 +324,7 @@ export default function HeaderBar() {
         ) : (
           <button
             onClick={() => setEditingName(true)}
-            className={`text-sm font-medium px-1.5 py-0.5 rounded hover:bg-opacity-50 transition truncate max-w-48 ${
+            className={`text-sm font-medium px-1.5 py-0.5 rounded hover:bg-opacity-50 transition truncate max-w-24 sm:max-w-48 ${
               isDark
                 ? "text-slate-300 hover:bg-slate-800"
                 : "text-gray-600 hover:bg-gray-100"
@@ -337,7 +341,7 @@ export default function HeaderBar() {
         )}
 
         {/* Save status — fixed-size container prevents layout shift */}
-        <span className="inline-flex items-center w-20 shrink-0">
+        <span className="hidden sm:inline-flex items-center w-20 shrink-0">
           {isSaving && (
             <span
               className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap ${
@@ -363,218 +367,361 @@ export default function HeaderBar() {
       </div>
 
       {/* ── Right side: action buttons ── */}
-      <div className="flex items-center gap-2">
-        {/* Help / Tutorial */}
+      <div className="flex items-center gap-1 sm:gap-2">
+        {/* Sidebar toggle (visible below lg) */}
         <button
-          onClick={openTutorial}
-          className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
+          onClick={() => useWorkflowStore.getState().toggleSidebar()}
+          className={`lg:hidden rounded-md border p-1.5 transition ${
             isDark
               ? "border-slate-600 text-slate-300 hover:bg-slate-700"
               : "border-gray-300 text-gray-600 hover:bg-gray-100"
           }`}
-          title="Canvas tutorial"
+          title="Toggle sidebar"
         >
-          <HelpCircle className="inline w-3.5 h-3.5 mr-1" /> Help
+          <PanelLeft className="h-4 w-4" />
         </button>
 
-        {/* Theme toggle */}
-        <button
-          onClick={toggleTheme}
-          className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
-            isDark
-              ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-              : "border-gray-300 text-gray-600 hover:bg-gray-100"
-          }`}
-          title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-        >
-          {isDark ? <><Sun className="inline w-3.5 h-3.5 mr-1" /> Light</> : <><MoonStar className="inline w-3.5 h-3.5 mr-1" /> Dark</>}
-        </button>
-
-        {/* Templates */}
-        <Link
-          href="/marketplace"
-          className={`rounded-md border px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${
-            isDark
-              ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-              : "border-gray-300 text-gray-600 hover:bg-gray-100"
-          }`}
-          title="Browse workflow templates"
-        >
-          <LayoutTemplate className="inline w-3.5 h-3.5 mr-1" /> Templates
-        </Link>
-
-        {/* New Workflow */}
-        <button
-          onClick={handleNew}
-          className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
-            isDark
-              ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-              : "border-gray-300 text-gray-600 hover:bg-gray-100"
-          }`}
-          title="New blank workflow"
-        >
-          <FilePlus className="inline w-3.5 h-3.5 mr-1" /> New
-        </button>
-
-        {/* Publish to Marketplace (only when user has a saved workflow) */}
-        {currentWorkflowId && user && (
+        {/* ── Desktop/Tablet actions (hidden on mobile) ── */}
+        <div className="hidden md:contents">
+          {/* Help */}
           <button
-            onClick={() => setIsPublishOpen(true)}
-            disabled={nodes.length === 0}
-            className={`rounded-md border px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 ${
+            onClick={openTutorial}
+            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${
               isDark
-                ? "border-amber-700 text-amber-300 hover:bg-amber-800/40"
-                : "border-amber-300 text-amber-700 hover:bg-amber-50"
+                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                : "border-gray-300 text-gray-600 hover:bg-gray-100"
             }`}
-            title="Publish this workflow to the marketplace"
+            title="Canvas tutorial"
           >
-            <UploadCloud className="inline w-3.5 h-3.5 mr-1" /> Publish
+            <HelpCircle className="w-3.5 h-3.5" />
+            <span className="hidden lg:inline ml-1">Help</span>
           </button>
-        )}
 
-        {/* Share (workflow or canvas) */}
-        {activeCanvasId && user && (
-          <div className="relative" ref={shareDropdownRef}>
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${
+              isDark
+                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                : "border-gray-300 text-gray-600 hover:bg-gray-100"
+            }`}
+            title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {isDark ? <Sun className="w-3.5 h-3.5" /> : <MoonStar className="w-3.5 h-3.5" />}
+            <span className="hidden lg:inline ml-1">{isDark ? "Light" : "Dark"}</span>
+          </button>
+
+          {/* Templates */}
+          <Link
+            href="/marketplace"
+            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${
+              isDark
+                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                : "border-gray-300 text-gray-600 hover:bg-gray-100"
+            }`}
+            title="Browse workflow templates"
+          >
+            <LayoutTemplate className="w-3.5 h-3.5" />
+            <span className="hidden lg:inline ml-1">Templates</span>
+          </Link>
+
+          {/* New Workflow */}
+          <button
+            onClick={handleNew}
+            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${
+              isDark
+                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                : "border-gray-300 text-gray-600 hover:bg-gray-100"
+            }`}
+            title="New blank workflow"
+          >
+            <FilePlus className="w-3.5 h-3.5" />
+            <span className="hidden lg:inline ml-1">New</span>
+          </button>
+
+          {/* Publish */}
+          {currentWorkflowId && user && (
             <button
-              onClick={() => setIsShareOpen((o) => !o)}
-              className={`rounded-md border px-3 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 ${
+              onClick={() => setIsPublishOpen(true)}
+              disabled={nodes.length === 0}
+              className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center ${
                 isDark
-                  ? "border-sky-700 text-sky-300 hover:bg-sky-800/40"
-                  : "border-sky-300 text-sky-700 hover:bg-sky-50"
+                  ? "border-amber-700 text-amber-300 hover:bg-amber-800/40"
+                  : "border-amber-300 text-amber-700 hover:bg-amber-50"
               }`}
-              title="Share workflow or canvas"
+              title="Publish this workflow to the marketplace"
             >
-              <Share2 className="inline w-3.5 h-3.5" /> Share <ChevronDown className="w-3.5 h-3.5" />
+              <UploadCloud className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline ml-1">Publish</span>
             </button>
-            {isShareOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setIsShareOpen(false)}
-                  aria-hidden
-                />
-                <div
-                  className={`absolute right-0 top-full mt-1 z-50 min-w-48 rounded-md border py-1 shadow-lg ${
-                    isDark ? "border-slate-600 bg-slate-900" : "border-gray-200 bg-white"
-                  }`}
-                >
-                  <button
-                    onClick={() => {
-                      setShareMode("workflow");
-                      setIsShareOpen(false);
-                    }}
-                    disabled={nodes.length === 0}
-                    className={`w-full px-3 py-2 text-left text-sm transition disabled:opacity-40 ${
-                      isDark ? "hover:bg-slate-800" : "hover:bg-gray-100"
-                    }`}
-                  >
-                    Share this workflow
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShareMode("canvas");
-                      setIsShareOpen(false);
-                    }}
-                    className={`w-full px-3 py-2 text-left text-sm transition ${
-                      isDark ? "hover:bg-slate-800" : "hover:bg-gray-100"
-                    }`}
-                  >
-                    Share this canvas
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+          )}
 
-        {/* Save */}
+          {/* Share (workflow or canvas) */}
+          {activeCanvasId && user && (
+            <div className="relative" ref={shareDropdownRef}>
+              <button
+                onClick={() => setIsShareOpen((o) => !o)}
+                className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 ${
+                  isDark
+                    ? "border-sky-700 text-sky-300 hover:bg-sky-800/40"
+                    : "border-sky-300 text-sky-700 hover:bg-sky-50"
+                }`}
+                title="Share workflow or canvas"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline">Share</span>
+                <ChevronDown className="w-3 h-3 hidden lg:inline" />
+              </button>
+              {isShareOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsShareOpen(false)}
+                    aria-hidden
+                  />
+                  <div
+                    className={`absolute right-0 top-full mt-1 z-50 min-w-48 rounded-md border py-1 shadow-lg ${
+                      isDark ? "border-slate-600 bg-slate-900" : "border-gray-200 bg-white"
+                    }`}
+                  >
+                    <button
+                      onClick={() => {
+                        setShareMode("workflow");
+                        setIsShareOpen(false);
+                      }}
+                      disabled={nodes.length === 0}
+                      className={`w-full px-3 py-2 text-left text-sm transition disabled:opacity-40 ${
+                        isDark ? "hover:bg-slate-800" : "hover:bg-gray-100"
+                      }`}
+                    >
+                      Share this workflow
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShareMode("canvas");
+                        setIsShareOpen(false);
+                      }}
+                      className={`w-full px-3 py-2 text-left text-sm transition ${
+                        isDark ? "hover:bg-slate-800" : "hover:bg-gray-100"
+                      }`}
+                    >
+                      Share this canvas
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Save As */}
+          {currentWorkflowId && (
+            <button
+              onClick={handleSaveAs}
+              disabled={nodes.length === 0 || isSaving}
+              className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center ${
+                isDark
+                  ? "border-teal-700 text-teal-300 hover:bg-teal-800/40"
+                  : "border-teal-300 text-teal-700 hover:bg-teal-50"
+              }`}
+              title="Save a copy as a new workflow"
+            >
+              <SaveAll className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline ml-1">Save As</span>
+            </button>
+          )}
+
+          {/* Import */}
+          <button
+            onClick={handleImport}
+            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${
+              isDark
+                ? "border-violet-700 text-violet-300 hover:bg-violet-800/40"
+                : "border-violet-300 text-violet-700 hover:bg-violet-50"
+            }`}
+            title="Import a workflow from JSON (Generic / LangGraph)"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden lg:inline ml-1">Import</span>
+          </button>
+
+          {/* Pull from canvas */}
+          {activeCanvasId && user && (
+            <button
+              onClick={() => setIsPullOpen(true)}
+              className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${
+                isDark
+                  ? "border-violet-700 text-violet-300 hover:bg-violet-800/40"
+                  : "border-violet-300 text-violet-700 hover:bg-violet-50"
+              }`}
+              title="Pull workflows from another canvas"
+            >
+              <GitBranch className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline ml-1">Pull</span>
+            </button>
+          )}
+
+          {/* Auto-layout */}
+          <button
+            onClick={() => autoLayout()}
+            disabled={nodes.length === 0}
+            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center ${
+              isDark
+                ? "border-cyan-700 text-cyan-300 hover:bg-cyan-800/40"
+                : "border-cyan-300 text-cyan-700 hover:bg-cyan-50"
+            }`}
+            title="Auto-arrange nodes using dagre layout"
+          >
+            <LayoutDashboard className="w-3.5 h-3.5" />
+            <span className="hidden lg:inline ml-1">Layout</span>
+          </button>
+
+          {/* Export */}
+          <ExportDropdown isDark={isDark} />
+        </div>
+
+        {/* ── Mobile overflow menu (below md) ── */}
+        <div className="md:hidden relative" ref={overflowRef}>
+          <button
+            onClick={() => setOverflowOpen((v) => !v)}
+            className={`rounded-md border p-1.5 transition ${
+              isDark
+                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                : "border-gray-300 text-gray-600 hover:bg-gray-100"
+            }`}
+            title="More actions"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+          {overflowOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setOverflowOpen(false)} aria-hidden />
+              <div
+                className={`absolute right-0 top-full mt-1 z-50 min-w-52 rounded-md border py-1 shadow-lg ${
+                  isDark ? "border-slate-600 bg-slate-900" : "border-gray-200 bg-white"
+                }`}
+              >
+                <button
+                  onClick={() => { openTutorial(); setOverflowOpen(false); }}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                >
+                  <HelpCircle className="w-4 h-4 shrink-0" /> Help & Tutorial
+                </button>
+                <button
+                  onClick={() => { toggleTheme(); setOverflowOpen(false); }}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                >
+                  {isDark ? <Sun className="w-4 h-4 shrink-0" /> : <MoonStar className="w-4 h-4 shrink-0" />}
+                  {isDark ? "Light mode" : "Dark mode"}
+                </button>
+                <div className={`my-1 border-t ${isDark ? "border-slate-700" : "border-gray-200"}`} />
+                <a
+                  href="/marketplace"
+                  onClick={() => setOverflowOpen(false)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                >
+                  <LayoutTemplate className="w-4 h-4 shrink-0" /> Templates
+                </a>
+                <button
+                  onClick={() => { handleNew(); setOverflowOpen(false); }}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                >
+                  <FilePlus className="w-4 h-4 shrink-0" /> New workflow
+                </button>
+                <button
+                  onClick={() => { handleImport(); setOverflowOpen(false); }}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                >
+                  <Download className="w-4 h-4 shrink-0" /> Import
+                </button>
+                {activeCanvasId && user && (
+                  <button
+                    onClick={() => { setIsPullOpen(true); setOverflowOpen(false); }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                  >
+                    <GitBranch className="w-4 h-4 shrink-0" /> Pull from canvas
+                  </button>
+                )}
+                <button
+                  onClick={() => { autoLayout(); setOverflowOpen(false); }}
+                  disabled={nodes.length === 0}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition disabled:opacity-40 ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                >
+                  <LayoutDashboard className="w-4 h-4 shrink-0" /> Auto-layout
+                </button>
+                <div className={`my-1 border-t ${isDark ? "border-slate-700" : "border-gray-200"}`} />
+                {currentWorkflowId && user && (
+                  <button
+                    onClick={() => { setIsPublishOpen(true); setOverflowOpen(false); }}
+                    disabled={nodes.length === 0}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition disabled:opacity-40 ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                  >
+                    <UploadCloud className="w-4 h-4 shrink-0" /> Publish
+                  </button>
+                )}
+                {activeCanvasId && user && (
+                  <>
+                    <button
+                      onClick={() => { setShareMode("workflow"); setOverflowOpen(false); }}
+                      disabled={nodes.length === 0}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition disabled:opacity-40 ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                    >
+                      <Share2 className="w-4 h-4 shrink-0" /> Share workflow
+                    </button>
+                    <button
+                      onClick={() => { setShareMode("canvas"); setOverflowOpen(false); }}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                    >
+                      <Share2 className="w-4 h-4 shrink-0" /> Share canvas
+                    </button>
+                  </>
+                )}
+                {currentWorkflowId && (
+                  <button
+                    onClick={() => { handleSaveAs(); setOverflowOpen(false); }}
+                    disabled={nodes.length === 0 || isSaving}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition disabled:opacity-40 ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                  >
+                    <SaveAll className="w-4 h-4 shrink-0" /> Save As
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Save — always visible */}
         <button
           onClick={handleSave}
           disabled={nodes.length === 0 || isSaving}
-          className={`rounded-md border px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 ${
+          className={`rounded-md border px-2 sm:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center ${
             isDark
               ? "border-emerald-700 text-emerald-300 hover:bg-emerald-800/40"
               : "border-emerald-300 text-emerald-700 hover:bg-emerald-50"
           }`}
           title={currentWorkflowId ? "Save changes to current workflow" : "Save as new workflow"}
         >
-          <Save className="inline w-3.5 h-3.5 mr-1" />
-          {isSaving ? "Saving\u2026" : "Save"}
+          <Save className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline ml-1">{isSaving ? "Saving\u2026" : "Save"}</span>
         </button>
 
-        {/* Save As (only show when we have a current workflow) */}
-        {currentWorkflowId && (
-          <button
-            onClick={handleSaveAs}
-            disabled={nodes.length === 0 || isSaving}
-            className={`rounded-md border px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 ${
-              isDark
-                ? "border-teal-700 text-teal-300 hover:bg-teal-800/40"
-                : "border-teal-300 text-teal-700 hover:bg-teal-50"
-            }`}
-            title="Save a copy as a new workflow"
-          >
-            <SaveAll className="inline w-3.5 h-3.5 mr-1" /> Save As
-          </button>
-        )}
-
-        {/* Import */}
-        <button
-          onClick={handleImport}
-          className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
-            isDark
-              ? "border-violet-700 text-violet-300 hover:bg-violet-800/40"
-              : "border-violet-300 text-violet-700 hover:bg-violet-50"
-          }`}
-          title="Import a workflow from JSON (Generic / LangGraph)"
-        >
-          <Download className="inline w-3.5 h-3.5 mr-1" /> Import
-        </button>
-
-        {/* Pull from canvas */}
-        {activeCanvasId && user && (
-          <button
-            onClick={() => setIsPullOpen(true)}
-            className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
-              isDark
-                ? "border-violet-700 text-violet-300 hover:bg-violet-800/40"
-                : "border-violet-300 text-violet-700 hover:bg-violet-50"
-            }`}
-            title="Pull workflows from another canvas"
-          >
-            <GitBranch className="inline w-3.5 h-3.5 mr-1" /> Pull from canvas
-          </button>
-        )}
-
-        {/* Auto-layout */}
-        <button
-          onClick={() => autoLayout()}
-          disabled={nodes.length === 0}
-          className={`rounded-md border px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 ${
-            isDark
-              ? "border-cyan-700 text-cyan-300 hover:bg-cyan-800/40"
-              : "border-cyan-300 text-cyan-700 hover:bg-cyan-50"
-          }`}
-          title="Auto-arrange nodes using dagre layout"
-        >
-          <LayoutDashboard className="inline w-3.5 h-3.5 mr-1" /> Layout
-        </button>
-
-        {/* Export */}
-        <ExportDropdown isDark={isDark} />
-
-        {/* Estimate */}
+        {/* Estimate — always visible, responsive text */}
         <button
           onClick={handleEstimate}
           disabled={loading}
-          className="rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition"
+          className="rounded-md bg-blue-600 px-2 sm:px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition"
         >
-          {loading ? "Running\u2026" : "Run Workflow & Gen Estimate"}
+          {loading ? "Running\u2026" : (
+            <>
+              <span className="hidden lg:inline">Run Workflow & Gen Estimate</span>
+              <span className="hidden md:inline lg:hidden">Estimate</span>
+              <span className="md:hidden">Run</span>
+            </>
+          )}
         </button>
 
         {/* ── Auth controls ── */}
         <div
-          className={`ml-2 pl-2 border-l flex items-center ${
+          className={`ml-1 sm:ml-2 pl-1 sm:pl-2 border-l flex items-center ${
             isDark ? "border-slate-700" : "border-gray-200"
           }`}
         >

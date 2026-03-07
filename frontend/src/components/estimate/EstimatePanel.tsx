@@ -10,6 +10,8 @@ import {
   useActualStats,
 } from "@/store/useWorkflowStore";
 
+import { useIsMobile } from "@/hooks/useBreakpoint";
+
 import OverviewSection from "./OverviewSection";
 import HealthSection from "./HealthSection";
 import CyclesSection from "./CyclesSection";
@@ -83,9 +85,17 @@ export default function EstimatePanel() {
   const setActualStats = useWorkflowStore((s) => s.setActualStats);
   const clearActualStats = useWorkflowStore((s) => s.clearActualStats);
   const isDark = theme === "dark";
+  const isMobile = useIsMobile();
 
   /* ── Fullscreen (expanded dashboard) mode ──────────────── */
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  /* ── Auto-fullscreen on mobile ─────────────────────────── */
+  useEffect(() => {
+    if (isMobile && isEstimatePanelOpen) {
+      setIsFullscreen(true);
+    }
+  }, [isMobile, isEstimatePanelOpen]);
 
   /* ── Collapsible section state (persisted in sessionStorage) ── */
   const [sectionCollapsed, setSectionCollapsed] = useState<Record<SectionId, boolean>>(() =>
@@ -233,8 +243,8 @@ export default function EstimatePanel() {
         `}
         style={isFullscreen ? undefined : { width }}
       >
-        {/* Resize handle (only in sidebar mode) */}
-        {!isFullscreen && (
+        {/* Resize handle (only in sidebar mode, hidden on mobile) */}
+        {!isFullscreen && !isMobile && (
           <div
             onMouseDown={onMouseDown}
             className={`
@@ -274,7 +284,8 @@ export default function EstimatePanel() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {/* Fullscreen toggle */}
+              {/* Fullscreen toggle (hidden on mobile — auto-fullscreened) */}
+              {!isMobile && (
               <button
                 onClick={() => setIsFullscreen((v) => !v)}
                 className={`
@@ -293,6 +304,7 @@ export default function EstimatePanel() {
                   </svg>
                 )}
               </button>
+              )}
               {/* Close */}
               <button
                 onClick={() => { setIsFullscreen(false); toggleEstimatePanel(); }}

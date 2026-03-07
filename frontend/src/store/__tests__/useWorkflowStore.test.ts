@@ -78,6 +78,7 @@ describe('useWorkflowStore', () => {
         isComparisonOpen: false,
         theme: 'dark',
         needsLayout: false,
+        isSidebarOpen: true,
       },
     });
 

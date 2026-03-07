@@ -132,7 +132,7 @@ function EditorContent() {
       <SuccessBanner />
       <ContextToolbar />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden min-w-0">
         <Sidebar />
         <Canvas />
       </div>
