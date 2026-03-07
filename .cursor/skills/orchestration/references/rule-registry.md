@@ -2,12 +2,17 @@
 
 Maps programmer intent to Cursor rules, Context docs, and feature files. Use this to select what to load when orchestrating a task.
 
+For cross-IDE portability (Claude Code, Copilot, Antigravity), see `Context/ide-portability.md`.
+
 ## Paths Overview
 
 | Location | Purpose |
 |----------|---------|
 | `.cursor/rules/*.mdc` | Cursor rules — when to apply, what to do |
-| `Context/` | Product context, plans, roadmap |
+| `.cursor/skills/*/SKILL.md` | Cursor skills — complex multi-step workflows |
+| `.claude/commands/*.md` | Claude Code commands — `/command-name` invocation |
+| `.github/instructions/*.instructions.md` | Copilot instructions — `applyTo` glob matching |
+| `Context/` | Product context, plans, roadmap (shared across all IDEs) |
 | `Context/features/` | Feature specs (Context team) |
 | `.ai/context/features/` | Feature specs (AI-generated) |
 | `Context/memory/` | Agent memory, logs, task plans |
@@ -27,6 +32,7 @@ Maps programmer intent to Cursor rules, Context docs, and feature files. Use thi
 | supabase-db | `supabase-db.mdc` | Supabase, migrations, `frontend/src/lib/supabase*`, `supabase/**/*`. |
 | log-update | `log-update.mdc` | After EVERY completed task. Append to logs, optionally AGENT_MEMORY. |
 | min-lovable-product | `min-lovable-product.mdc` | UX, lovability, delight. MLP over MVP. (Often always-applied.) |
+| qa-agent (skill) | `.cursor/skills/qa-agent/SKILL.md` | Testing, QA, test coverage, write tests, add tests, verify code. |
 
 ---
 
@@ -39,6 +45,7 @@ Maps programmer intent to Cursor rules, Context docs, and feature files. Use thi
 | `Context/FRONTEND_PLAN.MD` | Component locations, store shape, naming. Load for frontend work. |
 | `Context/BACKEND_PLAN.md` | API patterns, endpoints. Load for backend work. |
 | `Context/supabase.md` | Schema, tables, RLS. Load for DB/Supabase work. (Create if missing.) |
+| `Context/testing/conventions.md` | Testing conventions, framework choices, fixture patterns. Load for QA/testing work. |
 
 ---
 
@@ -120,6 +127,15 @@ Maps programmer intent to Cursor rules, Context docs, and feature files. Use thi
 1. `.cursor/rules/log-update.mdc`
 2. Append to `Context/memory/logs_agent/YYYY-MM-DD.md`
 3. Optionally `Context/memory/AGENT_MEMORY.md` for non-obvious decisions
+
+### QA / Testing
+1. `Context/testing/conventions.md`
+2. `Context/memory/MEMORY.md` (file map, architecture)
+3. `.cursor/skills/qa-agent/references/testing-stack.md`
+4. `Context/FRONTEND_PLAN.MD` (if frontend tests)
+5. `Context/BACKEND_PLAN.md` (if backend tests)
+6. Source files under test
+7. Use Exa MCP for testing best-practice research before designing tests
 
 ---
 

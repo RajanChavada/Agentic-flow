@@ -76,3 +76,47 @@ Planning docs live in `Context/` — agents should **read before starting work**
 3. **Backend estimation is pure computation** — no external API calls in MVP; keep response < 10 ms.
 4. **Pricing key format** — `"<Provider>_<Model>"`, e.g. `"OpenAI_GPT-4o"`. Must match exactly between `pricing_data.py` and the frontend `MODELS` map in `NodeConfigModal.tsx`.
 5. **Graph validation** — frontend validates Start + Finish nodes exist before calling `/api/estimate`; backend classifies DAG vs CYCLIC via DFS.
+
+## Product philosophy — Minimum Lovable Product
+
+We build MLPs (Minimum Lovable Products), not MVPs. The bar is not "does it work" but "is this lovable?" Every feature should aim for the earliest version that creates a genuine emotional response.
+
+- **Functional < Reliable < Usable < Lovable** — don't stop at usable
+- Fast, obvious, opinionated UI — aim for "wait, this is actually nice" moments
+- Build lovemarks into interactions: personality, celebration of wins, thoughtful error states
+- Keep it minimal — MLP is not gold-plating; find the simplest lovable version
+
+## Before starting any task
+
+Read the relevant Context documents before making changes:
+
+| Task type | Files to read first |
+|-----------|-------------------|
+| Feature / planning | `Context/CONTEXT.md`, `Context/FEATURE_ROADMAP.md`, relevant plan docs |
+| Frontend edit | `Context/FRONTEND_PLAN.MD`, `Context/memory/MEMORY.md`, relevant feature file in `Context/features/` |
+| Backend edit | `Context/BACKEND_PLAN.md`, `Context/memory/MEMORY.md` |
+| Database / Supabase | `Context/supabase.md` |
+| Bug fix | `Context/memory/AGENT_MEMORY.md`, recent logs in `Context/memory/logs_agent/` |
+| QA / testing | `Context/testing/conventions.md`, source files under test |
+
+Write `Context/memory/task_plan.md` before editing frontend source files.
+
+## IDE portability
+
+This repo supports multiple AI-assisted IDEs. The same skills are available across Claude Code (`.claude/commands/`), Cursor (`.cursor/skills/` + `.cursor/rules/`), and Copilot (`.github/instructions/`). See `Context/ide-portability.md` for the full mapping.
+
+## Bug fix workflow
+
+When fixing a bug, follow root-cause-first thinking:
+1. Read `Context/memory/AGENT_MEMORY.md` for prior related bugs
+2. Identify ALL root causes (usually 2-3 stacked) before writing any fix
+3. Fix the root cause, not the symptom — no `try/catch` to silence errors
+4. If changing enum values or Pydantic field names, update ALL matching references in both frontend and backend
+5. Run type checks after: `npx tsc --noEmit` (frontend), `python -c "from main import app"` (backend)
+
+## After completing any task
+
+1. Append to `Context/memory/logs_agent/YYYY-MM-DD.md` (create if missing):
+   - Task title, agent type, files changed, root causes fixed (if bug), next steps
+2. If a non-obvious decision or lesson was learned, append to `Context/memory/AGENT_MEMORY.md`
+   with context, decision, and "don't repeat" notes

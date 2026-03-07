@@ -19,6 +19,7 @@ import {
   Home,
   Share2,
   ChevronDown,
+  HelpCircle,
 } from "lucide-react";
 import {
   useWorkflowStore,
@@ -45,6 +46,7 @@ import ExportDropdown from "./ExportDropdown";
 import PublishModal from "./marketplace/PublishModal";
 import ShareWorkflowModal from "./ShareWorkflowModal";
 import { useAutoLayout } from "@/hooks/useAutoLayout";
+import { openTutorial } from "@/hooks/useTutorial";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -362,6 +364,19 @@ export default function HeaderBar() {
 
       {/* ── Right side: action buttons ── */}
       <div className="flex items-center gap-2">
+        {/* Help / Tutorial */}
+        <button
+          onClick={openTutorial}
+          className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
+            isDark
+              ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+              : "border-gray-300 text-gray-600 hover:bg-gray-100"
+          }`}
+          title="Canvas tutorial"
+        >
+          <HelpCircle className="inline w-3.5 h-3.5 mr-1" /> Help
+        </button>
+
         {/* Theme toggle */}
         <button
           onClick={toggleTheme}

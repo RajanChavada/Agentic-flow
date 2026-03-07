@@ -43,6 +43,7 @@ Use the [Rule Registry](references/rule-registry.md) to select which rules and f
 - Database / Supabase → `supabase-db`
 - After any task → `log-update`
 - UX / lovability → `min-lovable-product`
+- Testing / QA → `qa-agent` (skill)
 
 ## Step 3 — Load Context Proactively
 
@@ -87,6 +88,7 @@ After loading, proceed with edits.
 | Database, Supabase, migration | supabase-db | migrations, schema |
 | After any task | log-update | logs_agent/YYYY-MM-DD.md |
 | UX, lovable, delight | min-lovable-product | (guidance only) |
+| Test, QA, coverage, "write tests" | qa-agent (skill) | Context/testing/conventions.md, testing-stack.md, source files |
 
 ---
 

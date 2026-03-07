@@ -9,6 +9,7 @@ import { GitBranch } from "lucide-react";
 function ConditionNode({ id, data, selected }: NodeProps & { data: WorkflowNodeData }) {
   // Detect dark mode via html class (per project conventions)
   const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+  const conditionExpr = (data.conditionExpression as string | undefined) ?? "";
 
   return (
     <div className="relative flex items-center justify-center" style={{ width: 140, height: 120 }}>
@@ -20,22 +21,42 @@ function ConditionNode({ id, data, selected }: NodeProps & { data: WorkflowNodeD
         className="bg-gray-500! w-2.5! h-2.5!"
       />
 
-      {/* Diamond shape visual using clipPath */}
+      {/* Outer diamond for border */}
       <div
         className={`
-          absolute inset-0 flex items-center justify-center
-          border-2 transition-all duration-300
-          ${isDark ? "bg-purple-900/30 border-purple-400" : "bg-purple-50 border-purple-500"}
+          absolute inset-0 transition-all duration-300
+          ${isDark ? "bg-purple-400" : "bg-purple-500"}
           ${selected ? "ring-2 ring-offset-2 ring-blue-400" : ""}
         `}
         style={{ clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)" }}
+      />
+
+      {/* Inner diamond for fill (inset by 2px for border effect) */}
+      <div
+        className={`
+          absolute flex items-center justify-center
+          transition-all duration-300
+          ${isDark ? "bg-purple-900/30" : "bg-purple-50"}
+        `}
+        style={{
+          clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)",
+          inset: "2px",
+        }}
       >
-        {/* Node content (counter-rotated to stay horizontal) */}
-        <div className="flex flex-col items-center justify-center gap-1 px-2">
-          <GitBranch className={`w-5 h-5 ${isDark ? "text-purple-400" : "text-purple-600"}`} />
-          <span className={`text-sm font-semibold truncate max-w-[80px] ${isDark ? "text-purple-100" : "text-purple-900"}`}>
+        {/* Node content */}
+        <div className="flex flex-col items-center justify-center gap-0.5 px-2">
+          <GitBranch className={`w-4 h-4 ${isDark ? "text-purple-400" : "text-purple-600"}`} />
+          <span className={`text-xs font-semibold truncate max-w-[70px] ${isDark ? "text-purple-100" : "text-purple-900"}`}>
             {data.label || "Condition"}
           </span>
+          {conditionExpr && (
+            <span
+              className={`text-[9px] truncate max-w-[70px] leading-tight ${isDark ? "text-purple-300/80" : "text-purple-700/70"}`}
+              title={conditionExpr}
+            >
+              {conditionExpr}
+            </span>
+          )}
         </div>
       </div>
 

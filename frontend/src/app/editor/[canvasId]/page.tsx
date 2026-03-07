@@ -15,6 +15,7 @@ import SuccessBanner from "@/components/SuccessBanner";
 import ComparisonDrawer from "@/components/ComparisonDrawer";
 import AuthModal from "@/components/AuthModal";
 import NameWorkflowModal from "@/components/NameWorkflowModal";
+import CanvasTutorialModal from "@/components/tutorial/CanvasTutorialModal";
 import { useAuthStore, useUser } from "@/store/useAuthStore";
 import { useWorkflowStore } from "@/store/useWorkflowStore";
 import { useAutoSave } from "@/hooks/useAutoSave";
@@ -141,6 +142,7 @@ function EditorContent() {
       <ComparisonDrawer />
       <AuthModal />
       <NameWorkflowModal />
+      <CanvasTutorialModal />
     </div>
   );
 }

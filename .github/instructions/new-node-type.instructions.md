@@ -1,0 +1,43 @@
+---
+applyTo: "frontend/src/components/nodes/**"
+---
+
+# New Node Type Checklist
+
+Adding a node type requires changes in exactly 8 places. Check them all off:
+
+## Backend (2 files)
+- [ ] `backend/models.py` — add new `type` literal to `NodeConfig.type` `Literal[...]`
+- [ ] `backend/estimator.py` — add estimation branch for the new type in `estimate_workflow`
+
+## Frontend types (1 file)
+- [ ] `frontend/src/types/workflow.ts` — add new type to `WorkflowNodeType` union
+
+## Node component (1 file)
+- [ ] Create `frontend/src/components/nodes/[NewTypeName]Node.tsx`
+  - Must have `"use client"` and `"use no memo"` at top
+  - Must have handles with unique IDs: `t-top`, `s-top`, `t-right`, `s-right`, `t-bottom`, `s-bottom`, `t-left`, `s-left`
+  - Content div must be `pointer-events-none`
+
+## Canvas registration (1 file)
+- [ ] `frontend/src/components/Canvas.tsx`
+  - Add to `nodeTypes` const: `newTypeName: NewTypeNode`
+  - Add to `onNodeDoubleClick` condition if it should open config
+  - Add connection rules in `onConnect` if it has special routing logic
+
+## Sidebar (1 file)
+- [ ] `frontend/src/components/Sidebar.tsx` (or wherever the node palette lives)
+  - Add drag item with correct `application/reactflow-type` data transfer value
+  - Add to minimap `nodeColor` switch in Canvas.tsx
+
+## Context toolbar (1 file)
+- [ ] `frontend/src/components/ContextToolbar.tsx`
+  - Add a new `[NewType]ToolbarSection` component
+  - Add render condition in the main `ContextToolbar` return
+
+## MiniMap colors (already in Canvas.tsx — same file as nodeTypes)
+- [ ] Add color entry to the `nodeColor` switch in `<MiniMap>`
+
+## After adding
+- `npx tsc --noEmit` — zero errors
+- Drag the new node onto the canvas and verify handles connect bidirectionally

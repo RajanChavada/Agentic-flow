@@ -6,13 +6,13 @@ import {
   getBezierPath,
   EdgeLabelRenderer,
   BaseEdge,
+  MarkerType,
   type EdgeProps,
 } from "@xyflow/react";
 import { useWorkflowStore } from "@/store/useWorkflowStore";
 
 export default function AnnotationEdge({
   id,
-  source,
   sourceX,
   sourceY,
   targetX,
@@ -22,20 +22,34 @@ export default function AnnotationEdge({
   style,
   markerEnd,
   data,
+  sourceHandleId,
 }: EdgeProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const updateEdgeLabel = useWorkflowStore((s) => s.updateEdgeLabel);
-  const sourceNodeType = useWorkflowStore(
-    (s) => s.nodes.find((n) => n.id === source)?.type
-  );
 
-  const isBlankBoxSource = sourceNodeType === "blankBoxNode";
   const savedLabel = (data as Record<string, unknown> | undefined)?.label as
     | string
     | undefined;
+
+  // Condition edge coloring: green for True branch, red for False branch
+  const defaultStrokeColor = "#6b7280";
+  const isDefaultStroke = !style?.stroke || style.stroke === defaultStrokeColor;
+
+  let finalStyle = style;
+  let finalMarkerEnd = markerEnd;
+
+  if (isDefaultStroke && sourceHandleId?.includes("true")) {
+    const resolvedStroke = "#22c55e"; // green-500 for True branch
+    finalStyle = { ...style, stroke: resolvedStroke, strokeWidth: 2 };
+    finalMarkerEnd = { type: MarkerType.ArrowClosed, width: 16, height: 16, color: resolvedStroke } as any;
+  } else if (isDefaultStroke && sourceHandleId?.includes("false")) {
+    const resolvedStroke = "#ef4444"; // red-500 for False branch
+    finalStyle = { ...style, stroke: resolvedStroke, strokeWidth: 2 };
+    finalMarkerEnd = { type: MarkerType.ArrowClosed, width: 16, height: 16, color: resolvedStroke } as any;
+  }
 
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
@@ -48,12 +62,11 @@ export default function AnnotationEdge({
 
   const onDoubleClick = useCallback(
     (e: React.MouseEvent) => {
-      if (!isBlankBoxSource) return;
       e.stopPropagation();
       setDraft(savedLabel ?? "");
       setEditing(true);
     },
-    [isBlankBoxSource, savedLabel]
+    [savedLabel]
   );
 
   const save = useCallback(() => {
@@ -88,7 +101,7 @@ export default function AnnotationEdge({
 
   return (
     <>
-      <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
+      <BaseEdge path={edgePath} markerEnd={finalMarkerEnd} style={finalStyle} />
 
       {/* Transparent wide hit area for double-click */}
       <path
@@ -97,7 +110,7 @@ export default function AnnotationEdge({
         stroke="transparent"
         strokeWidth={20}
         onDoubleClick={onDoubleClick}
-        style={{ cursor: isBlankBoxSource ? "pointer" : "default" }}
+        style={{ cursor: "pointer" }}
       />
 
       <EdgeLabelRenderer>
