@@ -2,10 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Copy, Trash2, BarChart3, Save, Cloud, Square, Type, LayoutTemplate, Target, X as XIcon } from "lucide-react";
-import { useReactFlow } from "@xyflow/react";
-import { v4 as uuid } from "uuid";
-import type { WorkflowNodeType, WorkflowNodeData, BatchEstimateResponse } from "@/types/workflow";
+import { Copy, Trash2, BarChart3, Save, Cloud, Square, Type, LayoutTemplate, Target } from "lucide-react";
+import type { WorkflowNodeType, BatchEstimateResponse } from "@/types/workflow";
 import {
   useUIState,
   useScenarios,
@@ -13,11 +11,9 @@ import {
   useCurrentWorkflowId,
   useActiveCanvasId,
   useWorkflowStore,
-  useSidebarOpen,
 } from "@/store/useWorkflowStore";
 import { useUser } from "@/store/useAuthStore";
 import { useAutoLayout } from "@/hooks/useAutoLayout";
-import { useIsMobile } from "@/hooks/useBreakpoint";
 import { supabase } from "@/lib/supabase";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -113,9 +109,6 @@ function ShapeIndicator({ shape, color }: { shape: string; color: string }) {
 
 export default function Sidebar() {
   const { theme } = useUIState();
-  const isSidebarOpen = useSidebarOpen();
-  const isMobile = useIsMobile();
-  const { setSidebarOpen } = useWorkflowStore();
   const scenarios = useScenarios();
   const selectedIds = useSelectedForComparison();
   const currentWorkflowId = useCurrentWorkflowId();
@@ -135,17 +128,10 @@ export default function Sidebar() {
   } = useWorkflowStore();
   const applyLayout = useAutoLayout();
   const isDark = theme === "dark";
-  const { screenToFlowPosition, getViewport } = useReactFlow();
-  const addNode = useWorkflowStore((s) => s.addNode);
   const [comparing, setComparing] = useState(false);
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [editingWorkflowName, setEditingWorkflowName] = useState("");
   const user = useUser();
-
-  // Auto-close sidebar on mobile
-  useEffect(() => {
-    if (isMobile) setSidebarOpen(false);
-  }, [isMobile, setSidebarOpen]);
 
   const handleUpdateWorkflowName = useCallback(
     async (workflowId: string, newName: string) => {
@@ -194,75 +180,6 @@ export default function Sidebar() {
     event.dataTransfer.effectAllowed = "move";
   };
 
-  // ── Click-to-add: create node at viewport centre ──────
-  const handleClickAdd = useCallback(
-    (nodeType: WorkflowNodeType, label: string) => {
-      // One-per-canvas enforcement
-      if (nodeType === "idealStateNode") {
-        if (useWorkflowStore.getState().nodes.some((n) => n.type === "idealStateNode")) return;
-      }
-
-      // Place at centre of the visible viewport
-      const vp = getViewport();
-      const cx = (window.innerWidth / 2 - vp.x) / vp.zoom;
-      const cy = (window.innerHeight / 2 - vp.y) / vp.zoom;
-      const position = { x: cx, y: cy };
-
-      const baseData: WorkflowNodeData = { label, type: nodeType };
-
-      if (nodeType === "blankBoxNode") {
-        baseData.blankBoxStyle = {
-          label: "Group",
-          labelPosition: "top-left",
-          labelColor: "#3b82f6",
-          labelBackground: "none",
-          borderStyle: "dashed",
-          borderColor: "#3b82f6",
-          borderWidth: 2,
-          backgroundColor: "#eff6ff",
-          backgroundOpacity: 40,
-          connectable: true,
-        };
-      }
-
-      if (nodeType === "textNode") {
-        baseData.textNodeStyle = {
-          content: "Text",
-          fontSize: "md",
-          color: "#374151",
-          background: "none",
-        };
-      }
-
-      if (nodeType === "conditionNode") {
-        baseData.conditionExpression = "";
-        baseData.probability = 50;
-      }
-
-      if (nodeType === "idealStateNode") {
-        baseData.idealStateDescription = "";
-        baseData.idealStateSchema = null;
-      }
-
-      const newNode: Parameters<typeof addNode>[0] = {
-        id: uuid(),
-        type: nodeType,
-        position,
-        data: baseData,
-        ...(nodeType === "blankBoxNode" && {
-          style: { width: 320, height: 220 },
-          zIndex: -1,
-        }),
-      };
-
-      addNode(newNode);
-
-      // On mobile, close sidebar to reveal the newly added node
-      if (isMobile) setSidebarOpen(false);
-    },
-    [addNode, getViewport, isMobile, setSidebarOpen]
-  );
-
   // ── Compare handler ─────────────────────────────────────
   const handleCompare = async () => {
     if (selectedIds.length < 2) return;
@@ -304,40 +221,13 @@ export default function Sidebar() {
   };
 
   return (
-    <>
-      {/* Mobile overlay backdrop */}
-      {isSidebarOpen && isMobile && (
-        <div
-          className="fixed inset-0 z-30 bg-black/30 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      <aside
-        className={`
-          ${isMobile
-            ? `fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-200 ease-in-out ${
-                isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-              }`
-            : `w-52 shrink-0 transition-all duration-200 ${
-                isSidebarOpen ? "" : "hidden"
-              }`
-          }
-          border-r p-4 flex flex-col gap-3 overflow-y-auto
-          ${isDark ? "border-slate-600 bg-slate-900" : "border-gray-200 bg-gray-50"}
-        `}
-      >
-        {/* Close button on mobile */}
-        {isMobile && (
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className={`self-end rounded-md p-1.5 transition ${
-              isDark ? "hover:bg-slate-800 text-slate-400" : "hover:bg-gray-100 text-gray-400"
-            }`}
-          >
-            <XIcon className="h-4 w-4" />
-          </button>
-        )}
+    <aside
+      className={`w-52 shrink-0 border-r p-4 flex flex-col gap-3 overflow-y-auto ${
+        isDark
+          ? "border-slate-600 bg-slate-900"
+          : "border-gray-200 bg-gray-50"
+      }`}
+    >
       {/* ── Node palette ──────────────────────────────────── */}
       <h2
         className={`text-xs font-bold uppercase tracking-wide mb-1 ${
@@ -364,14 +254,10 @@ export default function Sidebar() {
               }
               onDragStart(e, item.type, item.label);
             }}
-            onClick={() => {
-              if (isDisabled) return;
-              handleClickAdd(item.type, item.label);
-            }}
             className={`
               flex items-center gap-2.5
               rounded-md border px-3 py-2.5 text-sm font-medium
-              transition-all select-none
+              transition-all
               ${isDisabled
                 ? "opacity-50 cursor-not-allowed"
                 : "cursor-grab active:cursor-grabbing hover:shadow-md"}
@@ -402,8 +288,7 @@ export default function Sidebar() {
           <div
             draggable
             onDragStart={(e) => onDragStart(e, "blankBoxNode" as WorkflowNodeType, "Group")}
-            onClick={() => handleClickAdd("blankBoxNode" as WorkflowNodeType, "Group")}
-            className={`flex items-center gap-2.5 cursor-grab active:cursor-grabbing rounded-md border px-3 py-2.5 text-sm font-medium hover:shadow-md transition-all select-none ${
+            className={`flex items-center gap-2.5 cursor-grab active:cursor-grabbing rounded-md border px-3 py-2.5 text-sm font-medium hover:shadow-md transition-all ${
               isDark
                 ? "bg-slate-800/40 border-slate-600 text-slate-300"
                 : "bg-gray-50 border-gray-300 text-gray-700"
@@ -416,8 +301,7 @@ export default function Sidebar() {
           <div
             draggable
             onDragStart={(e) => onDragStart(e, "textNode" as WorkflowNodeType, "Text")}
-            onClick={() => handleClickAdd("textNode" as WorkflowNodeType, "Text")}
-            className={`flex items-center gap-2.5 cursor-grab active:cursor-grabbing rounded-md border px-3 py-2.5 text-sm font-medium hover:shadow-md transition-all select-none ${
+            className={`flex items-center gap-2.5 cursor-grab active:cursor-grabbing rounded-md border px-3 py-2.5 text-sm font-medium hover:shadow-md transition-all ${
               isDark
                 ? "bg-violet-900/20 border-violet-700 text-violet-300"
                 : "bg-violet-50 border-violet-300 text-violet-700"
@@ -635,9 +519,8 @@ export default function Sidebar() {
       </div>
 
       <div className={`mt-auto pt-4 border-t text-[10px] ${isDark ? "border-slate-700 text-slate-500" : "border-gray-200 text-gray-400"}`}>
-        Drag or click a node to add it
+        Drag a node onto the canvas
       </div>
     </aside>
-    </>
   );
 }

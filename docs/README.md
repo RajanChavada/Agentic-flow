@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://neurovn.com"><img src="https://img.shields.io/badge/Live_Demo-neurovn.com-black?style=for-the-badge" alt="Live Demo" /></a>&nbsp;
-  <a href="https://github.com/RajanChavada/neurovn"><img src="https://img.shields.io/github/stars/RajanChavada/neurovn?style=for-the-badge&color=orange" alt="Stars" /></a>&nbsp;
+  <a href="https://github.com/RajanChavada/Neurovn-Alpha"><img src="https://img.shields.io/github/stars/RajanChavada/Neurovn-Alpha?style=for-the-badge&color=orange" alt="Stars" /></a>&nbsp;
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License" /></a>
 </p>
 
@@ -282,7 +282,7 @@ The canvas even shows **inline estimation badges** on each node after running an
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/RajanChavada/neurovn.git
+git clone https://github.com/RajanChavada/Neurovn-Alpha.git
 cd neurovn
 ```
 

@@ -72,7 +72,7 @@ function FooterSection() {
                 How It Works
               </a>
               <a
-                href="https://github.com/RajanChavada/neurovn"
+                href="https://github.com/RajanChavada/Neurovn-Alpha"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block transition-colors hover:text-foreground text-muted-foreground"
@@ -195,7 +195,7 @@ function FooterSection() {
           </p>
           <nav className="flex gap-4 text-sm text-muted-foreground">
             <a
-              href="https://github.com/RajanChavada/neurovn"
+              href="https://github.com/RajanChavada/Neurovn-Alpha"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"

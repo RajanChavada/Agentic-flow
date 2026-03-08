@@ -100,7 +100,7 @@ export default function LandingPage() {
               How It Works
             </a>
             <a
-              href="https://github.com/RajanChavada/neurovn"
+              href="https://github.com/RajanChavada/Neurovn-Alpha"
               target="_blank"
               rel="noopener noreferrer"
               className="hidden items-center gap-1.5 text-muted-foreground transition hover:text-foreground sm:inline-flex"
@@ -144,7 +144,7 @@ export default function LandingPage() {
                 How It Works
               </a>
               <a
-                href="https://github.com/RajanChavada/neurovn"
+                href="https://github.com/RajanChavada/Neurovn-Alpha"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setMobileNavOpen(false)}
