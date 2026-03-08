@@ -25,6 +25,8 @@ export interface UISlice {
   setNeedsLayout: (v: boolean) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (v: boolean) => void;
+  dismissBlankOverlay: () => void;
+  setRefineBarOpen: (v: boolean) => void;
 }
 
 type CombinedState = WorkflowSlice & EstimationSlice & UISlice & PersistenceSlice;
@@ -37,6 +39,10 @@ export const createUISlice: StateCreator<CombinedState, [], [], UISlice> = (set)
     theme: 'light',
     needsLayout: false,
     isSidebarOpen: true,
+    hasSeenBlankOverlay: typeof window !== 'undefined'
+      ? localStorage.getItem('neurovn-blank-overlay-dismissed') === 'true'
+      : false,
+    isRefineBarOpen: false,
   },
 
   openConfigModal: () =>
@@ -69,4 +75,12 @@ export const createUISlice: StateCreator<CombinedState, [], [], UISlice> = (set)
     set((s) => ({ ui: { ...s.ui, isSidebarOpen: !s.ui.isSidebarOpen } })),
   setSidebarOpen: (v) =>
     set((s) => ({ ui: { ...s.ui, isSidebarOpen: v } })),
+  dismissBlankOverlay: () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('neurovn-blank-overlay-dismissed', 'true');
+    }
+    set((s) => ({ ui: { ...s.ui, hasSeenBlankOverlay: true } }));
+  },
+  setRefineBarOpen: (v) =>
+    set((s) => ({ ui: { ...s.ui, isRefineBarOpen: v } })),
 });

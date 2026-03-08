@@ -85,6 +85,8 @@ We build MLPs (Minimum Lovable Products), not MVPs. The bar is not "does it work
 - Fast, obvious, opinionated UI — aim for "wait, this is actually nice" moments
 - Build lovemarks into interactions: personality, celebration of wins, thoughtful error states
 - Keep it minimal — MLP is not gold-plating; find the simplest lovable version
+- When planning features, evaluate against the MLP hierarchy (Functional > Reliable > Usable > Lovable)
+- Feature specs should include research findings, lovemark opportunities, and GSD phase structure when applicable
 
 ## Before starting any task
 

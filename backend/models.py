@@ -376,6 +376,33 @@ class SchemaValidateResponse(BaseModel):
     errors: List[str] = []
 
 
+# ── Scaffold (NL-to-workflow) models ──────────────────────────
+
+class ScaffoldRequest(BaseModel):
+    """POST /api/scaffold -- generate workflow from NL prompt."""
+    prompt: str = Field(
+        ..., min_length=5, max_length=1000,
+        description="Natural language workflow description",
+    )
+
+
+class ScaffoldRefineRequest(BaseModel):
+    """POST /api/scaffold/refine -- refine existing workflow."""
+    prompt: str = Field(
+        ..., min_length=3, max_length=1000,
+        description="Refinement instruction",
+    )
+    nodes: List[NodeConfig]
+    edges: List[EdgeConfig]
+
+
+class ScaffoldResponse(BaseModel):
+    """Response from scaffold endpoints."""
+    nodes: List[NodeConfig]
+    edges: List[EdgeConfig]
+    name: str = "Generated Workflow"
+
+
 # ── Import / export models ─────────────────────────────────────
 
 class ExternalWorkflowImportRequest(BaseModel):

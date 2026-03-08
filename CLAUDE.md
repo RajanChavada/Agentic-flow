@@ -50,7 +50,7 @@ Project-specific slash commands live in `.claude/commands/` alongside GSD comman
 | Command | Purpose |
 |---------|---------|
 | `/orchestrate` | Parse natural language intent and route to the right context/rules |
-| `/feature` | Plan a new feature -- creates structured spec with frontend/backend tasks |
+| `/feature` | Plan a feature with MLP evaluation, external research, UX analysis, and GSD-ready phases. Use `--quick` to skip research. |
 | `/bugfix` | Root-cause-first bug diagnosis and fix workflow |
 | `/frontend` | Frontend implementation with mandatory pre/post steps |
 | `/backend` | Backend implementation with FastAPI/Pydantic patterns |

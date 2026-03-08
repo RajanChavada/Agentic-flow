@@ -79,6 +79,8 @@ describe('useWorkflowStore', () => {
         theme: 'dark',
         needsLayout: false,
         isSidebarOpen: true,
+        hasSeenBlankOverlay: false,
+        isRefineBarOpen: false,
       },
     });
 

@@ -246,4 +246,9 @@ Each phase is independently shippable and builds on the existing codebase withou
 
 ## Security & Production Hardening
 
-- [ ] Security Guardrails & Production Hardening — `Context/features/security-guardrails-production-hardening.md`
+- [ ] Security Guardrails & Production Hardening -- `Context/features/security-guardrails-production-hardening.md`
+
+## Blank Canvas & Onboarding
+
+- [x] Blank Canvas Workflow Scaffolding (Phase 1) -- `Context/features/blank-canvas-workflow-scaffold.md`
+- [x] AI-Powered NLP Scaffolding (Phase 2) -- backend `POST /api/scaffold` + NL prompt enablement + refine bar

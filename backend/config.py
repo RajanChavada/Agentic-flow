@@ -19,3 +19,4 @@ PORT: int = int(os.getenv("PORT", "8000"))
 # LLM configuration for NL-to-schema generation
 OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
 SCHEMA_GEN_MODEL: str = os.getenv("SCHEMA_GEN_MODEL", "gpt-4o-mini")
+SCAFFOLD_MODEL: str = os.getenv("SCAFFOLD_MODEL", "gpt-4o-mini")

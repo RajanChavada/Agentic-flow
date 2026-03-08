@@ -24,12 +24,16 @@ from models import (
     SchemaGenerateResponse,
     SchemaValidateRequest,
     SchemaValidateResponse,
+    ScaffoldRequest,
+    ScaffoldRefineRequest,
+    ScaffoldResponse,
 )
 from estimator import estimate_workflow
 from pricing_registry import registry
 from tool_registry import tool_registry
 from import_adapters import get_adapter
 from schema_generator import generate_schema, validate_schema
+from scaffold_generator import scaffold_workflow, refine_workflow
 
 app = FastAPI(
     title="Neurovn",
@@ -132,6 +136,30 @@ async def validate_schema_endpoint(request: SchemaValidateRequest):
     """Validate a JSON schema for correctness."""
     is_valid, errors = validate_schema(request.schema_obj)
     return SchemaValidateResponse(valid=is_valid, errors=errors)
+
+
+# ── Scaffold (NL-to-workflow) ─────────────────────────────────
+
+@app.post("/api/scaffold", response_model=ScaffoldResponse)
+async def scaffold_endpoint(request: ScaffoldRequest):
+    """Generate a workflow graph from a natural language description."""
+    result = scaffold_workflow(request.prompt)
+    return ScaffoldResponse(**result)
+
+
+@app.post("/api/scaffold/refine", response_model=ScaffoldResponse)
+async def scaffold_refine_endpoint(request: ScaffoldRefineRequest):
+    """Refine an existing workflow graph based on a follow-up instruction."""
+    current_graph = {
+        "nodes": [n.model_dump() for n in request.nodes],
+        "edges": [e.model_dump() for e in request.edges],
+    }
+    result = refine_workflow(
+        request.prompt,
+        current_graph["nodes"],
+        current_graph["edges"],
+    )
+    return ScaffoldResponse(**result)
 
 
 # ── Provider & Model Registry ──────────────────────────────────

@@ -26,6 +26,8 @@ export interface UIState {
   theme: 'light' | 'dark';
   needsLayout: boolean;
   isSidebarOpen: boolean;
+  hasSeenBlankOverlay: boolean;
+  isRefineBarOpen: boolean;
 }
 
 // Scaling params for what-if analysis

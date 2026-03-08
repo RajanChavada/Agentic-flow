@@ -43,3 +43,5 @@ export const useCurrentWorkflowName = () => useWorkflowStore((s) => s.currentWor
 export const useIsDirty = () => useWorkflowStore((s) => s.isDirty);
 export const useActiveCanvasId = () => useWorkflowStore((s) => s.activeCanvasId);
 export const useSidebarOpen = () => useWorkflowStore((s) => s.ui.isSidebarOpen);
+export const useHasSeenOverlay = () => useWorkflowStore((s) => s.ui.hasSeenBlankOverlay);
+export const useIsRefineBarOpen = () => useWorkflowStore((s) => s.ui.isRefineBarOpen);

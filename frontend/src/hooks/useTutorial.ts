@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { useWorkflowStore } from "@/store/useWorkflowStore";
-import { useNeedsProfileOnboarding } from "@/store/useAuthStore";
 
 const STORAGE_KEY = "neurovn-tutorial-completed";
 const OPEN_EVENT = "neurovn:open-tutorial";
@@ -15,25 +13,8 @@ export function openTutorial() {
 export function useTutorial() {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const needsOnboarding = useNeedsProfileOnboarding();
 
-  // Auto-trigger on mount for first-time users with empty canvas
-  useEffect(() => {
-    const completed = localStorage.getItem(STORAGE_KEY) === "true";
-    if (completed || needsOnboarding) return;
-
-    const timer = setTimeout(() => {
-      const nodes = useWorkflowStore.getState().nodes;
-      if (nodes.length === 0) {
-        setIsOpen(true);
-        setCurrentStep(0);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [needsOnboarding]);
-
-  // Listen for external open requests (Help button)
+  // Listen for external open requests (Help button, BlankCanvasOverlay)
   useEffect(() => {
     const handler = () => {
       setCurrentStep(0);

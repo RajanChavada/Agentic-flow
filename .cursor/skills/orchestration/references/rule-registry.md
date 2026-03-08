@@ -23,7 +23,7 @@ For cross-IDE portability (Claude Code, Copilot, Antigravity), see `Context/ide-
 
 | Rule | File | When to apply |
 |------|------|---------------|
-| feature-roadmap | `feature-roadmap.mdc` | Roadmap, plan, design new feature. Creates feature .md, delegates frontend/backend. |
+| feature-planner (skill) | `.cursor/skills/feature-planner/SKILL.md` | Roadmap, plan, design, spec new feature. MLP evaluation, Exa research, competitor analysis, UX patterns, GSD phase mapping. Replaces `feature-roadmap.mdc`. |
 | bug-fix | `bug-fix.mdc` | Diagnose and fix a bug. Root-cause-first, no patch-over-patch. |
 | frontend-impl | `frontend-impl.mdc` | Editing `frontend/src/**/*.{ts,tsx}`. Enforces architecture, Tailwind v4, task_plan. |
 | backend-impl | `backend-impl.mdc` | Editing `backend/**/*.py`. FastAPI, Pydantic, registries. |
@@ -77,7 +77,7 @@ For cross-IDE portability (Claude Code, Copilot, Antigravity), see `Context/ide-
 1. `Context/CONTEXT.md`
 2. `Context/FEATURE_ROADMAP.md`
 3. `Context/FRONTEND_PLAN.MD`, `Context/BACKEND_PLAN.md` (as needed)
-4. `.cursor/rules/feature-roadmap.mdc`
+4. `.cursor/skills/feature-planner/SKILL.md` (replaces `.cursor/rules/feature-roadmap.mdc`)
 5. Existing feature file from `Context/features/` or `.ai/context/features/` if one matches
 
 ### Bug fix

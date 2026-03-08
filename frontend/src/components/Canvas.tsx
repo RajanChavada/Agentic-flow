@@ -24,12 +24,16 @@ import ConditionNode from "@/components/nodes/ConditionNode";
 import IdealStateNode from "@/components/nodes/IdealStateNode";
 import AnnotationEdge from "@/components/edges/AnnotationEdge";
 import { CanvasMetadataOverlay } from "@/components/CanvasMetadataOverlay";
+import BlankCanvasOverlay from "@/components/BlankCanvasOverlay";
+import ScaffoldRefineBar from "@/components/ScaffoldRefineBar";
 import {
   useWorkflowStore,
   useWorkflowNodes,
   useWorkflowEdges,
   useUIState,
   useEstimation,
+  useHasSeenOverlay,
+  useIsRefineBarOpen,
 } from "@/store/useWorkflowStore";
 import type { WorkflowNodeData, WorkflowNodeType } from "@/types/workflow";
 
@@ -71,6 +75,9 @@ export default function Canvas() {
   const edges = useWorkflowEdges();
   const { theme } = useUIState();
   const estimation = useEstimation();
+  const hasSeenOverlay = useHasSeenOverlay();
+  const isRefineBarOpen = useIsRefineBarOpen();
+  const showOverlay = nodes.length === 0 && !hasSeenOverlay;
   const {
     onNodesChange,
     onEdgesChange,
@@ -309,8 +316,11 @@ export default function Canvas() {
   }, [setSelectedNodeId, closeConfigModal]);
 
   return (
-    <div ref={reactFlowWrapper} className="flex-1 h-full">
-      <ReactFlow
+    <div ref={reactFlowWrapper} className="flex-1 h-full relative flex flex-col">
+      {showOverlay && <BlankCanvasOverlay />}
+      {isRefineBarOpen && <ScaffoldRefineBar />}
+      <div className="flex-1 relative">
+        <ReactFlow
         nodes={nodes}
         edges={styledEdges}
         onNodesChange={onNodesChange}
@@ -355,6 +365,7 @@ export default function Canvas() {
         />
         <CanvasMetadataOverlay />
       </ReactFlow>
+      </div>
     </div>
   );
 }
