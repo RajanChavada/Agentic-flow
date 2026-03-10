@@ -27,6 +27,8 @@ from models import (
     ScaffoldRequest,
     ScaffoldRefineRequest,
     ScaffoldResponse,
+    ContractValidationRequest,
+    ContractValidationResponse,
 )
 from estimator import estimate_workflow
 from pricing_registry import registry
@@ -34,6 +36,7 @@ from tool_registry import tool_registry
 from import_adapters import get_adapter
 from schema_generator import generate_schema, validate_schema
 from scaffold_generator import scaffold_workflow, refine_workflow
+from contract_validator import validate_contracts
 
 app = FastAPI(
     title="Neurovn",
@@ -160,6 +163,23 @@ async def scaffold_refine_endpoint(request: ScaffoldRefineRequest):
         current_graph["edges"],
     )
     return ScaffoldResponse(**result)
+
+
+# ── Edge Data Contract Validation ─────────────────────────────
+
+@app.post("/api/validate-contracts", response_model=ContractValidationResponse)
+async def validate_contracts_endpoint(request: ContractValidationRequest):
+    """Validate schema contracts across all edges in a workflow.
+
+    Checks that each source node's ``output_schema`` structurally
+    satisfies the target node's ``input_schema`` using structural
+    subtyping (required fields + type compatibility).
+    """
+    edge_results, summary = validate_contracts(
+        [n.model_dump() for n in request.nodes],
+        [e.model_dump() for e in request.edges],
+    )
+    return ContractValidationResponse(edges=edge_results, summary=summary)
 
 
 # ── Provider & Model Registry ──────────────────────────────────

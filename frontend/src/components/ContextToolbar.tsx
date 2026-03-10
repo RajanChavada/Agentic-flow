@@ -1,8 +1,8 @@
 "use client";
 "use no memo";
 
-import React from "react";
-import { Trash2, GitBranch, Target, CheckCircle2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Trash2, GitBranch, Target, CheckCircle2, Cpu, Wrench, Play, Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Node } from "@xyflow/react";
 import type {
@@ -14,6 +14,7 @@ import {
   useWorkflowStore,
   useWorkflowNodes,
 } from "@/store/useWorkflowStore";
+import SchemaPanel from "./SchemaPanel";
 
 /* ─── Shared primitives (inline) ──────────────────────────── */
 
@@ -431,22 +432,219 @@ function IdealStateToolbarSection({ node }: { node: Node<WorkflowNodeData> }) {
   );
 }
 
+/* ─── Schema Status Button (shared) ──────────────────────── */
+
+function SchemaStatusButton({
+  label,
+  schema,
+  active,
+  onClick,
+}: {
+  label: string;
+  schema: Record<string, unknown> | null;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const hasSchema = Boolean(schema);
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1 h-7 px-2 rounded text-[10px] font-medium transition-colors border shrink-0",
+        active
+          ? "bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/40 dark:border-blue-600 dark:text-blue-300"
+          : hasSchema
+            ? "bg-green-50 border-green-200 text-green-700 dark:bg-green-900/30 dark:border-green-700 dark:text-green-400"
+            : "bg-stone-50 border-stone-200 text-stone-500 hover:bg-stone-100 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-700"
+      )}
+    >
+      {hasSchema && <CheckCircle2 className="w-3 h-3" />}
+      {label}
+    </button>
+  );
+}
+
+/* ─── Schema section props (shared) ──────────────────────── */
+
+interface SchemaSectionProps {
+  node: Node<WorkflowNodeData>;
+  activePanel: { type: "output" | "input"; nodeId: string } | null;
+  setActivePanel: (v: { type: "output" | "input"; nodeId: string } | null) => void;
+}
+
+/* ─── Agent Section ──────────────────────────────────────── */
+
+function AgentToolbarSection({ node, activePanel, setActivePanel }: SchemaSectionProps) {
+  const outputSchema = (node.data.outputSchema as Record<string, unknown> | null) ?? null;
+  const inputSchema = (node.data.inputSchema as Record<string, unknown> | null) ?? null;
+
+  return (
+    <>
+      <Cpu className="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0" />
+      <span className="text-xs text-stone-600 dark:text-slate-300 shrink-0 max-w-32 truncate">
+        {node.data.label}
+      </span>
+      <ToolbarDivider />
+      <SchemaStatusButton
+        label="Output"
+        schema={outputSchema}
+        active={activePanel?.type === "output" && activePanel.nodeId === node.id}
+        onClick={() =>
+          setActivePanel(
+            activePanel?.type === "output" && activePanel.nodeId === node.id
+              ? null
+              : { type: "output", nodeId: node.id }
+          )
+        }
+      />
+      <SchemaStatusButton
+        label="Input"
+        schema={inputSchema}
+        active={activePanel?.type === "input" && activePanel.nodeId === node.id}
+        onClick={() =>
+          setActivePanel(
+            activePanel?.type === "input" && activePanel.nodeId === node.id
+              ? null
+              : { type: "input", nodeId: node.id }
+          )
+        }
+      />
+      <DeleteButton nodeId={node.id} />
+    </>
+  );
+}
+
+/* ─── Tool Section ───────────────────────────────────────── */
+
+function ToolSchemaToolbarSection({ node, activePanel, setActivePanel }: SchemaSectionProps) {
+  const outputSchema = (node.data.outputSchema as Record<string, unknown> | null) ?? null;
+  const inputSchema = (node.data.inputSchema as Record<string, unknown> | null) ?? null;
+
+  return (
+    <>
+      <Wrench className="w-4 h-4 text-orange-500 dark:text-orange-400 shrink-0" />
+      <span className="text-xs text-stone-600 dark:text-slate-300 shrink-0 max-w-32 truncate">
+        {node.data.label}
+      </span>
+      <ToolbarDivider />
+      <SchemaStatusButton
+        label="Output"
+        schema={outputSchema}
+        active={activePanel?.type === "output" && activePanel.nodeId === node.id}
+        onClick={() =>
+          setActivePanel(
+            activePanel?.type === "output" && activePanel.nodeId === node.id
+              ? null
+              : { type: "output", nodeId: node.id }
+          )
+        }
+      />
+      <SchemaStatusButton
+        label="Input"
+        schema={inputSchema}
+        active={activePanel?.type === "input" && activePanel.nodeId === node.id}
+        onClick={() =>
+          setActivePanel(
+            activePanel?.type === "input" && activePanel.nodeId === node.id
+              ? null
+              : { type: "input", nodeId: node.id }
+          )
+        }
+      />
+      <DeleteButton nodeId={node.id} />
+    </>
+  );
+}
+
+/* ─── Start Section ──────────────────────────────────────── */
+
+function StartToolbarSection({ node, activePanel, setActivePanel }: SchemaSectionProps) {
+  const outputSchema = (node.data.outputSchema as Record<string, unknown> | null) ?? null;
+
+  return (
+    <>
+      <Play className="w-4 h-4 text-green-500 dark:text-green-400 shrink-0" />
+      <span className="text-xs text-stone-600 dark:text-slate-300 shrink-0">
+        {node.data.label}
+      </span>
+      <ToolbarDivider />
+      <SchemaStatusButton
+        label="Output"
+        schema={outputSchema}
+        active={activePanel?.type === "output" && activePanel.nodeId === node.id}
+        onClick={() =>
+          setActivePanel(
+            activePanel?.type === "output" && activePanel.nodeId === node.id
+              ? null
+              : { type: "output", nodeId: node.id }
+          )
+        }
+      />
+      <DeleteButton nodeId={node.id} />
+    </>
+  );
+}
+
+/* ─── Finish Section ─────────────────────────────────────── */
+
+function FinishToolbarSection({ node, activePanel, setActivePanel }: SchemaSectionProps) {
+  const inputSchema = (node.data.inputSchema as Record<string, unknown> | null) ?? null;
+
+  return (
+    <>
+      <Flag className="w-4 h-4 text-red-500 dark:text-red-400 shrink-0" />
+      <span className="text-xs text-stone-600 dark:text-slate-300 shrink-0">
+        {node.data.label}
+      </span>
+      <ToolbarDivider />
+      <SchemaStatusButton
+        label="Input"
+        schema={inputSchema}
+        active={activePanel?.type === "input" && activePanel.nodeId === node.id}
+        onClick={() =>
+          setActivePanel(
+            activePanel?.type === "input" && activePanel.nodeId === node.id
+              ? null
+              : { type: "input", nodeId: node.id }
+          )
+        }
+      />
+      <DeleteButton nodeId={node.id} />
+    </>
+  );
+}
+
 /* ─── Main Toolbar ────────────────────────────────────────── */
+
+const TOOLBAR_NODE_TYPES = [
+  "blankBoxNode", "textNode", "conditionNode", "idealStateNode",
+  "agentNode", "toolNode", "startNode", "finishNode",
+];
 
 export default function ContextToolbar() {
   const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId);
   const nodes = useWorkflowNodes();
   const node = nodes.find((n) => n.id === selectedNodeId);
 
-  const visible =
-    !!node && (node.type === "blankBoxNode" || node.type === "textNode" || node.type === "conditionNode" || node.type === "idealStateNode");
+  const [activePanel, setActivePanel] = useState<{ type: "output" | "input"; nodeId: string } | null>(null);
+
+  // Close panel when selected node changes
+  useEffect(() => {
+    setActivePanel(null);
+  }, [selectedNodeId]);
+
+  const visible = !!node && TOOLBAR_NODE_TYPES.includes(node.type ?? "");
 
   return (
     <div
       className={cn(
         "overflow-hidden transition-all duration-200 border-b",
         "bg-white dark:bg-slate-900 border-stone-200 dark:border-slate-700",
-        visible ? "max-h-16 opacity-100" : "max-h-0 opacity-0"
+        visible && activePanel
+          ? "max-h-[340px] opacity-100"
+          : visible
+            ? "max-h-16 opacity-100"
+            : "max-h-0 opacity-0"
       )}
     >
       <div className="flex items-center gap-1.5 px-3 h-12 overflow-x-auto overflow-y-hidden scrollbar-hide">
@@ -454,7 +652,26 @@ export default function ContextToolbar() {
         {node?.type === "textNode" && <TextToolbarSection node={node} />}
         {node?.type === "conditionNode" && <ConditionToolbarSection node={node} />}
         {node?.type === "idealStateNode" && <IdealStateToolbarSection node={node} />}
+        {node?.type === "agentNode" && (
+          <AgentToolbarSection node={node} activePanel={activePanel} setActivePanel={setActivePanel} />
+        )}
+        {node?.type === "toolNode" && (
+          <ToolSchemaToolbarSection node={node} activePanel={activePanel} setActivePanel={setActivePanel} />
+        )}
+        {node?.type === "startNode" && (
+          <StartToolbarSection node={node} activePanel={activePanel} setActivePanel={setActivePanel} />
+        )}
+        {node?.type === "finishNode" && (
+          <FinishToolbarSection node={node} activePanel={activePanel} setActivePanel={setActivePanel} />
+        )}
       </div>
+      {activePanel && node && (
+        <SchemaPanel
+          nodeId={activePanel.nodeId}
+          schemaType={activePanel.type}
+          onClose={() => setActivePanel(null)}
+        />
+      )}
     </div>
   );
 }

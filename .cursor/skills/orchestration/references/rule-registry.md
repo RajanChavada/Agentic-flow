@@ -33,6 +33,7 @@ For cross-IDE portability (Claude Code, Copilot, Antigravity), see `Context/ide-
 | log-update | `log-update.mdc` | After EVERY completed task. Append to logs, optionally AGENT_MEMORY. |
 | min-lovable-product | `min-lovable-product.mdc` | UX, lovability, delight. MLP over MVP. (Often always-applied.) |
 | qa-agent (skill) | `.cursor/skills/qa-agent/SKILL.md` | Testing, QA, test coverage, write tests, add tests, verify code. |
+| mobile-compat (skill) | `.cursor/skills/mobile-compat/SKILL.md` | Mobile, responsive, breakpoint, touch, small screen, mobile-friendly, mobile compatibility. |
 
 ---
 
@@ -136,6 +137,16 @@ For cross-IDE portability (Claude Code, Copilot, Antigravity), see `Context/ide-
 5. `Context/BACKEND_PLAN.md` (if backend tests)
 6. Source files under test
 7. Use Exa MCP for testing best-practice research before designing tests
+
+### Mobile Compatibility
+1. `.cursor/skills/mobile-compat/SKILL.md`
+2. `Context/FRONTEND_PLAN.MD` (layout system, component structure)
+3. `Context/memory/MEMORY.md` (past mobile decisions)
+4. `Context/memory/AGENT_MEMORY.md` (breakpoint gotchas)
+5. `frontend/src/hooks/useBreakpoint.ts` (breakpoint definitions)
+6. `.cursor/skills/mobile-compat/references/mobile-patterns.md` (responsive patterns)
+7. `Context/testing/conventions.md` (QA patterns)
+8. Source files to audit
 
 ---
 

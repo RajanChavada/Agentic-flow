@@ -11,6 +11,8 @@ import type {
   WorkflowScenario,
   BatchEstimateResult,
   ActualNodeStats,
+  EdgeContractResult,
+  ContractSummary,
 } from '@/types/workflow';
 import { nodesToPayload, edgesToPayload } from '../utils';
 import type { ScalingParams } from '../types';
@@ -50,6 +52,17 @@ export interface EstimationSlice {
   // Actions - observability
   setActualStats: (stats: ActualNodeStats[]) => void;
   clearActualStats: () => void;
+
+  // State - contract validation
+  contractResults: EdgeContractResult[];
+  contractSummary: ContractSummary | null;
+  isValidatingContracts: boolean;
+
+  // Actions - contract validation
+  setContractResults: (results: EdgeContractResult[], summary: ContractSummary) => void;
+  clearContractResults: () => void;
+  setIsValidatingContracts: (v: boolean) => void;
+  validateContracts: () => Promise<void>;
 }
 
 type CombinedState = WorkflowSlice & EstimationSlice & UISlice & PersistenceSlice;
@@ -176,4 +189,39 @@ export const createEstimationSlice: StateCreator<CombinedState, [], [], Estimati
 
   setActualStats: (stats) => set({ actualStats: stats }),
   clearActualStats: () => set({ actualStats: [] }),
+
+  // Contract validation
+  contractResults: [],
+  contractSummary: null,
+  isValidatingContracts: false,
+
+  setContractResults: (results, summary) => set({ contractResults: results, contractSummary: summary }),
+  clearContractResults: () => set({ contractResults: [], contractSummary: null }),
+  setIsValidatingContracts: (v) => set({ isValidatingContracts: v }),
+
+  validateContracts: async () => {
+    const s = get();
+    if (s.edges.length === 0) return;
+    set({ isValidatingContracts: true });
+    try {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+      const res = await fetch(`${API_BASE}/api/validate-contracts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nodes: nodesToPayload(s.nodes),
+          edges: edgesToPayload(s.edges),
+        }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      set({
+        contractResults: data.edges,
+        contractSummary: data.summary,
+        isValidatingContracts: false,
+      });
+    } catch {
+      set({ isValidatingContracts: false });
+    }
+  },
 });

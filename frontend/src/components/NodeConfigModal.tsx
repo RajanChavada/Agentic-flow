@@ -170,7 +170,7 @@ export default function NodeConfigModal() {
       const modalMaxHeight = Math.min(640, vh - 2 * MODAL_PADDING - 80);
       setModalPos({
         top: 100,
-        left: window.innerWidth - MODAL_WIDTH - 40,
+        left: Math.max(MODAL_PADDING, window.innerWidth - MODAL_WIDTH - 40),
         maxHeight: modalMaxHeight,
       });
     }
@@ -253,8 +253,8 @@ export default function NodeConfigModal() {
         style={{
           position: "fixed",
           top: modalPos?.top ?? 100,
-          left: modalPos?.left ?? window.innerWidth - MODAL_WIDTH - 40,
-          width: MODAL_WIDTH,
+          left: modalPos?.left ?? Math.max(MODAL_PADDING, window.innerWidth - MODAL_WIDTH - 40),
+          width: Math.min(MODAL_WIDTH, window.innerWidth - 2 * MODAL_PADDING),
           maxHeight: modalPos?.maxHeight ?? 600,
         }}
         className={`flex flex-col rounded-lg shadow-2xl border transition-colors pointer-events-auto overflow-hidden ${

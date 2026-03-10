@@ -22,6 +22,8 @@ import {
   HelpCircle,
   PanelLeft,
   MoreHorizontal,
+  ShieldCheck,
+  X,
 } from "lucide-react";
 import {
   useWorkflowStore,
@@ -49,6 +51,7 @@ import PublishModal from "./marketplace/PublishModal";
 import ShareWorkflowModal from "./ShareWorkflowModal";
 import { useAutoLayout } from "@/hooks/useAutoLayout";
 import { openTutorial } from "@/hooks/useTutorial";
+import { nodesToPayload, edgesToPayload } from "@/store/utils";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -70,6 +73,13 @@ export default function HeaderBar() {
   const autoLayout = useAutoLayout();
   const [overflowOpen, setOverflowOpen] = useState(false);
   const overflowRef = useRef<HTMLDivElement>(null);
+  const [validating, setValidating] = useState(false);
+  const [contractToast, setContractToast] = useState<{
+    total: number;
+    compatible: number;
+    incompatible: number;
+    unvalidated: number;
+  } | null>(null);
 
   // Auth
   const user = useUser();
@@ -172,6 +182,45 @@ export default function HeaderBar() {
     const result = await useWorkflowStore.getState().saveWorkflowToSupabase(name);
     if (!result) {
       setSaveError("Save As failed. Please try again.");
+    }
+  };
+
+  // ── Contract toast auto-dismiss ─────────────────────────────
+  useEffect(() => {
+    if (contractToast) {
+      const timer = setTimeout(() => setContractToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [contractToast]);
+
+  // ── Validate Contracts ──────────────────────────────────────
+  const handleValidateContracts = async () => {
+    setValidating(true);
+    setErrorBanner(undefined);
+    try {
+      const res = await fetch(`${API_BASE}/api/validate-contracts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nodes: nodesToPayload(nodes),
+          edges: edgesToPayload(edges),
+        }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || res.statusText);
+      }
+      const data = await res.json();
+      useWorkflowStore
+        .getState()
+        .setContractResults(data.edges, data.summary);
+      setContractToast(data.summary);
+    } catch (err: unknown) {
+      setErrorBanner(
+        err instanceof Error ? err.message : "Contract validation failed"
+      );
+    } finally {
+      setValidating(false);
     }
   };
 
@@ -706,6 +755,21 @@ export default function HeaderBar() {
 
         {/* Estimate — always visible, responsive text */}
         <button
+          onClick={handleValidateContracts}
+          disabled={validating || edges.length === 0}
+          className={`rounded-md border px-2 sm:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center ${
+            isDark
+              ? "border-emerald-700 text-emerald-300 hover:bg-emerald-800/40"
+              : "border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+          }`}
+          title="Validate schema contracts on all edges"
+        >
+          <ShieldCheck className="w-3.5 h-3.5" />
+          <span className="hidden lg:inline ml-1">
+            {validating ? "Validating\u2026" : "Validate"}
+          </span>
+        </button>
+        <button
           onClick={handleEstimate}
           disabled={loading}
           className="rounded-md bg-blue-600 px-2 sm:px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition"
@@ -765,6 +829,38 @@ export default function HeaderBar() {
           edges={shareMode === "workflow" ? edges : undefined}
           userId={user.id}
         />
+      )}
+
+      {/* Contract validation toast */}
+      {contractToast && (
+        <div
+          className={`fixed bottom-4 right-4 z-50 rounded-lg border shadow-lg px-4 py-3 text-sm animate-in slide-in-from-bottom-2 ${
+            isDark
+              ? "bg-slate-900 border-slate-700 text-slate-200"
+              : "bg-white border-stone-200 text-stone-800"
+          }`}
+        >
+          <p className="font-medium mb-1">Contract Validation</p>
+          <div className="flex items-center gap-3 text-xs">
+            {contractToast.compatible > 0 && (
+              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                <Check className="w-3 h-3" />
+                {contractToast.compatible} valid
+              </span>
+            )}
+            {contractToast.incompatible > 0 && (
+              <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
+                <X className="w-3 h-3" />
+                {contractToast.incompatible} incompatible
+              </span>
+            )}
+            {contractToast.unvalidated > 0 && (
+              <span className={`flex items-center gap-1 ${isDark ? "text-slate-400" : "text-stone-500"}`}>
+                {contractToast.unvalidated} unvalidated
+              </span>
+            )}
+          </div>
+        </div>
       )}
     </header>
   );

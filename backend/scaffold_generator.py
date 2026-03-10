@@ -14,10 +14,19 @@ Given a natural language description, generate a workflow as a JSON object with:
 - "edges": Array of edge objects connecting nodes
 
 NODE TYPES:
-- startNode: Entry point. Every workflow must have exactly one. Fields: { id, type: "startNode", label: "Start" }
-- agentNode: An AI agent. Fields: { id, type: "agentNode", label, model_provider, model_name, context, task_type, expected_output_size, allowed_actions }
-- toolNode: An external tool. Fields: { id, type: "toolNode", label, tool_id }
-- finishNode: Exit point. Every workflow must have exactly one. Fields: { id, type: "finishNode", label: "Finish" }
+- startNode: Entry point. Every workflow must have exactly one. Fields: { id, type: "startNode", label: "Start", output_schema }
+- agentNode: An AI agent. Fields: { id, type: "agentNode", label, model_provider, model_name, context, task_type, expected_output_size, allowed_actions, output_schema, input_schema }
+- toolNode: An external tool. Fields: { id, type: "toolNode", label, tool_id, output_schema, input_schema }
+- finishNode: Exit point. Every workflow must have exactly one. Fields: { id, type: "finishNode", label: "Finish", input_schema }
+
+SCHEMAS (output_schema / input_schema):
+These are optional JSON Schema objects describing the data a node produces (output_schema) or consumes (input_schema).
+Use them when the description implies specific structured data flowing between agents, e.g.:
+- "classify intent and route" → classifier agent output_schema: { type: "object", properties: { intent: { type: "string" }, confidence: { type: "number" } }, required: ["intent"] }
+- "summarize document" → summarizer output_schema: { type: "object", properties: { summary: { type: "string" }, key_points: { type: "array", items: { type: "string" } } }, required: ["summary"] }
+- "validate and approve" → decision agent output_schema: { type: "object", properties: { decision: { type: "string", enum: ["approve", "reject"] }, reason: { type: "string" } }, required: ["decision"] }
+Schemas must always have type: "object" at the root with a "properties" object.
+Set output_schema/input_schema to null if the data flow is unstructured or the prompt does not imply specific field names.
 
 AVAILABLE MODELS:
 - OpenAI: GPT-4o (complex tasks), GPT-4o-mini (simple/fast tasks)
@@ -59,6 +68,7 @@ RULES:
 8. For cyclic workflows (review loops, iterative refinement), add back-edges and set max_steps on the looping agent
 9. Connect tool nodes to agent nodes that use them (tool output feeds into agent)
 10. If the user description mentions specific actions an agent should take (e.g., "classify as positive, negative, or neutral", "route to escalate, auto-resolve, or request-info"), populate the `allowed_actions` field as a list of those action labels. Only include allowed_actions on agentNode type. Set allowed_actions to null if no specific actions are mentioned.
+11. Add output_schema and input_schema when the description implies structured data flowing between nodes (specific field names, types, or data shapes). Adjacent nodes should have compatible schemas: the upstream node's output_schema should cover the downstream node's input_schema required fields. Set both to null for unstructured or conversational data flow.
 
 Return ONLY valid JSON. No markdown, no explanations, no code blocks."""
 

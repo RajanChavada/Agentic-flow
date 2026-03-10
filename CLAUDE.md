@@ -55,6 +55,7 @@ Project-specific slash commands live in `.claude/commands/` alongside GSD comman
 | `/frontend` | Frontend implementation with mandatory pre/post steps |
 | `/backend` | Backend implementation with FastAPI/Pydantic patterns |
 | `/qa` | QA and test automation -- researches via Exa, then designs and implements tests |
+| `/mobile-compat` | Mobile compatibility audit, translation, QA validation, and production transferability |
 
 GSD commands are in `.claude/commands/gsd/` -- use `/gsd:help` for the full list.
 
@@ -120,5 +121,6 @@ See `Context/ide-portability.md` for the full mapping.
 | Database / Supabase | `Context/supabase.md` |
 | Bug fix | `Context/memory/AGENT_MEMORY.md`, recent logs in `Context/memory/logs_agent/` |
 | QA / testing | `Context/testing/conventions.md`, source files under test |
+| Mobile compatibility | `Context/FRONTEND_PLAN.MD`, `frontend/src/hooks/useBreakpoint.ts`, `Context/memory/MEMORY.md` |
 
 Write `Context/memory/task_plan.md` before editing frontend source files.

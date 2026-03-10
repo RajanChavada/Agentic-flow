@@ -100,6 +100,7 @@ Read the relevant Context documents before making changes:
 | Database / Supabase | `Context/supabase.md` |
 | Bug fix | `Context/memory/AGENT_MEMORY.md`, recent logs in `Context/memory/logs_agent/` |
 | QA / testing | `Context/testing/conventions.md`, source files under test |
+| Mobile compatibility | `Context/FRONTEND_PLAN.MD`, `frontend/src/hooks/useBreakpoint.ts`, `Context/memory/MEMORY.md` |
 
 Write `Context/memory/task_plan.md` before editing frontend source files.
 

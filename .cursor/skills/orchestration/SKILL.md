@@ -44,6 +44,7 @@ Use the [Rule Registry](references/rule-registry.md) to select which rules and f
 - After any task → `log-update`
 - UX / lovability → `min-lovable-product`
 - Testing / QA → `qa-agent` (skill)
+- Mobile / responsive / breakpoints → `mobile-compat` (skill), `Context/FRONTEND_PLAN.MD`, `frontend/src/hooks/useBreakpoint.ts`
 
 ## Step 3 — Load Context Proactively
 
@@ -89,6 +90,7 @@ After loading, proceed with edits.
 | After any task | log-update | logs_agent/YYYY-MM-DD.md |
 | UX, lovable, delight | min-lovable-product | (guidance only) |
 | Test, QA, coverage, "write tests" | qa-agent (skill) | Context/testing/conventions.md, testing-stack.md, source files |
+| Mobile, responsive, breakpoint, touch, phone | mobile-compat (skill) | FRONTEND_PLAN.MD, useBreakpoint.ts, mobile-patterns.md, MEMORY.md |
 
 ---
 

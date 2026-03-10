@@ -64,6 +64,9 @@ export default function ScaffoldRefineBar() {
             taskType: n.task_type ?? undefined,
             expectedOutputSize: n.expected_output_size ?? undefined,
             expectedCallsPerRun: n.expected_calls_per_run ?? undefined,
+            allowedActions: n.allowed_actions ?? undefined,
+            outputSchema: (n.output_schema as Record<string, unknown> | null | undefined) ?? null,
+            inputSchema: (n.input_schema as Record<string, unknown> | null | undefined) ?? null,
           },
         })
       );

@@ -36,6 +36,7 @@ import {
   useIsRefineBarOpen,
 } from "@/store/useWorkflowStore";
 import type { WorkflowNodeData, WorkflowNodeType } from "@/types/workflow";
+import { useContractAutoValidate } from "@/hooks/useContractAutoValidate";
 
 /** Register all custom node types once. */
 const nodeTypes = {
@@ -88,6 +89,9 @@ export default function Canvas() {
     closeConfigModal,
     restoreFromLocalStorage,
   } = useWorkflowStore();
+
+  // ── Auto-validate contracts when node schemas change ─────────
+  useContractAutoValidate();
 
   // ── Restore local storage guest snapshot on mount ───────────
   useEffect(() => {

@@ -202,7 +202,7 @@ export default function TagInput({
                       e.stopPropagation();
                       removeTag(i);
                     }}
-                    className="opacity-60 hover:opacity-100 cursor-pointer"
+                    className="opacity-60 hover:opacity-100 cursor-pointer p-1 -m-1"
                     aria-label={`Remove ${tag}`}
                   >
                     <X className="w-3.5 h-3.5" />

@@ -11,6 +11,8 @@ import type {
   ActualNodeStats,
   ProviderDetailed,
   ToolCategoryDetailed,
+  EdgeContractResult,
+  ContractSummary,
 } from '@/types/workflow';
 
 // Forward exports for slice use
@@ -38,4 +40,4 @@ export interface ScalingParams {
 
 // Re-export workflow types
 export type WorkflowNode = Node<WorkflowNodeData>;
-export type { BatchEstimateResult, ActualNodeStats, ProviderDetailed, ToolCategoryDetailed };
+export type { BatchEstimateResult, ActualNodeStats, ProviderDetailed, ToolCategoryDetailed, EdgeContractResult, ContractSummary };
