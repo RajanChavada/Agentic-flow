@@ -52,12 +52,10 @@ created: 2026-03-09
 
 ## Wave 0 Requirements
 
-- [ ] `backend/tests/test_models.py` — add action constraint validation tests
-- [ ] `backend/tests/test_estimator.py` — add action-aware estimation tests
-- [ ] `frontend/src/components/__tests__/TagInput.test.tsx` — TagInput component tests
-- [ ] `backend/tests/test_scaffold.py` — scaffold action auto-population tests
+- [x] `backend/tests/test_allowed_actions.py` — 10 tests for validation + estimation (Plan 05-00)
+- [x] `frontend/src/components/__tests__/TagInput.test.tsx` — 9 tests for TagInput interactions (Plan 05-00)
 
-*Existing test infrastructure (Vitest + pytest) covers framework requirements.*
+*Wave 0 plan (05-00-PLAN.md) creates both test files before implementation begins.*
 
 ---
 
