@@ -110,12 +110,17 @@ Plans:
   3. Backend accepts `allowed_actions` and uses action count to refine estimation for classification/routing agents
   4. Scaffold generator auto-populates actions from NL descriptions containing action keywords
   5. Agent node face shows "N actions" badge when actions are configured
-**Plans**: 0 plans
+**Plans**: 3 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Data layer: frontend types, backend model, estimation refinement
+- [ ] 05-02-PLAN.md — Frontend UI: TagInput component, config modal integration, node badge
+- [ ] 05-03-PLAN.md — Scaffold update and backend tests for allowed_actions
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 0 -> 1 -> 2 -> 3 -> 4
+Phases execute in numeric order: 0 -> 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -124,4 +129,4 @@ Phases execute in numeric order: 0 -> 1 -> 2 -> 3 -> 4
 | 2. Canvas Metadata | 2/2 | Complete   | 2026-03-05 |
 | 3. Ideal State Node | 3/3 | Complete | 2026-03-05 |
 | 4. Probability-Weighted Estimation | 2/2 | Complete | 2026-03-05 |
-| 5. Action Constraints | 0/0 | Not Started |  |
+| 5. Action Constraints | 0/3 | Not Started |  |
