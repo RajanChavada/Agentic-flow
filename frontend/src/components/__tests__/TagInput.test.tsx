@@ -40,10 +40,10 @@ describe("TagInput", () => {
   test("rejects duplicate case-insensitively", () => {
     const onChange = vi.fn();
     render(
-      <TagInput value={["approve"]} onChange={onChange} placeholder="Type action..." />
+      <TagInput value={["approve"]} onChange={onChange} />
     );
 
-    const input = screen.getByPlaceholderText("Type action...");
+    const input = screen.getByRole("textbox");
     fireEvent.change(input, { target: { value: "Approve" } });
     fireEvent.keyDown(input, { key: "Enter" });
 
@@ -63,10 +63,10 @@ describe("TagInput", () => {
   test("backspace on empty removes last tag", () => {
     const onChange = vi.fn();
     render(
-      <TagInput value={["approve", "reject"]} onChange={onChange} placeholder="Type action..." />
+      <TagInput value={["approve", "reject"]} onChange={onChange} />
     );
 
-    const input = screen.getByPlaceholderText("Type action...");
+    const input = screen.getByRole("textbox");
     // Ensure input is empty (no change event)
     fireEvent.keyDown(input, { key: "Backspace" });
 
@@ -85,11 +85,10 @@ describe("TagInput", () => {
         value={["a", "b"]}
         onChange={onChange}
         maxTags={2}
-        placeholder="Type action..."
       />
     );
 
-    const input = screen.getByPlaceholderText("Type action...");
+    const input = screen.getByRole("textbox");
     fireEvent.change(input, { target: { value: "c" } });
     fireEvent.keyDown(input, { key: "Enter" });
 
