@@ -1,7 +1,7 @@
 """Pydantic request / response schemas for the estimation API."""
 
 from typing import List, Optional, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class EstimationRange(BaseModel):
@@ -66,6 +66,29 @@ class NodeConfig(BaseModel):
         le=50,
         description="Expected number of LLM calls this agent makes per workflow run (for orchestrators)",
     )
+    # ── Action constraint fields ──────────────────────────────────
+    allowed_actions: Optional[List[str]] = Field(
+        default=None,
+        description="Discrete actions this agent can take (e.g., ['approve', 'reject', 'escalate'])",
+    )
+
+    @field_validator("allowed_actions")
+    @classmethod
+    def validate_allowed_actions(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+        if v is None:
+            return None
+        if len(v) > 20:
+            raise ValueError("Maximum 20 allowed actions permitted")
+        cleaned = []
+        for item in v:
+            stripped = item.strip()
+            if not stripped:
+                raise ValueError("Action labels must not be empty")
+            if len(stripped) > 50:
+                raise ValueError(f"Action label must be 50 chars or fewer, got {len(stripped)}")
+            cleaned.append(stripped)
+        return cleaned
+
     # ── Condition node fields ─────────────────────────────────────
     condition_expression: Optional[str] = Field(
         default=None,
@@ -86,6 +109,15 @@ class NodeConfig(BaseModel):
     ideal_state_schema: Optional[dict] = Field(
         default=None,
         description="Generated JSON schema for success criteria",
+    )
+    # ── Edge Data Contract fields ─────────────────────────────────
+    output_schema: Optional[dict] = Field(
+        default=None,
+        description="JSON Schema defining what this node produces",
+    )
+    input_schema: Optional[dict] = Field(
+        default=None,
+        description="JSON Schema defining what this node expects as input",
     )
 
 
@@ -420,3 +452,34 @@ class ImportedWorkflow(BaseModel):
     nodes: List[NodeConfig]
     edges: List[EdgeConfig]
     metadata: dict = Field(default_factory=dict, description="Source-specific extra info")
+
+
+# ── Edge Data Contract validation models ──────────────────────
+
+class ContractValidationRequest(BaseModel):
+    """POST /api/validate-contracts -- check all edge schemas."""
+    nodes: List[NodeConfig]
+    edges: List[EdgeConfig]
+
+
+class EdgeContractResult(BaseModel):
+    """Validation result for a single edge."""
+    edge_id: Optional[str] = None
+    source_id: str
+    target_id: str
+    status: Literal["compatible", "incompatible", "unvalidated"]
+    errors: List[str] = []
+
+
+class ContractSummary(BaseModel):
+    """Aggregate status of all contracts."""
+    total_edges: int
+    compatible: int
+    incompatible: int
+    unvalidated: int
+
+
+class ContractValidationResponse(BaseModel):
+    """Response from POST /api/validate-contracts."""
+    edges: List[EdgeContractResult]
+    summary: ContractSummary

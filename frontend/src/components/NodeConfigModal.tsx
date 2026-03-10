@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { BrainCircuit, Target, Loader2 } from "lucide-react";
+import TagInput from "@/components/ui/TagInput";
 import {
   useWorkflowStore,
   useSelectedNodeId,
@@ -43,6 +44,9 @@ export default function NodeConfigModal() {
   const [expectedOutputSize, setExpectedOutputSize] = useState(node?.data?.expectedOutputSize ?? "");
   const [expectedCallsPerRun, setExpectedCallsPerRun] = useState<number | null>(
     (node?.data?.expectedCallsPerRun as number | null | undefined) ?? null
+  );
+  const [allowedActions, setAllowedActions] = useState<string[]>(
+    (node?.data?.allowedActions as string[] | undefined) ?? []
   );
 
   // ── Condition node state ─────────────────────────────────
@@ -184,6 +188,7 @@ export default function NodeConfigModal() {
       setTaskType(node.data.taskType ?? "");
       setExpectedOutputSize(node.data.expectedOutputSize ?? "");
       setExpectedCallsPerRun((node.data.expectedCallsPerRun as number | null | undefined) ?? null);
+      setAllowedActions((node.data.allowedActions as string[] | undefined) ?? []);
       setConditionExpression((node.data.conditionExpression as string | undefined) ?? "");
       setProbability((node.data.probability as number | undefined) ?? 50);
       setIdealStateDescription((node.data.idealStateDescription as string | undefined) ?? "");
@@ -224,6 +229,7 @@ export default function NodeConfigModal() {
         taskType: taskType || undefined,
         expectedOutputSize: expectedOutputSize || undefined,
         expectedCallsPerRun: expectedCallsPerRun,
+        allowedActions: allowedActions.length > 0 ? allowedActions : undefined,
       });
     }
     closeConfigModal();
@@ -808,6 +814,26 @@ export default function NodeConfigModal() {
               }`}
               placeholder="Provide context for this agent node…"
             />
+
+            {/* Allowed Actions */}
+            <label
+              className={`block text-xs font-medium mb-1 ${
+                isDark ? "text-slate-400" : "text-gray-600"
+              }`}
+            >
+              Allowed Actions{" "}
+              <span className={isDark ? "text-slate-500" : "text-gray-400"}>
+                (optional)
+              </span>
+            </label>
+            <div className="mb-4">
+              <TagInput
+                value={allowedActions}
+                onChange={setAllowedActions}
+                placeholder="Type action, press Enter..."
+                maxTags={20}
+              />
+            </div>
 
             {/* Max Steps (loop control) */}
             <label

@@ -72,7 +72,8 @@ class TestAllowedActionsValidation:
 class TestAllowedActionsEstimation:
     """Tests for estimation impact of allowed_actions on agent nodes."""
 
-    def _make_agent(self, task_type: str, allowed_actions=None):
+    def _make_agent(self, task_type: str, allowed_actions=None,
+                    expected_output_size: str = "medium"):
         """Helper to create an agent NodeConfig."""
         return NodeConfig(
             id="agent-1",
@@ -82,12 +83,16 @@ class TestAllowedActionsEstimation:
             model_name="GPT-4o",
             context="Classify the incoming ticket",
             task_type=task_type,
-            expected_output_size="short",
+            expected_output_size=expected_output_size,
             allowed_actions=allowed_actions,
         )
 
     def test_classification_with_actions_fewer_output_tokens(self):
-        """Classification + allowed_actions produces fewer output_tokens than without."""
+        """Classification + allowed_actions produces fewer output_tokens than without.
+
+        With medium output size, base multiplier is 0.5.
+        With 3 actions, constrained multiplier is 0.15*3 = 0.45 < 0.5.
+        """
         without = estimate_agent_node(
             self._make_agent("classification"), []
         )
@@ -97,12 +102,16 @@ class TestAllowedActionsEstimation:
         assert with_actions.output_tokens < without.output_tokens
 
     def test_routing_with_actions_fewer_output_tokens(self):
-        """Routing + allowed_actions produces fewer output_tokens than without."""
+        """Routing + allowed_actions produces fewer output_tokens than without.
+
+        With medium output size, base multiplier is 0.4.
+        With 2 actions, constrained multiplier is 0.15*2 = 0.30 < 0.4.
+        """
         without = estimate_agent_node(
             self._make_agent("routing"), []
         )
         with_actions = estimate_agent_node(
-            self._make_agent("routing", ["escalate", "auto-resolve", "request-info"]), []
+            self._make_agent("routing", ["escalate", "auto-resolve"]), []
         )
         assert with_actions.output_tokens < without.output_tokens
 

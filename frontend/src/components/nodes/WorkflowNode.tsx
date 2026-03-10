@@ -178,6 +178,13 @@ function WorkflowNode({ id, data, selected }: NodeProps & { data: WorkflowNodeDa
         </p>
       )}
 
+      {/* Actions badge */}
+      {data.type === "agentNode" && (data.allowedActions as string[] | undefined)?.length ? (
+        <p className={`text-[9px] mt-0.5 truncate ${isDark ? "text-zinc-400" : "text-zinc-500"}`}>
+          {(data.allowedActions as string[]).length} action{(data.allowedActions as string[]).length !== 1 ? "s" : ""}
+        </p>
+      ) : null}
+
       {data.type === "toolNode" && data.toolId && (
         <p className={`text-[10px] mt-1 truncate ${isDark ? "text-amber-400/70" : "text-orange-500"}`}>
           <Wrench className="inline w-3 h-3 mr-0.5" /> {data.toolId}
