@@ -625,6 +625,7 @@ export default function ContextToolbar() {
   const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId);
   const nodes = useWorkflowNodes();
   const node = nodes.find((n) => n.id === selectedNodeId);
+  const contractSummary = useWorkflowStore((s) => s.contractSummary);
 
   const [activePanel, setActivePanel] = useState<{ type: "output" | "input"; nodeId: string } | null>(null);
 
@@ -663,6 +664,27 @@ export default function ContextToolbar() {
         )}
         {node?.type === "finishNode" && (
           <FinishToolbarSection node={node} activePanel={activePanel} setActivePanel={setActivePanel} />
+        )}
+        {contractSummary && contractSummary.total_edges > 0 && (
+          <>
+            <ToolbarDivider />
+            <span
+              title="Schema Contract Check: verifies that data fields passed between connected nodes are type-compatible. This does not affect cost estimates — it catches data format mismatches before deployment."
+              className={cn(
+                "flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 cursor-help select-none",
+                contractSummary.incompatible > 0
+                  ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
+                  : contractSummary.compatible > 0
+                    ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
+                    : "bg-stone-100 text-stone-500 dark:bg-slate-700 dark:text-slate-400"
+              )}
+            >
+              <GitBranch className="w-3 h-3 shrink-0" />
+              {contractSummary.incompatible > 0
+                ? `${contractSummary.incompatible} schema mismatch${contractSummary.incompatible > 1 ? "es" : ""}`
+                : `${contractSummary.compatible}/${contractSummary.total_edges} compatible`}
+            </span>
+          </>
         )}
       </div>
       {activePanel && node && (

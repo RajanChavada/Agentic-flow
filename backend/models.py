@@ -378,7 +378,7 @@ class BatchEstimateResponse(BaseModel):
 class SchemaGenerateRequest(BaseModel):
     """POST /api/generate-schema - NL to JSON schema."""
     description: str = Field(
-        ..., min_length=10, max_length=2000,
+        ..., min_length=3, max_length=2000,
         description="Natural language success criteria description",
     )
     context: Optional[str] = Field(
@@ -456,9 +456,21 @@ class ImportedWorkflow(BaseModel):
 
 # ── Edge Data Contract validation models ──────────────────────
 
+class ContractNodeInput(BaseModel):
+    """Minimal node representation for contract validation.
+
+    Intentionally uses Optional[str] (not a strict Literal) for any
+    node-type or task-type fields — the validator only reads
+    ``id``, ``output_schema``, and ``input_schema``.
+    """
+    id: str
+    output_schema: Optional[dict] = None
+    input_schema: Optional[dict] = None
+
+
 class ContractValidationRequest(BaseModel):
     """POST /api/validate-contracts -- check all edge schemas."""
-    nodes: List[NodeConfig]
+    nodes: List[ContractNodeInput]
     edges: List[EdgeConfig]
 
 

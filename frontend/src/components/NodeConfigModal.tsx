@@ -16,6 +16,7 @@ import type { ModelInfo, ToolInfoType } from "@/types/workflow";
 
 const MODAL_WIDTH = 370;
 const MODAL_PADDING = 16;
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export default function NodeConfigModal() {
   const { isConfigModalOpen, theme } = useUIState();
@@ -339,11 +340,11 @@ export default function NodeConfigModal() {
             {/* Generate Schema Button */}
             <button
               onClick={async () => {
-                if (!idealStateDescription.trim()) return;
+                if (idealStateDescription.trim().length < 3) return;
                 setIsGenerating(true);
                 setSchemaErrors([]);
                 try {
-                  const res = await fetch("http://localhost:8000/api/generate-schema", {
+                  const res = await fetch(`${API_BASE}/api/generate-schema`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ description: idealStateDescription }),
@@ -362,9 +363,9 @@ export default function NodeConfigModal() {
                   setIsGenerating(false);
                 }
               }}
-              disabled={isGenerating || !idealStateDescription.trim()}
+              disabled={isGenerating || idealStateDescription.trim().length < 3}
               className={`w-full rounded-md px-3 py-2 text-sm font-medium transition mb-3 flex items-center justify-center gap-2 ${
-                isGenerating || !idealStateDescription.trim()
+                isGenerating || idealStateDescription.trim().length < 3
                   ? isDark
                     ? "bg-slate-700 text-slate-500 cursor-not-allowed"
                     : "bg-gray-100 text-gray-400 cursor-not-allowed"
