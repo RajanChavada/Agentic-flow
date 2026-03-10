@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Canvas Metadata** - Real-time graph analysis and risk scoring (completed 2026-03-05)
 - [x] **Phase 3: Ideal State Node** - NL-to-schema success criteria definition
 - [x] **Phase 4: Probability-Weighted Estimation** - Cost ranges across conditional branches
-- [ ] **Phase 5: Action Constraints** - Discrete allowed actions on agent nodes for constrained output
+- [x] **Phase 5: Action Constraints** - Discrete allowed actions on agent nodes for constrained output
 
 ## Phase Details
 
@@ -113,9 +113,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Data layer: frontend types, backend model, estimation refinement
-- [ ] 05-02-PLAN.md — Frontend UI: TagInput component, config modal integration, node badge
-- [ ] 05-03-PLAN.md — Scaffold update and backend tests for allowed_actions
+- [x] 05-01-PLAN.md — Data layer: frontend types, backend model, estimation refinement
+- [x] 05-02-PLAN.md — Frontend UI: TagInput component, config modal integration, node badge
+- [x] 05-03-PLAN.md — Scaffold update and backend tests for allowed_actions
 
 ## Progress
 
@@ -129,4 +129,4 @@ Phases execute in numeric order: 0 -> 1 -> 2 -> 3 -> 4 -> 5
 | 2. Canvas Metadata | 2/2 | Complete   | 2026-03-05 |
 | 3. Ideal State Node | 3/3 | Complete | 2026-03-05 |
 | 4. Probability-Weighted Estimation | 2/2 | Complete | 2026-03-05 |
-| 5. Action Constraints | 0/3 | Not Started |  |
+| 5. Action Constraints | 3/3 | Complete | 2026-03-10 |

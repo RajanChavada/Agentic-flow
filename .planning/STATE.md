@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-stopped_at: Completed Phase 4 (Probability-Weighted Estimation)
-last_updated: "2026-03-05T21:00:00.000Z"
-last_activity: 2026-03-05 — Completed Phase 4 Probability-Weighted Estimation (2 plans)
+stopped_at: Completed Phase 05 Action Constraints
+last_updated: "2026-03-10T18:00:00.000Z"
+last_activity: 2026-03-10 — Phase 05 Action Constraints complete (all 3 plans verified)
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 5
-  total_plans: 13
-  completed_plans: 13
-  percent: 100
+  total_plans: 17
+  completed_plans: 14
+  percent: 82
 ---
 
 # Project State
@@ -21,32 +21,33 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** Users can define what "done" looks like for a workflow and see, before any execution, whether their graph can reach that goal, how much it will cost across different branches, and where the risk surfaces are.
-**Current focus:** All phases complete. Phase 1 has 2/3 plans in ROADMAP (code appears complete).
+**Current focus:** Phase 5 (Action Constraints) complete. Phase 1 (Condition Node) still in progress.
 
 ## Current Position
 
-Phase: 4 of 5 (Probability-Weighted Estimation) - Completed
-Plan: 2 of 2 plans completed
-Status: All milestone phases complete
-Last activity: 2026-03-05 — Completed Phase 4 Probability-Weighted Estimation
+Phase: 5 of 6 (Action Constraints) - Complete
+Plan: 3 of 3 plans completed
+Status: complete
+Last activity: 2026-03-10 — Phase 05 all plans verified and committed
 
-Progress: [██████████] 100%
+Progress: [████████░░] 82%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
-- Total execution time: ~2 hours
+- Total plans completed: 14
+- Total execution time: ~2.5 hours
 
 **By Phase:**
 
 | Phase | Plans | Status |
 |-------|-------|--------|
 | 00    | 3/3   | Complete |
-| 01    | 2/2   | Complete |
+| 01    | 2/3   | In Progress |
 | 02    | 2/2   | Complete |
 | 03    | 3/3   | Complete |
 | 04    | 2/2   | Complete |
+| 05    | 3/3   | Complete |
 
 ## Accumulated Context
 
@@ -70,6 +71,10 @@ Recent decisions affecting current work:
 - [Phase 04]: Branch ranges: min = cheapest path, max = most expensive, avg = E[cost] (probability-weighted)
 - [Phase 04]: Per-node branch_probability = sum of path probabilities containing that node
 - [Phase 04]: Sensitivity readout updated to use ranges from both cycles AND branches (was cycle-only)
+- [Phase 05]: TagInput uses pre-built CHIP_STYLES array (8 colors) instead of dynamic Tailwind classes (v4 can't JIT dynamic strings)
+- [Phase 05]: allowed_actions stored as string[] on node data, no separate output ports in v1
+- [Phase 05]: Estimation: 0.15 * action_count multiplier for classification/routing agents with constrained actions
+- [Phase 05]: Scaffold system prompt updated to extract action labels from NL descriptions
 
 ### Pending Todos
 
@@ -77,11 +82,10 @@ None.
 
 ### Blockers/Concerns
 
-- Backend Python environment is 3.9.12 (project targets 3.11+) — tiktoken module not installed
 - Phase 1 Condition Node shows 2/3 plans in ROADMAP but code implementation appears complete
 
 ## Session Continuity
 
-Last session: 2026-03-05T21:00:00.000Z
-Stopped at: Completed Phase 4 (Probability-Weighted Estimation)
+Last session: 2026-03-10T18:00:00.000Z
+Stopped at: Completed Phase 05 Action Constraints
 Resume file: None
