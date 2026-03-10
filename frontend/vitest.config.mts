@@ -8,7 +8,8 @@ export default defineConfig({
     react(),          // Enables JSX/TSX transformation
   ],
   test: {
-    environment: 'jsdom',  // Browser-like environment for React
+    environment: 'happy-dom',  // happy-dom avoids jsdom ESM compat issue (see AGENT_MEMORY)
     globals: true,         // No need to import describe/test/expect
+    setupFiles: ['./vitest.setup.ts'],
   },
 });
