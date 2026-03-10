@@ -244,6 +244,10 @@ Each phase is independently shippable and builds on the existing codebase withou
 - [x] Workflow Share Links — `.ai/context/features/workflow-share-links.md`
 - [ ] Stripe Integration & Subscription Tiers — `Context/features/stripe-integration-subscription-tiers.md`
 
+## Workflow Resilience & Error Handling
+
+- [ ] Failure Path Edges (Error Handling / Retry) -- `Context/features/failure-path-edges.md`
+
 ## Security & Production Hardening
 
 - [ ] Security Guardrails & Production Hardening -- `Context/features/security-guardrails-production-hardening.md`
@@ -252,3 +256,8 @@ Each phase is independently shippable and builds on the existing codebase withou
 
 - [x] Blank Canvas Workflow Scaffolding (Phase 1) -- `Context/features/blank-canvas-workflow-scaffold.md`
 - [x] AI-Powered NLP Scaffolding (Phase 2) -- backend `POST /api/scaffold` + NL prompt enablement + refine bar
+
+## Agent Intelligence
+
+- [ ] Edge Data Contracts (Typed Schemas) -- `Context/features/edge-data-contracts.md`
+- [ ] Action Constraints on Agent Nodes -- `Context/features/action-constraints-agent-nodes.md`

@@ -17,6 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Canvas Metadata** - Real-time graph analysis and risk scoring (completed 2026-03-05)
 - [x] **Phase 3: Ideal State Node** - NL-to-schema success criteria definition
 - [x] **Phase 4: Probability-Weighted Estimation** - Cost ranges across conditional branches
+- [ ] **Phase 5: Action Constraints** - Discrete allowed actions on agent nodes for constrained output
 
 ## Phase Details
 
@@ -99,6 +100,18 @@ Plans:
 - [x] 04-1-PLAN.md — Backend branch enumeration, probability-weighted aggregation, sensitivity update
 - [x] 04-2-PLAN.md — Frontend range display, probability badges in BreakdownSection
 
+### Phase 5: Action Constraints
+**Goal**: Users can define discrete allowed actions on agent nodes, improving estimation accuracy and scaffold generation quality
+**Depends on**: Phase 0
+**Requirements**: ACTN-01, ACTN-02, ACTN-03, ACTN-04, ACTN-05, ACTN-06, ACTN-07
+**Success Criteria** (what must be TRUE):
+  1. User can add/remove allowed action labels on agent nodes via tag input in config modal
+  2. Action chips display with color coding and support add/remove/edit-last interactions
+  3. Backend accepts `allowed_actions` and uses action count to refine estimation for classification/routing agents
+  4. Scaffold generator auto-populates actions from NL descriptions containing action keywords
+  5. Agent node face shows "N actions" badge when actions are configured
+**Plans**: 0 plans
+
 ## Progress
 
 **Execution Order:**
@@ -111,3 +124,4 @@ Phases execute in numeric order: 0 -> 1 -> 2 -> 3 -> 4
 | 2. Canvas Metadata | 2/2 | Complete   | 2026-03-05 |
 | 3. Ideal State Node | 3/3 | Complete | 2026-03-05 |
 | 4. Probability-Weighted Estimation | 2/2 | Complete | 2026-03-05 |
+| 5. Action Constraints | 0/0 | Not Started |  |

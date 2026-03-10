@@ -48,6 +48,16 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [ ] **ESTM-03**: EstimatePanel displays cost/token/latency as ranges (min-expected-max) instead of single values for branching workflows
 - [x] **ESTM-04**: Reachability analysis (BFS from Start to Ideal State) is computed and shown in metadata overlay
 
+### Action Constraints
+
+- [ ] **ACTN-01**: User can define allowed actions (string labels) on agent nodes via tag input in config modal
+- [ ] **ACTN-02**: Action chips display with color coding, support add (Enter), remove (X), and edit-last (Backspace)
+- [ ] **ACTN-03**: Duplicate actions are rejected with visual feedback (pulse on existing chip)
+- [ ] **ACTN-04**: Backend `NodeConfig` accepts `allowed_actions` as optional `List[str]` with validation
+- [ ] **ACTN-05**: Estimator uses action count to refine output tokens for classification/routing agents
+- [ ] **ACTN-06**: Scaffold generator auto-populates `allowed_actions` from NL descriptions containing action keywords
+- [ ] **ACTN-07**: Agent node face shows "N actions" badge when actions are configured
+
 ## v2 Requirements
 
 Deferred to future milestone. Tracked but not in current roadmap.
@@ -111,11 +121,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ESTM-02 | Phase 4 | Pending |
 | ESTM-03 | Phase 4 | Pending |
 | ESTM-04 | Phase 2 | Complete |
+| ACTN-01 | Phase 5 | Pending |
+| ACTN-02 | Phase 5 | Pending |
+| ACTN-03 | Phase 5 | Pending |
+| ACTN-04 | Phase 5 | Pending |
+| ACTN-05 | Phase 5 | Pending |
+| ACTN-06 | Phase 5 | Pending |
+| ACTN-07 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 26 total
-- Mapped to phases: 26
-- Unmapped: 0 ✓
+- v1 requirements: 33 total
+- Mapped to phases: 33
+- Unmapped: 0
 
 **Phase breakdown:**
 - Phase 0: 3 requirements (Foundation)
@@ -123,7 +140,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Phase 2: 7 requirements (Canvas Metadata + Reachability)
 - Phase 3: 7 requirements (Ideal State Node)
 - Phase 4: 3 requirements (Probability-Weighted Estimation)
+- Phase 5: 7 requirements (Action Constraints)
 
 ---
 *Requirements defined: 2026-03-04*
-*Last updated: 2026-03-04 after roadmap creation*
+*Last updated: 2026-03-09 after Phase 5 addition*
