@@ -15,7 +15,7 @@ Given a natural language description, generate a workflow as a JSON object with:
 
 NODE TYPES:
 - startNode: Entry point. Every workflow must have exactly one. Fields: { id, type: "startNode", label: "Start" }
-- agentNode: An AI agent. Fields: { id, type: "agentNode", label, model_provider, model_name, context, task_type, expected_output_size }
+- agentNode: An AI agent. Fields: { id, type: "agentNode", label, model_provider, model_name, context, task_type, expected_output_size, allowed_actions }
 - toolNode: An external tool. Fields: { id, type: "toolNode", label, tool_id }
 - finishNode: Exit point. Every workflow must have exactly one. Fields: { id, type: "finishNode", label: "Finish" }
 
@@ -45,6 +45,7 @@ AVAILABLE TOOLS (tool_id values):
 - pdf_reader: PDF text extraction
 
 TASK TYPES for agentNode: classification, summarization, code_generation, rag_answer, tool_orchestration, routing
+ALLOWED_ACTIONS for agentNode: optional list of string labels representing discrete output options (e.g., ["approve", "reject", "escalate"]). Only populate when the description explicitly mentions specific action/category labels.
 OUTPUT SIZES for agentNode: short (<=200 tokens), medium (200-600), long (600-1500), very_long (>1500)
 
 RULES:
@@ -57,6 +58,7 @@ RULES:
 7. Include tool nodes when the description mentions search, database, API, code execution, or file operations
 8. For cyclic workflows (review loops, iterative refinement), add back-edges and set max_steps on the looping agent
 9. Connect tool nodes to agent nodes that use them (tool output feeds into agent)
+10. If the user description mentions specific actions an agent should take (e.g., "classify as positive, negative, or neutral", "route to escalate, auto-resolve, or request-info"), populate the `allowed_actions` field as a list of those action labels. Only include allowed_actions on agentNode type. Set allowed_actions to null if no specific actions are mentioned.
 
 Return ONLY valid JSON. No markdown, no explanations, no code blocks."""
 
