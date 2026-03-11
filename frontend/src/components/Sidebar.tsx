@@ -11,9 +11,11 @@ import {
   useCurrentWorkflowId,
   useActiveCanvasId,
   useWorkflowStore,
+  useSidebarOpen,
 } from "@/store/useWorkflowStore";
 import { useUser } from "@/store/useAuthStore";
 import { useAutoLayout } from "@/hooks/useAutoLayout";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { supabase } from "@/lib/supabase";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -109,6 +111,9 @@ function ShapeIndicator({ shape, color }: { shape: string; color: string }) {
 
 export default function Sidebar() {
   const { theme } = useUIState();
+  const bp = useBreakpoint();
+  const isDesktop = bp === "lg" || bp === "xl";
+  const isSidebarOpen = useSidebarOpen();
   const scenarios = useScenarios();
   const selectedIds = useSelectedForComparison();
   const currentWorkflowId = useCurrentWorkflowId();
@@ -221,13 +226,22 @@ export default function Sidebar() {
   };
 
   return (
-    <aside
-      className={`w-52 shrink-0 border-r p-4 flex flex-col gap-3 overflow-y-auto ${
-        isDark
-          ? "border-slate-600 bg-slate-900"
-          : "border-gray-200 bg-gray-50"
-      }`}
-    >
+    <>
+      {/* Backdrop: dims canvas when sidebar is open on small screens */}
+      {!isDesktop && isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/30 lg:hidden"
+          onClick={() => useWorkflowStore.getState().toggleSidebar()}
+        />
+      )}
+      <aside
+        className={`w-52 shrink-0 border-r p-4 flex flex-col gap-3 overflow-y-auto
+          transition-transform duration-200
+          fixed top-14 left-0 z-40 h-[calc(100vh-3.5rem)] shadow-xl
+          lg:relative lg:top-auto lg:left-auto lg:z-auto lg:h-full lg:shadow-none lg:translate-x-0
+          ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          ${isDark ? "border-slate-600 bg-slate-900" : "border-gray-200 bg-gray-50"}`}
+      >
       {/* ── Node palette ──────────────────────────────────── */}
       <h2
         className={`text-xs font-bold uppercase tracking-wide mb-1 ${
@@ -522,5 +536,6 @@ export default function Sidebar() {
         Drag a node onto the canvas
       </div>
     </aside>
+    </>
   );
 }

@@ -416,7 +416,7 @@ export default function HeaderBar() {
       </div>
 
       {/* ── Right side: action buttons ── */}
-      <div className="flex items-center gap-1 sm:gap-2">
+      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
         {/* Sidebar toggle (visible below lg) */}
         <button
           onClick={() => useWorkflowStore.getState().toggleSidebar()}
@@ -431,7 +431,7 @@ export default function HeaderBar() {
         </button>
 
         {/* ── Desktop/Tablet actions (hidden on mobile) ── */}
-        <div className="hidden md:contents">
+        <div className="hidden lg:contents">
           {/* Help */}
           <button
             onClick={openTutorial}
