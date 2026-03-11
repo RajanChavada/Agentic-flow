@@ -38,7 +38,7 @@ export const createUISlice: StateCreator<CombinedState, [], [], UISlice> = (set)
     isComparisonOpen: false,
     theme: 'light',
     needsLayout: false,
-    isSidebarOpen: true,
+    isSidebarOpen: false,
     hasSeenBlankOverlay: typeof window !== 'undefined'
       ? localStorage.getItem('neurovn-blank-overlay-dismissed') === 'true'
       : false,
