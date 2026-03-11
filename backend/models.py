@@ -57,6 +57,18 @@ class NodeConfig(BaseModel):
         "classification", "summarization", "code_generation",
         "rag_answer", "tool_orchestration", "routing"
     ]] = Field(default=None, description="Semantic task type for smarter output estimation")
+
+    @field_validator("task_type", mode="before")
+    @classmethod
+    def coerce_unknown_task_type(cls, v: object) -> object:
+        """Silently coerce unrecognised task_type values (e.g. 'generation'
+        from scaffold LLM) to None rather than raising a 422."""
+        valid = {"classification", "summarization", "code_generation",
+                 "rag_answer", "tool_orchestration", "routing"}
+        if v is None or v in valid:
+            return v
+        return None
+
     expected_output_size: Optional[Literal[
         "short", "medium", "long", "very_long"
     ]] = Field(default=None, description="Expected output token range: short ≤200, medium 200-600, long 600-1500, very_long >1500")
