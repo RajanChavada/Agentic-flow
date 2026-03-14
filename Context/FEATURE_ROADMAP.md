@@ -261,3 +261,5 @@ Each phase is independently shippable and builds on the existing codebase withou
 
 - [ ] Edge Data Contracts (Typed Schemas) -- `Context/features/edge-data-contracts.md`
 - [ ] Action Constraints on Agent Nodes -- `Context/features/action-constraints-agent-nodes.md`
+
+- [ ] Output Dashboard Redesign -- `Context/features/dashboard-redesign.md`

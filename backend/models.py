@@ -28,7 +28,7 @@ class NodeConfig(BaseModel):
     type: Literal[
         "startNode", "agentNode", "toolNode", "finishNode",
         "blankBoxNode", "textNode",
-        "conditionNode", "idealStateNode",
+        "conditionNode",
     ]
     label: Optional[str] = None
     model_provider: Optional[str] = Field(
@@ -78,29 +78,6 @@ class NodeConfig(BaseModel):
         le=50,
         description="Expected number of LLM calls this agent makes per workflow run (for orchestrators)",
     )
-    # ── Action constraint fields ──────────────────────────────────
-    allowed_actions: Optional[List[str]] = Field(
-        default=None,
-        description="Discrete actions this agent can take (e.g., ['approve', 'reject', 'escalate'])",
-    )
-
-    @field_validator("allowed_actions")
-    @classmethod
-    def validate_allowed_actions(cls, v: Optional[List[str]]) -> Optional[List[str]]:
-        if v is None:
-            return None
-        if len(v) > 20:
-            raise ValueError("Maximum 20 allowed actions permitted")
-        cleaned = []
-        for item in v:
-            stripped = item.strip()
-            if not stripped:
-                raise ValueError("Action labels must not be empty")
-            if len(stripped) > 50:
-                raise ValueError(f"Action label must be 50 chars or fewer, got {len(stripped)}")
-            cleaned.append(stripped)
-        return cleaned
-
     # ── Condition node fields ─────────────────────────────────────
     condition_expression: Optional[str] = Field(
         default=None,
@@ -111,25 +88,6 @@ class NodeConfig(BaseModel):
         ge=0,
         le=100,
         description="True branch probability 0-100%. False = 100 - probability.",
-    )
-    # ── Ideal State node fields ──────────────────────────────────
-    ideal_state_description: Optional[str] = Field(
-        default=None,
-        max_length=2000,
-        description="Natural language success criteria description",
-    )
-    ideal_state_schema: Optional[dict] = Field(
-        default=None,
-        description="Generated JSON schema for success criteria",
-    )
-    # ── Edge Data Contract fields ─────────────────────────────────
-    output_schema: Optional[dict] = Field(
-        default=None,
-        description="JSON Schema defining what this node produces",
-    )
-    input_schema: Optional[dict] = Field(
-        default=None,
-        description="JSON Schema defining what this node expects as input",
     )
 
 
@@ -385,68 +343,6 @@ class BatchEstimateResponse(BaseModel):
     results: List[BatchEstimateResult]
 
 
-# ── Schema generation models ─────────────────────────────────
-
-class SchemaGenerateRequest(BaseModel):
-    """POST /api/generate-schema - NL to JSON schema."""
-    description: str = Field(
-        ..., min_length=3, max_length=2000,
-        description="Natural language success criteria description",
-    )
-    context: Optional[str] = Field(
-        default=None, max_length=500,
-        description="Optional workflow context for better generation",
-    )
-
-
-class SchemaGenerateResponse(BaseModel):
-    """Response from POST /api/generate-schema."""
-    schema_obj: dict = Field(..., alias="schema", description="Generated JSON schema")
-    description: str
-
-    model_config = {"populate_by_name": True}
-
-
-class SchemaValidateRequest(BaseModel):
-    """POST /api/validate-schema - validate a JSON schema."""
-    schema_obj: dict = Field(..., alias="schema", description="JSON schema to validate")
-
-    model_config = {"populate_by_name": True}
-
-
-class SchemaValidateResponse(BaseModel):
-    """Response from POST /api/validate-schema."""
-    valid: bool
-    errors: List[str] = []
-
-
-# ── Scaffold (NL-to-workflow) models ──────────────────────────
-
-class ScaffoldRequest(BaseModel):
-    """POST /api/scaffold -- generate workflow from NL prompt."""
-    prompt: str = Field(
-        ..., min_length=5, max_length=1000,
-        description="Natural language workflow description",
-    )
-
-
-class ScaffoldRefineRequest(BaseModel):
-    """POST /api/scaffold/refine -- refine existing workflow."""
-    prompt: str = Field(
-        ..., min_length=3, max_length=1000,
-        description="Refinement instruction",
-    )
-    nodes: List[NodeConfig]
-    edges: List[EdgeConfig]
-
-
-class ScaffoldResponse(BaseModel):
-    """Response from scaffold endpoints."""
-    nodes: List[NodeConfig]
-    edges: List[EdgeConfig]
-    name: str = "Generated Workflow"
-
-
 # ── Import / export models ─────────────────────────────────────
 
 class ExternalWorkflowImportRequest(BaseModel):
@@ -466,44 +362,3 @@ class ImportedWorkflow(BaseModel):
     metadata: dict = Field(default_factory=dict, description="Source-specific extra info")
 
 
-# ── Edge Data Contract validation models ──────────────────────
-
-class ContractNodeInput(BaseModel):
-    """Minimal node representation for contract validation.
-
-    Intentionally uses Optional[str] (not a strict Literal) for any
-    node-type or task-type fields — the validator only reads
-    ``id``, ``output_schema``, and ``input_schema``.
-    """
-    id: str
-    output_schema: Optional[dict] = None
-    input_schema: Optional[dict] = None
-
-
-class ContractValidationRequest(BaseModel):
-    """POST /api/validate-contracts -- check all edge schemas."""
-    nodes: List[ContractNodeInput]
-    edges: List[EdgeConfig]
-
-
-class EdgeContractResult(BaseModel):
-    """Validation result for a single edge."""
-    edge_id: Optional[str] = None
-    source_id: str
-    target_id: str
-    status: Literal["compatible", "incompatible", "unvalidated"]
-    errors: List[str] = []
-
-
-class ContractSummary(BaseModel):
-    """Aggregate status of all contracts."""
-    total_edges: int
-    compatible: int
-    incompatible: int
-    unvalidated: int
-
-
-class ContractValidationResponse(BaseModel):
-    """Response from POST /api/validate-contracts."""
-    edges: List[EdgeContractResult]
-    summary: ContractSummary

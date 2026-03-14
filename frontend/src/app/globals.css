@@ -105,6 +105,13 @@ html.dark .react-flow__edge-path {
   stroke: #94a3b8 !important;
 }
 
+/* ── Hide React Flow attribution on mobile to save space ── */
+@media (max-width: 768px) {
+  .react-flow__attribution {
+    display: none !important;
+  }
+}
+
 /* ── Scrollbar hide utility ────────────────────────────────── */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }

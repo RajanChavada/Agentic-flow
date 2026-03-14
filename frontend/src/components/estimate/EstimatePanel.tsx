@@ -1,7 +1,18 @@
 "use client";
 
 import React, { useCallback, useRef, useState, useEffect } from "react";
-import { BarChart3 } from "lucide-react";
+import {
+  BarChart3,
+  AlertTriangle,
+  RefreshCw,
+  Zap,
+  Clock,
+  LayoutDashboard,
+  BrainCircuit,
+  Wrench,
+  Info,
+  X
+} from "lucide-react";
 import {
   useEstimation,
   useUIState,
@@ -10,11 +21,12 @@ import {
   useActualStats,
 } from "@/store/useWorkflowStore";
 
-import OverviewSection from "./OverviewSection";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { OverviewTab } from "./OverviewTab";
 import HealthSection from "./HealthSection";
 import CyclesSection from "./CyclesSection";
-import BreakdownSection from "./BreakdownSection";
-import ScalingSection from "./ScalingSection";
+import { BreakdownTab } from "./BreakdownTab";
+import { ScalingTab } from "./ScalingTab";
 import ObservabilitySection from "./ObservabilitySection";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -84,8 +96,9 @@ export default function EstimatePanel() {
   const clearActualStats = useWorkflowStore((s) => s.clearActualStats);
   const isDark = theme === "dark";
 
-  /* ── Fullscreen (expanded dashboard) mode ──────────────── */
+  /* ── Fullscreen/Tab State ─────────────────────────────── */
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("overview");
 
   /* ── Collapsible section state (persisted in sessionStorage) ── */
   const [sectionCollapsed, setSectionCollapsed] = useState<Record<SectionId, boolean>>(() =>
@@ -102,6 +115,24 @@ export default function EstimatePanel() {
       saveSectionState(next);
       return next;
     });
+  }, []);
+
+  /* ── Educational Modals ─────────────────────────────── */
+  const [infoModal, setInfoModal] = useState<{ title: string; content: React.ReactNode } | null>(null);
+
+  const scrollToSection = useCallback((id: string, tabValue?: string) => {
+    if (tabValue) setActiveTab(tabValue);
+
+    // Small timeout to allow tab switch or section expansion
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        // Flash animation for attention
+        el.classList.add("ring-2", "ring-blue-500", "ring-offset-2");
+        setTimeout(() => el.classList.remove("ring-2", "ring-blue-500", "ring-offset-2"), 2000);
+      }
+    }, 100);
   }, []);
 
   /* ── What-If live re-estimation ─────────────────────────── */
@@ -260,18 +291,78 @@ export default function EstimatePanel() {
               ${isDark ? "border-slate-700" : "border-gray-200"}
             `}
           >
-            <div>
-              <h2 className={`font-bold ${isFullscreen ? "text-lg" : "text-base"}`}>
-                {isFullscreen ? <><BarChart3 className="inline w-4 h-4 mr-1.5 -mt-0.5" /> Workflow Dashboard</> : "Estimate Report"}
-              </h2>
-              <p className={`text-xs mt-0.5 ${isDark ? "text-slate-400" : "text-gray-400"}`}>
-                Graph type: <span className="font-semibold">{estimation.graph_type}</span>
-                {isFullscreen && estimation.health && (
-                  <span className="ml-2">
-                    · Health: <span className="font-semibold">{estimation.health.grade}</span> ({estimation.health.score}/100)
+            <div className="flex items-center gap-4">
+              {/* Health Avatar */}
+              {estimation.health && (
+                <div
+                  className={`
+                    w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm
+                    ${estimation.health.grade === 'A' || estimation.health.grade === 'B' ? "bg-emerald-500" :
+                      estimation.health.grade === 'C' ? "bg-amber-500" : "bg-rose-500"}
+                    text-white
+                  `}
+                >
+                  <span className="text-2xl font-black">{estimation.health.grade}</span>
+                </div>
+              )}
+
+              <div className="min-w-0">
+                <h2 className={`font-bold flex items-center gap-2 ${isFullscreen ? "text-xl" : "text-base"}`}>
+                  {isFullscreen ? "Workflow Analytics Dashboard" : "Estimate Report"}
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${isDark ? "bg-slate-800 text-slate-400" : "bg-gray-100 text-gray-500"}`}>
+                    V1.1
                   </span>
-                )}
-              </p>
+                </h2>
+
+                {/* Metric Ribbon */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                  <div className={`flex items-center gap-1 text-[10px] sm:text-xs ${isDark ? "text-slate-400" : "text-gray-500"}`}>
+                    <LayoutDashboard className="w-3 h-3" />
+                    <span>{estimation.graph_type}</span>
+                  </div>
+
+                  {breakdownWithType.filter(b => b.bottleneck_severity === "high").length > 0 && (
+                    <button
+                      onClick={() => scrollToSection("health", "overview")}
+                      className="flex items-center gap-1 text-[10px] sm:text-xs text-rose-500 font-semibold hover:bg-rose-50 px-1 rounded transition-colors"
+                    >
+                      <AlertTriangle className="w-3 h-3" />
+                      <span className="underline decoration-dotted underline-offset-2">
+                        {breakdownWithType.filter(b => b.bottleneck_severity === "high").length} Bottlenecks
+                      </span>
+                    </button>
+                  )}
+
+                  {estimation.detected_cycles && estimation.detected_cycles.length > 0 && (
+                    <div className="flex items-center gap-1 text-[10px] sm:text-xs text-purple-500 font-medium">
+                      <RefreshCw className="w-3 h-3" />
+                      <span>{estimation.detected_cycles.length} Loops</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-1 text-[10px] sm:text-xs text-blue-500 font-medium">
+                    <Zap className="w-3 h-3" />
+                    <span>{(estimation.critical_path_latency * 1000).toFixed(0)}ms Critical Path</span>
+                    <button
+                      onClick={() => setInfoModal({
+                        title: "Critical Path Latency",
+                        content: (
+                          <div className="space-y-3 text-sm">
+                            <p>The <strong className="text-blue-500">Critical Path</strong> is the longest sequence of dependent tasks in your workflow. It represents the minimum possible time your workflow will take to execute, assuming infinite parallel processing capacity.</p>
+                            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+                              <p className="font-semibold text-blue-700 dark:text-blue-300">Why it matters:</p>
+                              <p className="mt-1">Even if you add more workers, your workflow cannot run faster than the Critical Path. To reduce latency, you must optimize the nodes on this specific path.</p>
+                            </div>
+                          </div>
+                        )
+                      })}
+                      className="ml-0.5 hover:text-blue-700 transition-colors"
+                    >
+                      <Info className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {/* Fullscreen toggle */}
@@ -313,84 +404,128 @@ export default function EstimatePanel() {
             id="estimate-dashboard-capture"
             className={`flex-1 overflow-y-auto px-5 py-5 ${isFullscreen ? "max-w-7xl mx-auto w-full" : ""}`}
           >
-           <div className="space-y-6">
-            {/* ── 1. OVERVIEW (North Star) -- always visible ── */}
-            <div>
-              <OverviewSection
-                estimation={estimation}
-                isDark={isDark}
-                isFullscreen={isFullscreen}
-                heroTextClass={heroTextClass}
-              />
-            </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <div className="overflow-x-auto -webkit-overflow-scrolling-touch mb-6 pb-1">
+                <TabsList className={`flex min-w-[400px] w-full justify-start p-1.5 rounded-xl border ${isDark ? "bg-slate-900 border-slate-700" : "bg-[#f5eeea] border-gray-200"}`}>
+                  <TabsTrigger value="overview" className="text-xs sm:text-sm h-full flex-1">Overview</TabsTrigger>
+                  <TabsTrigger value="breakdown" className="text-xs sm:text-sm h-full flex-1">Detailed Breakdown</TabsTrigger>
+                  <TabsTrigger value="scaling" className="text-xs sm:text-sm h-full flex-1">Scaling & Sensitivity</TabsTrigger>
+                </TabsList>
+              </div>
 
-            {/* ── 2. HEALTH & BOTTLENECKS (collapsible) ── */}
-            <div>
-              <HealthSection
-                estimation={estimation}
-                breakdownWithType={breakdownWithType}
-                nodes={nodes}
-                isDark={isDark}
-                collapsed={sectionCollapsed.health}
-                onToggle={() => toggleSection("health")}
-              />
-            </div>
+              <TabsContent value="overview" className="space-y-6 outline-none focus:outline-none focus:ring-0">
+                <OverviewTab
+                  estimation={estimation}
+                  breakdownWithType={breakdownWithType}
+                  isDark={isDark}
+                  isFullscreen={isFullscreen}
+                  heroTextClass={heroTextClass}
+                  onShowInfo={setInfoModal}
+                />
+                <HealthSection
+                  estimation={estimation}
+                  breakdownWithType={breakdownWithType}
+                  nodes={nodes}
+                  isDark={isDark}
+                  collapsed={sectionCollapsed.health}
+                  onToggle={() => toggleSection("health")}
+                  onShowInfo={setInfoModal}
+                />
+                {estimation.detected_cycles && estimation.detected_cycles.length > 0 && (
+                  <CyclesSection
+                    estimation={estimation}
+                    isDark={isDark}
+                    collapsed={sectionCollapsed.cycles}
+                    onToggle={() => toggleSection("cycles")}
+                  />
+                )}
+                <ObservabilitySection
+                  estimation={estimation}
+                  actualStats={actualStats}
+                  setActualStats={setActualStats}
+                  clearActualStats={clearActualStats}
+                  chartData={chartData}
+                  activeBreakdown={activeBreakdown}
+                  isDark={isDark}
+                  collapsed={sectionCollapsed.observability}
+                  onToggle={() => toggleSection("observability")}
+                />
+              </TabsContent>
 
-            {/* ── 3. CYCLES (collapsible, conditional) ── */}
-            {estimation.detected_cycles && estimation.detected_cycles.length > 0 && (
-            <div>
-              <CyclesSection
-                estimation={estimation}
-                isDark={isDark}
-                collapsed={sectionCollapsed.cycles}
-                onToggle={() => toggleSection("cycles")}
-              />
-            </div>
-            )}
+              <TabsContent value="breakdown" className="space-y-6 outline-none focus:outline-none focus:ring-0">
+                <BreakdownTab
+                  estimation={estimation}
+                  breakdownWithType={breakdownWithType}
+                  actualStats={actualStats}
+                  setActualStats={setActualStats}
+                  clearActualStats={clearActualStats}
+                  isDark={isDark}
+                  isFullscreen={isFullscreen}
+                  onShowInfo={setInfoModal}
+                />
+              </TabsContent>
 
-            {/* ── 4. BREAKDOWN (collapsible) ── */}
-            <div>
-              <BreakdownSection
-                estimation={estimation}
-                breakdownWithType={breakdownWithType}
-                isDark={isDark}
-                collapsed={sectionCollapsed.breakdown}
-                onToggle={() => toggleSection("breakdown")}
-              />
-            </div>
-
-            {/* ── 5. SCALING & PLANNING (collapsible) ── */}
-            <div>
-              <ScalingSection
-                estimation={estimation}
-                scalingParams={scalingParams}
-                setRunsPerDay={setRunsPerDay}
-                setLoopIntensity={setLoopIntensity}
-                scalingLoading={scalingLoading}
-                isDark={isDark}
-                collapsed={sectionCollapsed.scaling}
-                onToggle={() => toggleSection("scaling")}
-              />
-            </div>
-
-            {/* ── 6. OBSERVABILITY (collapsible) ── */}
-            <div>
-              <ObservabilitySection
-                estimation={estimation}
-                actualStats={actualStats}
-                setActualStats={setActualStats}
-                clearActualStats={clearActualStats}
-                chartData={chartData}
-                activeBreakdown={activeBreakdown}
-                isDark={isDark}
-                collapsed={sectionCollapsed.observability}
-                onToggle={() => toggleSection("observability")}
-              />
-            </div>
-           </div>{/* end grid / space-y wrapper */}
+              <TabsContent value="scaling" className="space-y-8 outline-none focus:outline-none focus:ring-0">
+                <ScalingTab
+                  estimation={estimation}
+                  scalingParams={scalingParams}
+                  setRunsPerDay={setRunsPerDay}
+                  setLoopIntensity={setLoopIntensity}
+                  scalingLoading={scalingLoading}
+                  isDark={isDark}
+                  onShowInfo={setInfoModal}
+                />
+                <div className={`pt-6 border-t ${isDark ? "border-slate-800" : "border-gray-200"}`}>
+                  <ObservabilitySection
+                    estimation={estimation}
+                    actualStats={actualStats}
+                    setActualStats={setActualStats}
+                    clearActualStats={clearActualStats}
+                    chartData={chartData}
+                    activeBreakdown={activeBreakdown}
+                    isDark={isDark}
+                    collapsed={false}
+                    onToggle={() => { }}
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>{/* end scrollable body */}
         </div>
       </div>
+      {/* ── Info Modal Overlay ───────────────────────── */}
+      {infoModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className={`w-full max-w-md rounded-2xl shadow-2xl overflow-hidden ${isDark ? "bg-slate-900 border border-slate-700" : "bg-white"}`}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-800">
+              <h3 className={`font-bold flex items-center gap-2 ${isDark ? "text-slate-100" : "text-gray-900"}`}>
+                <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+                  <Info className="w-4 h-4 text-blue-500" />
+                </div>
+                {infoModal.title}
+              </h3>
+              <button
+                onClick={() => setInfoModal(null)}
+                className={`p-2 rounded-full transition-all ${isDark ? "hover:bg-slate-800 text-slate-500 hover:text-slate-200" : "hover:bg-gray-100 text-gray-400 hover:text-gray-600"}`}
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className={`px-6 py-8 max-h-[60vh] overflow-y-auto custom-scrollbar ${isDark ? "text-slate-300 leading-relaxed" : "text-gray-600 leading-relaxed"}`}>
+              {infoModal.content}
+            </div>
+            <div className={`px-6 py-4 border-t flex justify-end ${isDark ? "border-slate-800 bg-slate-900/50" : "border-gray-100 bg-gray-50/50"}`}>
+              <button
+                onClick={() => setInfoModal(null)}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -9,9 +9,11 @@ import {
   BarChart3,
   Paintbrush,
   Lightbulb,
+  X,
 } from "lucide-react";
 import { useTutorial } from "@/hooks/useTutorial";
 import { useUIState } from "@/store/useWorkflowStore";
+import { useIsMobile } from "@/hooks/useBreakpoint";
 import WelcomeStep from "./steps/WelcomeStep";
 import NodeTypesStep from "./steps/NodeTypesStep";
 import BuildWorkflowStep from "./steps/BuildWorkflowStep";
@@ -78,6 +80,7 @@ const TABS: TabDef[] = [
 export default function CanvasTutorialModal() {
   const { isOpen, currentStep, next, back, finish, skip } = useTutorial();
   const { theme } = useUIState();
+  const isMobile = useIsMobile();
   const isDark = theme === "dark";
   const directionRef = useRef(1);
 
@@ -134,9 +137,8 @@ export default function CanvasTutorialModal() {
       <div className="absolute inset-0" onClick={skip} aria-hidden />
 
       <motion.div
-        className={`relative z-10 w-full max-w-2xl rounded-xl border shadow-2xl overflow-hidden flex flex-col ${
-          isDark ? "border-slate-700 bg-slate-900" : "border-gray-200 bg-white"
-        }`}
+        className={`relative z-10 w-full max-w-4xl max-sm:max-w-[95vw] rounded-2xl border shadow-2xl overflow-hidden flex flex-col ${isDark ? "border-slate-700 bg-slate-900" : "border-gray-200 bg-white"
+          }`}
         style={{ maxHeight: "85vh" }}
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -144,15 +146,14 @@ export default function CanvasTutorialModal() {
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Tab bar ──────────────────────────────────────── */}
-        <div className={`flex items-center border-b shrink-0 ${isDark ? "border-slate-700" : "border-gray-200"}`}>
+        <div className={`flex items-center border-b shrink-0 relative ${isDark ? "border-slate-700" : "border-gray-200"}`}>
           {/* Walkthrough tab */}
           <button
             onClick={() => setActiveView("walkthrough")}
-            className={`relative flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium transition whitespace-nowrap ${
-              isWalkthrough
-                ? isDark ? "text-blue-400" : "text-blue-600"
-                : isDark ? "text-slate-400 hover:text-slate-200" : "text-gray-500 hover:text-gray-700"
-            }`}
+            className={`relative flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium transition whitespace-nowrap ${isWalkthrough
+              ? isDark ? "text-blue-400" : "text-blue-600"
+              : isDark ? "text-slate-400 hover:text-slate-200" : "text-gray-500 hover:text-gray-700"
+              }`}
           >
             <BookOpen className="w-3.5 h-3.5" />
             Getting Started
@@ -168,16 +169,15 @@ export default function CanvasTutorialModal() {
           <div className={`w-px h-5 mx-1 ${isDark ? "bg-slate-700" : "bg-gray-200"}`} />
 
           {/* Reference tabs */}
-          <div className="flex items-center overflow-x-auto">
+          <div className="flex items-center max-sm:overflow-x-auto max-sm:pb-0.5 scrolling-touch custom-scrollbar-hide">
             {TABS.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveView(tab.key)}
-                className={`relative flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition whitespace-nowrap ${
-                  activeView === tab.key
-                    ? isDark ? "text-blue-400" : "text-blue-600"
-                    : isDark ? "text-slate-500 hover:text-slate-300" : "text-gray-400 hover:text-gray-600"
-                }`}
+                className={`relative flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition whitespace-nowrap ${activeView === tab.key
+                  ? isDark ? "text-blue-400" : "text-blue-600"
+                  : isDark ? "text-slate-500 hover:text-slate-300" : "text-gray-400 hover:text-gray-600"
+                  }`}
               >
                 <tab.icon className="w-3 h-3" />
                 {tab.label}
@@ -192,14 +192,12 @@ export default function CanvasTutorialModal() {
             ))}
           </div>
 
-          {/* Close */}
           <button
             onClick={skip}
-            className={`ml-auto mr-3 text-xs transition shrink-0 ${
-              isDark ? "text-slate-500 hover:text-slate-300" : "text-gray-400 hover:text-gray-600"
-            }`}
+            className={`ml-auto mr-2 p-2 rounded-full transition-all ${isDark ? "hover:bg-slate-800 text-slate-500 hover:text-slate-200" : "hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+              }`}
           >
-            Close
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -216,10 +214,9 @@ export default function CanvasTutorialModal() {
             >
               {/* Illustration */}
               <div
-                className={`relative border-b shrink-0 ${
-                  isDark ? "border-slate-700 bg-slate-800/50" : "border-gray-100 bg-gray-50"
-                }`}
-                style={{ height: 260 }}
+                className={`relative border-b shrink-0 ${isDark ? "border-slate-700 bg-slate-800/50" : "border-gray-100 bg-gray-50"
+                  }`}
+                style={{ height: isMobile ? 180 : 260 }}
               >
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -261,13 +258,12 @@ export default function CanvasTutorialModal() {
                   {STEPS.map((_, i) => (
                     <div
                       key={i}
-                      className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                        i === currentStep
-                          ? "bg-blue-500 scale-110"
-                          : i < currentStep
+                      className={`w-2 h-2 rounded-full transition-all duration-300 ${i === currentStep
+                        ? "bg-blue-500 scale-110"
+                        : i < currentStep
                           ? isDark ? "bg-blue-500/40" : "bg-blue-300"
                           : isDark ? "bg-slate-600" : "bg-gray-300"
-                      }`}
+                        }`}
                     />
                   ))}
                 </div>
@@ -276,11 +272,10 @@ export default function CanvasTutorialModal() {
                   {!isFirst && (
                     <button
                       onClick={handleBack}
-                      className={`rounded-md border px-4 py-1.5 text-sm font-medium transition ${
-                        isDark
-                          ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-                          : "border-gray-300 text-gray-600 hover:bg-gray-100"
-                      }`}
+                      className={`rounded-md border px-4 py-1.5 text-sm font-medium transition ${isDark
+                        ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                        : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                        }`}
                     >
                       Back
                     </button>

@@ -8,12 +8,11 @@ export type WorkflowNodeType =
   | "finishNode"
   | "blankBoxNode"
   | "textNode"
-  | "conditionNode"
-  | "idealStateNode";
+  | "conditionNode";
 
 /** 9 anchor points for label placement inside a BlankBoxNode. */
 export type LabelPosition =
-  | "top-left"    | "top-center"    | "top-right"
+  | "top-left" | "top-center" | "top-right"
   | "middle-left" | "middle-center" | "middle-right"
   | "bottom-left" | "bottom-center" | "bottom-right";
 
@@ -45,17 +44,9 @@ export type WorkflowNodeData = {
   taskType?: string;
   expectedOutputSize?: string;
   expectedCallsPerRun?: number | null;
-  /** Discrete allowed actions for classification/routing agents. */
-  allowedActions?: string[];
   /** Condition node fields. */
   conditionExpression?: string;
   probability?: number;
-  /** Ideal State node fields. */
-  idealStateDescription?: string;
-  idealStateSchema?: Record<string, unknown> | null;
-  /** Edge Data Contract fields. */
-  outputSchema?: Record<string, unknown> | null;
-  inputSchema?: Record<string, unknown> | null;
   /** BlankBoxNode styling. */
   blankBoxStyle?: BlankBoxStyle;
   /** TextNode styling. */
@@ -84,17 +75,9 @@ export interface NodeConfigPayload {
   task_type?: string | null;
   expected_output_size?: string | null;
   expected_calls_per_run?: number | null;
-  /** Allowed output actions for constrained agents. */
-  allowed_actions?: string[] | null;
   /** Condition node fields. */
   condition_expression?: string | null;
   probability?: number | null;
-  /** Ideal State node fields. */
-  ideal_state_description?: string | null;
-  ideal_state_schema?: Record<string, unknown> | null;
-  /** Edge Data Contract fields. */
-  output_schema?: Record<string, unknown> | null;
-  input_schema?: Record<string, unknown> | null;
 }
 
 /** Shape of an edge sent to the backend. */
@@ -140,7 +123,7 @@ export interface HealthScore {
   grade: "A" | "B" | "C" | "D" | "F";
   score: number;          // 0–100
   badges: string[];       // e.g. ["Cost-efficient", "Loop-free"]
-  details: Record<string, { score: number; [key: string]: unknown }>;
+  details: Record<string, { score: number;[key: string]: unknown }>;
 }
 
 /** Actual per-node runtime stats (for observability overlay). */
@@ -389,29 +372,4 @@ export interface ImportedWorkflow {
   nodes: NodeConfigPayload[];
   edges: EdgeConfigPayload[];
   metadata: Record<string, unknown>;
-}
-
-// ── Edge Data Contract validation types ─────────────────────────
-
-/** Validation result for a single edge. */
-export interface EdgeContractResult {
-  edge_id: string | null;
-  source_id: string;
-  target_id: string;
-  status: 'compatible' | 'incompatible' | 'unvalidated';
-  errors: string[];
-}
-
-/** Aggregate status of all contracts. */
-export interface ContractSummary {
-  total_edges: number;
-  compatible: number;
-  incompatible: number;
-  unvalidated: number;
-}
-
-/** Response from POST /api/validate-contracts. */
-export interface ContractValidationResponse {
-  edges: EdgeContractResult[];
-  summary: ContractSummary;
 }

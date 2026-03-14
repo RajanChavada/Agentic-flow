@@ -26,7 +26,7 @@ function ConditionNode({ id, data, selected }: NodeProps & { data: WorkflowNodeD
         className={`
           absolute inset-0 transition-all duration-300
           ${isDark ? "bg-purple-400" : "bg-purple-500"}
-          ${selected ? "ring-2 ring-offset-2 ring-blue-400" : ""}
+          ${selected ? "ring-4 ring-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.6)]" : ""}
         `}
         style={{ clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)" }}
       />

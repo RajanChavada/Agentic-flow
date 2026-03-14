@@ -15,7 +15,6 @@ import {
   highRiskGraph,
   conditionBranchGraph,
   withToolNodes,
-  withIdealState,
   withAnnotations,
   selfLoopGraph,
 } from "./fixtures/mockGraphs";
@@ -380,103 +379,6 @@ describe("graphAnalysis", () => {
     });
   });
 
-  describe("Reachability (META-04, ESTM-04)", () => {
-    it("returns null when no idealStateNode on canvas", () => {
-      const { nodes, edges } = linearChain(3);
-      const result = analyzeGraph(nodes, edges);
-
-      expect(result.idealStateReachable).toBeNull();
-    });
-
-    it("returns false when no startNode but idealStateNode present", () => {
-      const { nodes, edges } = emptyGraph();
-
-      // Add only ideal state node (no start)
-      nodes.push({
-        id: "idealState",
-        type: "finishNode",
-        data: { label: "Ideal State", type: "finishNode" },
-        position: { x: 0, y: 0 },
-      });
-
-      const result = analyzeGraph(nodes, edges);
-      expect(result.idealStateReachable).toBe(false);
-    });
-
-    it("returns true when idealState is reachable from start", () => {
-      const { nodes, edges } = withIdealState(true);
-      const result = analyzeGraph(nodes, edges);
-
-      expect(result.idealStateReachable).toBe(true);
-    });
-
-    it("returns false when idealState is disconnected", () => {
-      const { nodes, edges } = withIdealState(false);
-      const result = analyzeGraph(nodes, edges);
-
-      expect(result.idealStateReachable).toBe(false);
-    });
-
-    it("returns true when reachable through condition branch", () => {
-      const { nodes, edges } = conditionBranchGraph();
-
-      // Rename finish to idealState
-      const finishNode = nodes.find((n) => n.id === "finish");
-      if (finishNode) {
-        finishNode.id = "idealState";
-        finishNode.data.label = "Ideal State";
-      }
-
-      // Update edge targets
-      edges.forEach((e) => {
-        if (e.target === "finish") e.target = "idealState";
-      });
-
-      const result = analyzeGraph(nodes, edges);
-      expect(result.idealStateReachable).toBe(true);
-    });
-
-    it("returns true when reachable through multiple hops", () => {
-      const { nodes, edges } = linearChain(6);
-
-      // Rename finish to idealState
-      const finishNode = nodes.find((n) => n.id === "finish");
-      if (finishNode) {
-        finishNode.id = "idealState";
-        finishNode.data.label = "Ideal State";
-      }
-
-      // Update edge targets
-      edges.forEach((e) => {
-        if (e.target === "finish") e.target = "idealState";
-      });
-
-      const result = analyzeGraph(nodes, edges);
-      expect(result.idealStateReachable).toBe(true);
-    });
-
-    it("returns false when both start and idealState exist but no edges", () => {
-      const { nodes } = emptyGraph();
-
-      nodes.push(
-        {
-          id: "start",
-          type: "startNode",
-          data: { label: "Start", type: "startNode" },
-          position: { x: 0, y: 0 },
-        },
-        {
-          id: "idealState",
-          type: "finishNode",
-          data: { label: "Ideal State", type: "finishNode" },
-          position: { x: 100, y: 0 },
-        }
-      );
-
-      const result = analyzeGraph(nodes, []);
-      expect(result.idealStateReachable).toBe(false);
-    });
-  });
 
   describe("GraphMetrics interface", () => {
     it("returns all required fields in correct shape", () => {
@@ -490,7 +392,6 @@ describe("graphAnalysis", () => {
       expect(result).toHaveProperty("toolRiskSurface");
       expect(result).toHaveProperty("riskScore");
       expect(result).toHaveProperty("riskLevel");
-      expect(result).toHaveProperty("idealStateReachable");
 
       expect(typeof result.nodeCount).toBe("number");
       expect(typeof result.workflowNodeCount).toBe("number");
@@ -499,7 +400,6 @@ describe("graphAnalysis", () => {
       expect(typeof result.toolRiskSurface).toBe("object");
       expect(typeof result.riskScore).toBe("number");
       expect(["Low", "Medium", "High"]).toContain(result.riskLevel);
-      expect([true, false, null]).toContain(result.idealStateReachable);
     });
 
     it("toolRiskSurface has correct structure", () => {

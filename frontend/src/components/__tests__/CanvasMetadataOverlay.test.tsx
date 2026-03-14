@@ -44,7 +44,6 @@ describe("CanvasMetadataOverlay", () => {
       toolRiskSurface: { read: 0, write: 0, exec: 0, network: 0, other: 0 },
       riskScore: 0,
       riskLevel: "Low",
-      idealStateReachable: null,
     };
     vi.mocked(graphAnalysis.analyzeGraph).mockReturnValue(mockMetrics);
 
@@ -88,7 +87,6 @@ describe("CanvasMetadataOverlay", () => {
       toolRiskSurface: { read: 1, write: 2, exec: 1, network: 1, other: 0 },
       riskScore: 6,
       riskLevel: "Medium",
-      idealStateReachable: true,
     };
     vi.mocked(graphAnalysis.analyzeGraph).mockReturnValue(mockMetrics);
 
@@ -103,67 +101,7 @@ describe("CanvasMetadataOverlay", () => {
     expect(screen.getByText("X:1")).toBeDefined();
     expect(screen.getByText("N:1")).toBeDefined();
     expect(screen.getByText("Medium")).toBeDefined();
-    expect(screen.getByText("Reachable")).toBeDefined();
-    expect(screen.getByTestId("check-circle-icon")).toBeDefined();
   });
 
-  it("renders dash placeholder when idealStateReachable is null", () => {
-    const mockNodes = [{ id: "1", type: "startNode", data: { type: "startNode", label: "Start" }, position: { x: 0, y: 0 } }];
-    const mockEdges: any[] = [];
 
-    // Mock store
-    vi.mocked(store.useWorkflowStore).mockImplementation((selector: any) => {
-      const state = { nodes: mockNodes, edges: mockEdges };
-      return selector(state);
-    });
-
-    // Mock analyzeGraph with idealStateReachable: null
-    const mockMetrics: GraphMetrics = {
-      nodeCount: 1,
-      workflowNodeCount: 1,
-      maxDepth: 0,
-      loopCount: 0,
-      toolRiskSurface: { read: 0, write: 0, exec: 0, network: 0, other: 0 },
-      riskScore: 0,
-      riskLevel: "Low",
-      idealStateReachable: null, // No ideal state node
-    };
-    vi.mocked(graphAnalysis.analyzeGraph).mockReturnValue(mockMetrics);
-
-    render(<CanvasMetadataOverlay />);
-
-    // Verify dash placeholder is rendered
-    expect(screen.getByText("--")).toBeDefined();
-    expect(screen.getByTestId("minus-icon")).toBeDefined();
-  });
-
-  it("renders not reachable indicator when idealStateReachable is false", () => {
-    const mockNodes = [{ id: "1", type: "startNode", data: { type: "startNode", label: "Start" }, position: { x: 0, y: 0 } }];
-    const mockEdges: any[] = [];
-
-    // Mock store
-    vi.mocked(store.useWorkflowStore).mockImplementation((selector: any) => {
-      const state = { nodes: mockNodes, edges: mockEdges };
-      return selector(state);
-    });
-
-    // Mock analyzeGraph with idealStateReachable: false
-    const mockMetrics: GraphMetrics = {
-      nodeCount: 2,
-      workflowNodeCount: 2,
-      maxDepth: 0,
-      loopCount: 0,
-      toolRiskSurface: { read: 0, write: 0, exec: 0, network: 0, other: 0 },
-      riskScore: 0,
-      riskLevel: "Low",
-      idealStateReachable: false, // Not reachable
-    };
-    vi.mocked(graphAnalysis.analyzeGraph).mockReturnValue(mockMetrics);
-
-    render(<CanvasMetadataOverlay />);
-
-    // Verify not reachable indicator
-    expect(screen.getByText("Not reachable")).toBeDefined();
-    expect(screen.getByTestId("x-circle-icon")).toBeDefined();
-  });
 });

@@ -9,6 +9,7 @@ import {
   Route,
   Zap,
   Wrench,
+  Info
 } from 'lucide-react';
 import type { WorkflowEstimation } from '@/types/workflow';
 import type { Node } from '@xyflow/react';
@@ -23,6 +24,7 @@ interface HealthSectionProps {
   isDark: boolean;
   collapsed: boolean;
   onToggle: () => void;
+  onShowInfo?: (info: { title: string; content: React.ReactNode }) => void;
 }
 
 export default function HealthSection({
@@ -32,6 +34,7 @@ export default function HealthSection({
   isDark,
   collapsed,
   onToggle,
+  onShowInfo,
 }: HealthSectionProps) {
   return (
     <DashboardSection
@@ -51,9 +54,9 @@ export default function HealthSection({
               w-12 h-12 rounded-full flex items-center justify-center text-xl font-black
               ${estimation.health.grade === "A" ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" :
                 estimation.health.grade === "B" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" :
-                estimation.health.grade === "C" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300" :
-                estimation.health.grade === "D" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300" :
-                "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"}
+                  estimation.health.grade === "C" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300" :
+                    estimation.health.grade === "D" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300" :
+                      "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"}
             `}>
               {estimation.health.grade}
             </div>
@@ -65,17 +68,41 @@ export default function HealthSection({
                 <span className={`text-xs font-mono ${isDark ? "text-slate-400" : "text-gray-500"}`}>
                   {estimation.health.score}/100
                 </span>
+                <button
+                  onClick={() => onShowInfo?.({
+                    title: "Workflow Health Score",
+                    content: (
+                      <div className="space-y-4 text-sm">
+                        <p>The health score evaluates your workflow across three primary pillars:</p>
+                        <ul className="list-disc pl-5 space-y-2">
+                          <li><strong className="text-emerald-500">Cost Efficiency</strong>: How well your token usage matches the task complexity.</li>
+                          <li><strong className="text-blue-500">Reliability</strong>: Loop detection and recursion safety.</li>
+                          <li><strong className="text-amber-500">Optimization</strong>: Use of tool-calling vs raw prompting.</li>
+                        </ul>
+                        <div className="p-3 bg-muted rounded-lg font-mono text-[10px] space-y-1">
+                          <p>Grade Thresholds:</p>
+                          <p>A: 85-100 (Optimized)</p>
+                          <p>B: 70-84 (Solid)</p>
+                          <p>C: 55-69 (Needs Polish)</p>
+                          <p>F: &lt;40 (High Risk)</p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  className={`ml-1 hover:text-blue-500 transition-colors ${isDark ? "text-slate-500" : "text-gray-400"}`}
+                >
+                  <Info className="w-3 h-3" />
+                </button>
               </div>
               {/* Progress bar */}
               <div className={`mt-1.5 h-1.5 rounded-full overflow-hidden ${isDark ? "bg-slate-700" : "bg-gray-200"}`}>
                 <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    estimation.health.score >= 85 ? "bg-green-500" :
+                  className={`h-full rounded-full transition-all duration-500 ${estimation.health.score >= 85 ? "bg-green-500" :
                     estimation.health.score >= 70 ? "bg-blue-500" :
-                    estimation.health.score >= 55 ? "bg-yellow-500" :
-                    estimation.health.score >= 40 ? "bg-orange-500" :
-                    "bg-red-500"
-                  }`}
+                      estimation.health.score >= 55 ? "bg-yellow-500" :
+                        estimation.health.score >= 40 ? "bg-orange-500" :
+                          "bg-red-500"
+                    }`}
                   style={{ width: `${estimation.health.score}%` }}
                 />
               </div>
@@ -87,11 +114,10 @@ export default function HealthSection({
                     return (
                       <span
                         key={badge}
-                        className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                          isGood
-                            ? isDark ? "bg-green-900/40 text-green-300 border border-green-700" : "bg-green-100 text-green-700 border border-green-200"
-                            : isDark ? "bg-red-900/40 text-red-300 border border-red-700" : "bg-red-100 text-red-700 border border-red-200"
-                        }`}
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${isGood
+                          ? isDark ? "bg-green-900/40 text-green-300 border border-green-700" : "bg-green-100 text-green-700 border border-green-200"
+                          : isDark ? "bg-red-900/40 text-red-300 border border-red-700" : "bg-red-100 text-red-700 border border-red-200"
+                          }`}
                       >
                         {isGood ? <CheckCircle2 className="inline w-3 h-3 mr-0.5" /> : <AlertTriangle className="inline w-3 h-3 mr-0.5" />} {badge}
                       </span>
@@ -118,15 +144,14 @@ export default function HealthSection({
                   key={factor}
                   className={`rounded-md py-1.5 px-1 ${isDark ? "bg-slate-700/50" : "bg-gray-50"}`}
                 >
-                  <div className={`text-[10px] ${isDark ? "text-slate-400" : "text-gray-500"}`}>
+                  <div className={`text-xs ${isDark ? "text-slate-400" : "text-gray-500"}`}>
                     {labels[factor]}
                   </div>
-                  <div className={`text-xs font-bold ${
-                    s >= 20 ? (isDark ? "text-green-300" : "text-green-600") :
+                  <div className={`text-sm font-bold ${s >= 20 ? (isDark ? "text-green-300" : "text-green-600") :
                     s >= 15 ? (isDark ? "text-blue-300" : "text-blue-600") :
-                    s >= 10 ? (isDark ? "text-yellow-300" : "text-yellow-600") :
-                    (isDark ? "text-red-300" : "text-red-600")
-                  }`}>
+                      s >= 10 ? (isDark ? "text-yellow-300" : "text-yellow-600") :
+                        (isDark ? "text-red-300" : "text-red-600")
+                    }`}>
                     {s}/25
                   </div>
                 </div>
@@ -175,15 +200,14 @@ export default function HealthSection({
                       #{rank + 1}
                     </span>
                     <span
-                      className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                        DOT_COLOURS[b.nodeType] ?? "bg-blue-500"
-                      }`}
+                      className={`w-2.5 h-2.5 rounded-full shrink-0 ${DOT_COLOURS[b.nodeType] ?? "bg-blue-500"
+                        }`}
                     />
                     <div className="flex-1 min-w-0">
-                      <div className={`text-xs font-medium truncate ${isDark ? "text-slate-200" : "text-gray-700"}`}>
+                      <div className={`text-sm font-bold truncate ${isDark ? "text-slate-200" : "text-gray-800"}`}>
                         {b.node_name}
                       </div>
-                      <div className={`text-[10px] ${isDark ? "text-slate-400" : "text-gray-500"}`}>
+                      <div className={`text-xs mt-0.5 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
                         {b.model_provider && `${b.model_provider} / ${b.model_name}`}
                         {b.nodeType === "toolNode" && b.tool_id && `Tool: ${b.tool_id}`}
                       </div>
@@ -191,26 +215,24 @@ export default function HealthSection({
                     <div className="text-right shrink-0">
                       <div className="flex items-center gap-2">
                         <div className="text-center">
-                          <div className={`text-[10px] ${isDark ? "text-slate-500" : "text-gray-400"}`}>Cost</div>
-                          <div className={`text-xs font-bold tabular-nums ${
-                            costPct >= 40
-                              ? isDark ? "text-red-400" : "text-red-600"
-                              : costPct >= 20
+                          <div className={`text-xs tracking-wide uppercase font-semibold ${isDark ? "text-slate-500" : "text-gray-400"}`}>Cost</div>
+                          <div className={`text-sm font-bold tabular-nums ${costPct >= 40
+                            ? isDark ? "text-red-400" : "text-red-600"
+                            : costPct >= 20
                               ? isDark ? "text-yellow-400" : "text-yellow-600"
                               : isDark ? "text-slate-300" : "text-gray-600"
-                          }`}>
+                            }`}>
                             {costPct}%
                           </div>
                         </div>
                         <div className="text-center">
-                          <div className={`text-[10px] ${isDark ? "text-slate-500" : "text-gray-400"}`}>Latency</div>
-                          <div className={`text-xs font-bold tabular-nums ${
-                            latencyPct >= 40
-                              ? isDark ? "text-red-400" : "text-red-600"
-                              : latencyPct >= 20
+                          <div className={`text-xs tracking-wide uppercase font-semibold ${isDark ? "text-slate-500" : "text-gray-400"}`}>Latency</div>
+                          <div className={`text-sm font-bold tabular-nums ${latencyPct >= 40
+                            ? isDark ? "text-red-400" : "text-red-600"
+                            : latencyPct >= 20
                               ? isDark ? "text-yellow-400" : "text-yellow-600"
                               : isDark ? "text-slate-300" : "text-gray-600"
-                          }`}>
+                            }`}>
                             {latencyPct}%
                           </div>
                         </div>
@@ -233,9 +255,8 @@ export default function HealthSection({
                 <Route className="inline w-4 h-4 mr-1 -mt-0.5" /> Critical Path
               </h3>
               {estimation.critical_path_latency > 0 && (
-                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                  isDark ? "bg-blue-900/40 text-blue-300" : "bg-blue-100 text-blue-700"
-                }`}>
+                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${isDark ? "bg-blue-900/40 text-blue-300" : "bg-blue-100 text-blue-700"
+                  }`}>
                   {(estimation.critical_path_latency * 1000).toFixed(1)} ms total
                 </span>
               )}
@@ -248,23 +269,23 @@ export default function HealthSection({
                 const latMs = brkdown ? (brkdown.latency * 1000).toFixed(0) : null;
                 return (
                   <React.Fragment key={nodeId}>
-                    <div className="flex flex-col items-center gap-0.5">
+                    <div className="flex flex-col items-center gap-1">
                       <span
                         className={`
-                          text-xs px-2 py-1 rounded-md font-medium border
+                          text-sm px-2.5 py-1.5 rounded-md font-semibold border shadow-sm transition-transform hover:-translate-y-0.5
                           ${isDark ? "bg-blue-900/30 border-blue-700 text-blue-300" : "bg-blue-50 border-blue-200 text-blue-700"}
                         `}
                       >
                         {label}
                       </span>
                       {latMs && latMs !== "0" && (
-                        <span className={`text-[9px] tabular-nums ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+                        <span className={`text-[10px] font-medium tabular-nums ${isDark ? "text-slate-500" : "text-gray-400"}`}>
                           {latMs} ms
                         </span>
                       )}
                     </div>
                     {i < estimation.critical_path.length - 1 && (
-                      <span className={`text-xs ${isDark ? "text-blue-600" : "text-blue-300"}`}>→</span>
+                      <span className={`text-base font-bold px-1 ${isDark ? "text-blue-600" : "text-blue-300"}`}>→</span>
                     )}
                   </React.Fragment>
                 );
@@ -287,18 +308,17 @@ export default function HealthSection({
                   >
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-bold ${isDark ? "text-slate-400" : "text-gray-500"}`}>
+                        <span className={`text-xs font-bold ${isDark ? "text-slate-300" : "text-gray-600"}`}>
                           Step {step.step + 1}
                         </span>
                         {step.parallelism > 1 && (
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${
-                            isDark ? "bg-green-900/40 text-green-300" : "bg-green-100 text-green-700"
-                          }`}>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${isDark ? "bg-green-900/40 text-green-300" : "bg-green-100 text-green-700"
+                            }`}>
                             {step.parallelism}× parallel
                           </span>
                         )}
                       </div>
-                      <div className={`text-[10px] tabular-nums ${isDark ? "text-slate-400" : "text-gray-500"}`}>
+                      <div className={`text-xs tabular-nums font-medium ${isDark ? "text-slate-400" : "text-gray-500"}`}>
                         {step.total_latency > 0 && `${(step.total_latency * 1000).toFixed(1)} ms`}
                         {step.total_cost > 0 && ` · $${step.total_cost.toFixed(6)}`}
                       </div>
@@ -326,13 +346,12 @@ export default function HealthSection({
                     </div>
                     <div className={`mt-1.5 h-1.5 rounded-full overflow-hidden ${isDark ? "bg-slate-700" : "bg-gray-200"}`}>
                       <div
-                        className={`h-full rounded-full transition-all duration-300 ${
-                          step.parallelism >= 3
-                            ? "bg-green-500"
-                            : step.parallelism === 2
+                        className={`h-full rounded-full transition-all duration-300 ${step.parallelism >= 3
+                          ? "bg-green-500"
+                          : step.parallelism === 2
                             ? "bg-blue-500"
                             : "bg-gray-400"
-                        }`}
+                          }`}
                         style={{
                           width: `${Math.min(100, (step.parallelism / Math.max(1, ...estimation.parallel_steps.map(s => s.parallelism))) * 100)}%`,
                         }}

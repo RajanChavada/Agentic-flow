@@ -80,7 +80,6 @@ describe('useWorkflowStore', () => {
         needsLayout: false,
         isSidebarOpen: true,
         hasSeenBlankOverlay: false,
-        isRefineBarOpen: false,
       },
     });
 
@@ -89,32 +88,5 @@ describe('useWorkflowStore', () => {
     expect(state.ui.theme).toBe('dark');
   });
 
-  test('contract results can be set and cleared', () => {
-    const store = useWorkflowStore.getState();
-
-    // Initially empty
-    expect(store.contractResults).toEqual([]);
-    expect(store.contractSummary).toBeNull();
-    expect(store.isValidatingContracts).toBe(false);
-
-    // Set results
-    const results = [
-      { edge_id: 'e1', source_id: 'a', target_id: 'b', status: 'compatible' as const, errors: [] },
-      { edge_id: 'e2', source_id: 'b', target_id: 'c', status: 'incompatible' as const, errors: ['Missing field'] },
-    ];
-    const summary = { total_edges: 2, compatible: 1, incompatible: 1, unvalidated: 0 };
-
-    store.setContractResults(results, summary);
-
-    const updated = useWorkflowStore.getState();
-    expect(updated.contractResults).toHaveLength(2);
-    expect(updated.contractResults[0].status).toBe('compatible');
-    expect(updated.contractSummary?.incompatible).toBe(1);
-
-    // Clear
-    updated.clearContractResults();
-    const cleared = useWorkflowStore.getState();
-    expect(cleared.contractResults).toEqual([]);
-    expect(cleared.contractSummary).toBeNull();
-  });
 });
+

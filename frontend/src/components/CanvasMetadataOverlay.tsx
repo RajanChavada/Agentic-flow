@@ -2,13 +2,12 @@
 "use no memo";
 
 import { useMemo } from "react";
-import { CheckCircle2, XCircle, Minus } from "lucide-react";
 import { analyzeGraph } from "@/lib/graphAnalysis";
 import { useWorkflowStore } from "@/store/useWorkflowStore";
 
 /**
  * Canvas metadata overlay - frosted glass HUD in top-right corner.
- * Displays real-time graph metrics: node count, depth, loops, risk surface, risk level, reachability.
+ * Displays real-time graph metrics: node count, depth, loops, risk surface, risk level.
  */
 export function CanvasMetadataOverlay() {
   // Fine-grained subscriptions - only nodes and edges
@@ -19,7 +18,7 @@ export function CanvasMetadataOverlay() {
   const metrics = useMemo(() => analyzeGraph(nodes, edges), [nodes, edges]);
 
   return (
-    <div className="absolute top-4 right-4 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md rounded-lg border border-gray-200 dark:border-gray-700 shadow-lg px-3 py-2 pointer-events-none select-none">
+    <div className="absolute top-4 right-4 z-50 hidden md:block bg-white/80 dark:bg-gray-900/80 backdrop-blur-md rounded-lg border border-gray-200 dark:border-gray-700 shadow-lg px-3 py-2 pointer-events-none select-none">
       <div className="flex items-center gap-2 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
         {/* Node count */}
         <span>{metrics.workflowNodeCount} nodes</span>
@@ -50,33 +49,14 @@ export function CanvasMetadataOverlay() {
             metrics.riskLevel === "Low"
               ? "text-green-600 dark:text-green-400"
               : metrics.riskLevel === "Medium"
-              ? "text-amber-600 dark:text-amber-400"
-              : "text-red-600 dark:text-red-400"
+                ? "text-amber-600 dark:text-amber-400"
+                : "text-red-600 dark:text-red-400"
           }
         >
           {metrics.riskLevel}
         </span>
-
-        <span className="text-gray-400">|</span>
-
-        {/* Reachability indicator */}
-        {metrics.idealStateReachable === null ? (
-          <div className="flex items-center gap-1 text-gray-400">
-            <Minus className="w-4 h-4" />
-            <span>--</span>
-          </div>
-        ) : metrics.idealStateReachable ? (
-          <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
-            <CheckCircle2 className="w-4 h-4" />
-            <span>Reachable</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
-            <XCircle className="w-4 h-4" />
-            <span>Not reachable</span>
-          </div>
-        )}
       </div>
     </div>
   );
 }
+

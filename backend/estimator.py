@@ -259,7 +259,6 @@ def estimate_agent_node(
       • Tool schema injection (each connected tool adds schema_tokens)
       • Tool response consumption (each tool's avg_response_tokens added to input)
       • Tool execution latency (each tool's latency_ms added on top of LLM latency)
-      • Action constraints (allowed_actions shrinks output for classification/routing)
       • LLM cost based on total input/output tokens × model pricing
       • LLM latency based on output_tokens / tokens_per_sec
     """
@@ -278,14 +277,6 @@ def estimate_agent_node(
 
     # Task-aware output estimation: use multiplier table if task_type + output_size set
     output_multiplier = _get_output_multiplier(node.task_type, node.expected_output_size)
-
-    # Action-constrained estimation: classification/routing with explicit actions
-    # produce shorter, more predictable output
-    if node.allowed_actions and node.task_type in ("classification", "routing"):
-        output_multiplier = 0.15 * len(node.allowed_actions)
-        # Add action labels to input context (LLM sees them in system prompt)
-        action_label_tokens = count_tokens(", ".join(node.allowed_actions))
-        input_tokens += action_label_tokens
 
     output_tokens = int(base_context_tokens * output_multiplier)  # output based on base, not inflated by tool data
 

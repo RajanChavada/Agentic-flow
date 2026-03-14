@@ -1,7 +1,7 @@
 "use client";
 "use no memo";
 
-import React, { useCallback, useRef, useEffect } from "react";
+import React, { useCallback, useRef, useEffect, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -13,19 +13,19 @@ import {
   MarkerType,
   addEdge,
   useReactFlow,
+  SelectionMode,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { v4 as uuid } from "uuid";
+import { useIsMobile } from "@/hooks/useBreakpoint";
 
 import WorkflowNode from "@/components/nodes/WorkflowNode";
 import BlankBoxNode from "@/components/nodes/BlankBoxNode";
 import TextNode from "@/components/nodes/TextNode";
 import ConditionNode from "@/components/nodes/ConditionNode";
-import IdealStateNode from "@/components/nodes/IdealStateNode";
 import AnnotationEdge from "@/components/edges/AnnotationEdge";
 import { CanvasMetadataOverlay } from "@/components/CanvasMetadataOverlay";
 import BlankCanvasOverlay from "@/components/BlankCanvasOverlay";
-import ScaffoldRefineBar from "@/components/ScaffoldRefineBar";
 import {
   useWorkflowStore,
   useWorkflowNodes,
@@ -33,10 +33,8 @@ import {
   useUIState,
   useEstimation,
   useHasSeenOverlay,
-  useIsRefineBarOpen,
 } from "@/store/useWorkflowStore";
 import type { WorkflowNodeData, WorkflowNodeType } from "@/types/workflow";
-import { useContractAutoValidate } from "@/hooks/useContractAutoValidate";
 
 /** Register all custom node types once. */
 const nodeTypes = {
@@ -45,7 +43,6 @@ const nodeTypes = {
   toolNode: WorkflowNode,
   finishNode: WorkflowNode,
   conditionNode: ConditionNode,
-  idealStateNode: IdealStateNode,
   blankBoxNode: BlankBoxNode,
   textNode: TextNode,
 };
@@ -71,14 +68,15 @@ const defaultEdgeOptions = {
 export default function Canvas() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
+  const isMobile = useIsMobile();
 
   const nodes = useWorkflowNodes();
   const edges = useWorkflowEdges();
   const { theme } = useUIState();
   const estimation = useEstimation();
   const hasSeenOverlay = useHasSeenOverlay();
-  const isRefineBarOpen = useIsRefineBarOpen();
-  const showOverlay = nodes.length === 0 && !hasSeenOverlay;
+  const [isMounted, setIsMounted] = useState(false);
+  const showOverlay = isMounted && nodes.length === 0 && !hasSeenOverlay;
   const {
     onNodesChange,
     onEdgesChange,
@@ -88,13 +86,32 @@ export default function Canvas() {
     openConfigModal,
     closeConfigModal,
     restoreFromLocalStorage,
+    deleteNode,
+    selectedNodeId,
   } = useWorkflowStore();
 
-  // ── Auto-validate contracts when node schemas change ─────────
-  useContractAutoValidate();
+  // ── Keyboard shortcuts (Delete / Backspace) ────────────────
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      // Ignore if user is typing in an input or textarea
+      const isTyping = ["INPUT", "TEXTAREA"].includes((event.target as HTMLElement)?.tagName);
+      if (isTyping) return;
+
+      if ((event.key === "Delete" || event.key === "Backspace") && selectedNodeId) {
+        deleteNode(selectedNodeId);
+        setSelectedNodeId(null);
+        closeConfigModal();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedNodeId, deleteNode, setSelectedNodeId, closeConfigModal]);
+
 
   // ── Restore local storage guest snapshot on mount ───────────
   useEffect(() => {
+    setIsMounted(true);
     restoreFromLocalStorage();
   }, [restoreFromLocalStorage]);
 
@@ -239,14 +256,6 @@ export default function Canvas() {
 
       if (!type) return;
 
-      // One-per-canvas enforcement: only one ideal state node allowed
-      if (type === "idealStateNode") {
-        const currentNodes = useWorkflowStore.getState().nodes;
-        if (currentNodes.some(n => n.type === "idealStateNode")) {
-          return;
-        }
-      }
-
       const position = screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
@@ -283,11 +292,6 @@ export default function Canvas() {
         baseData.probability = 50;
       }
 
-      if (type === "idealStateNode") {
-        baseData.idealStateDescription = "";
-        baseData.idealStateSchema = null;
-      }
-
       const newNode: Parameters<typeof addNode>[0] = {
         id: uuid(),
         type,
@@ -307,7 +311,7 @@ export default function Canvas() {
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: { id: string; type?: string }) => {
       setSelectedNodeId(node.id);
-      if (node.type === "agentNode" || node.type === "toolNode" || node.type === "conditionNode" || node.type === "idealStateNode") {
+      if (node.type === "agentNode" || node.type === "toolNode" || node.type === "conditionNode") {
         openConfigModal();
       }
     },
@@ -322,53 +326,70 @@ export default function Canvas() {
   return (
     <div ref={reactFlowWrapper} className="flex-1 h-full relative flex flex-col">
       {showOverlay && <BlankCanvasOverlay />}
-      {isRefineBarOpen && <ScaffoldRefineBar />}
       <div className="flex-1 relative">
         <ReactFlow
-        nodes={nodes}
-        edges={styledEdges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        onNodeClick={onNodeClick}
-        onPaneClick={onPaneClick}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        defaultEdgeOptions={defaultEdgeOptions}
-        fitView
-        proOptions={{ hideAttribution: true }}
-        className={theme === "dark" ? "bg-slate-800" : "bg-gray-50"}
-      >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={16}
-          size={2}
-          color={theme === "dark" ? "#475569" : "#94a3b8"}
-        />
-        <Controls className={theme === "dark" ? "react-flow__controls--dark" : ""} />
-        <MiniMap
-          pannable
-          zoomable
-          style={{ minWidth: 120, minHeight: 80 }}
-          className={theme === "dark" ? "bg-slate-700!" : "bg-white!"}
-          nodeColor={(n) => {
-            switch (n.type) {
-              case "startNode": return "#22c55e";
-              case "agentNode": return "#3b82f6";
-              case "toolNode": return "#f97316";
-              case "finishNode": return "#ef4444";
-              case "conditionNode": return "#8b5cf6";
-              case "idealStateNode": return "#14b8a6";
-              case "blankBoxNode": return "#94a3b8";
-              case "textNode": return "#8b5cf6";
-              default: return "#6b7280";
+          nodes={nodes}
+          edges={styledEdges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onDrop={onDrop}
+          onDragOver={onDragOver}
+          onNodeClick={onNodeClick}
+          onPaneClick={onPaneClick}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          defaultEdgeOptions={defaultEdgeOptions}
+          fitView
+          panOnDrag={!isMobile}
+          panOnScroll={!isMobile}
+          zoomOnPinch={true}
+          zoomOnScroll={false}
+          selectionMode={SelectionMode.Partial}
+          selectionOnDrag={true}
+          preventScrolling={!isMobile}
+          minZoom={0.2}
+          maxZoom={isMobile ? 1.5 : 3}
+          nodesDraggable={!isMobile}
+          proOptions={{ hideAttribution: true }}
+          className={theme === "dark" ? "bg-slate-800" : "bg-gray-50"}
+        >
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={16}
+            size={2}
+            color={theme === "dark" ? "#475569" : "#94a3b8"}
+          />
+          <Controls
+            position={isMobile ? "bottom-right" : "bottom-left"}
+            orientation={isMobile ? "horizontal" : "vertical"}
+            className={isMobile
+              ? "mb-4 mr-4 bg-white/90 dark:bg-slate-900/90 shadow-lg border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden"
+              : theme === "dark" ? "react-flow__controls--dark" : ""
             }
-          }}
-        />
-        <CanvasMetadataOverlay />
-      </ReactFlow>
+          />
+          {!isMobile && (
+            <MiniMap
+              pannable
+              zoomable
+              style={{ minWidth: 120, minHeight: 80 }}
+              className={theme === "dark" ? "bg-slate-700!" : "bg-white!"}
+              nodeColor={(n) => {
+                switch (n.type) {
+                  case "startNode": return "#22c55e";
+                  case "agentNode": return "#3b82f6";
+                  case "toolNode": return "#f97316";
+                  case "finishNode": return "#ef4444";
+                  case "conditionNode": return "#8b5cf6";
+                  case "blankBoxNode": return "#94a3b8";
+                  case "textNode": return "#8b5cf6";
+                  default: return "#6b7280";
+                }
+              }}
+            />
+          )}
+          <CanvasMetadataOverlay />
+        </ReactFlow>
       </div>
     </div>
   );

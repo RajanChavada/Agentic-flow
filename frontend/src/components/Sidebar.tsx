@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Copy, Trash2, BarChart3, Save, Cloud, Square, Type, LayoutTemplate, Target } from "lucide-react";
+import { Copy, Trash2, BarChart3, Save, Cloud, Square, Type, LayoutTemplate } from "lucide-react";
 import type { WorkflowNodeType, BatchEstimateResponse } from "@/types/workflow";
 import {
   useUIState,
@@ -13,9 +13,11 @@ import {
   useWorkflowStore,
   useSidebarOpen,
 } from "@/store/useWorkflowStore";
+import { useReactFlow } from "@xyflow/react";
+import { v4 as uuid } from "uuid";
 import { useUser } from "@/store/useAuthStore";
 import { useAutoLayout } from "@/hooks/useAutoLayout";
-import { useBreakpoint } from "@/hooks/useBreakpoint";
+import { useBreakpoint, useIsMobile } from "@/hooks/useBreakpoint";
 import { supabase } from "@/lib/supabase";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -70,14 +72,6 @@ const PALETTE: PaletteItem[] = [
     darkColour: "bg-red-900/30 border-red-400 text-red-100",
     shapeColour: "bg-red-500",
   },
-  {
-    type: "idealStateNode",
-    label: "Ideal State",
-    shape: "pill",
-    colour: "bg-teal-50 border-teal-500 text-teal-900",
-    darkColour: "bg-teal-900/30 border-teal-400 text-teal-100",
-    shapeColour: "bg-teal-500",
-  },
 ];
 
 function ShapeIndicator({ shape, color }: { shape: string; color: string }) {
@@ -118,6 +112,7 @@ export default function Sidebar() {
   const selectedIds = useSelectedForComparison();
   const currentWorkflowId = useCurrentWorkflowId();
   const activeCanvasId = useActiveCanvasId();
+  const { screenToFlowPosition } = useReactFlow();
   const {
     toggleComparisonSelection,
     loadScenario,
@@ -130,6 +125,7 @@ export default function Sidebar() {
     deleteWorkflowFromSupabase,
     setCurrentWorkflow,
     updateWorkflowNameInStore,
+    addNode,
   } = useWorkflowStore();
   const applyLayout = useAutoLayout();
   const isDark = theme === "dark";
@@ -162,6 +158,62 @@ export default function Sidebar() {
     },
     [user, updateWorkflowNameInStore]
   );
+
+  const isMobile = useIsMobile();
+
+  const handleAddNode = useCallback((type: WorkflowNodeType, label: string) => {
+    const position = screenToFlowPosition({
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+    });
+
+    const baseData: any = { label, type };
+
+    if (type === "blankBoxNode" as any) {
+      baseData.blankBoxStyle = {
+        label: "Group",
+        labelPosition: "top-left",
+        labelColor: "#3b82f6",
+        labelBackground: "none",
+        borderStyle: "dashed",
+        borderColor: "#3b82f6",
+        borderWidth: 2,
+        backgroundColor: "#eff6ff",
+        backgroundOpacity: 40,
+        connectable: true,
+      };
+    }
+
+    if (type === "textNode" as any) {
+      baseData.textNodeStyle = {
+        content: "Text",
+        fontSize: "md",
+        color: "#374151",
+        background: "none",
+      };
+    }
+
+    if (type === "conditionNode" as any) {
+      baseData.conditionExpression = "";
+      baseData.probability = 50;
+    }
+
+    addNode({
+      id: uuid(),
+      type,
+      position,
+      data: baseData,
+      ...(type === "blankBoxNode" as any && {
+        style: { width: 320, height: 220 },
+        zIndex: -1,
+      }),
+    });
+
+    if (isMobile) {
+      useWorkflowStore.getState().toggleSidebar();
+    }
+  }, [screenToFlowPosition, addNode, isMobile]);
+
   const supabaseLoading = useWorkflowStore((s) => s.supabaseLoading);
 
   // Load workflows when user signs in and we have a canvas (editor page handles canvas-scoped load)
@@ -242,300 +294,271 @@ export default function Sidebar() {
           ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
           ${isDark ? "border-slate-600 bg-slate-900" : "border-gray-200 bg-gray-50"}`}
       >
-      {/* ── Node palette ──────────────────────────────────── */}
-      <h2
-        className={`text-xs font-bold uppercase tracking-wide mb-1 ${
-          isDark ? "text-slate-400" : "text-gray-500"
-        }`}
-      >
-        Nodes
-      </h2>
+        {/* ── Node palette ──────────────────────────────────── */}
+        <h2
+          className={`text-xs font-bold uppercase tracking-wide mb-1 ${isDark ? "text-slate-400" : "text-gray-500"
+            }`}
+        >
+          Nodes
+        </h2>
 
-      {PALETTE.map((item) => {
-        // One-per-canvas: grey out Ideal State if already on canvas
-        const isDisabled =
-          item.type === "idealStateNode" &&
-          useWorkflowStore.getState().nodes.some((n) => n.type === "idealStateNode");
-
-        return (
+        {PALETTE.map((item) => (
           <div
             key={item.type}
-            draggable={!isDisabled}
-            onDragStart={(e) => {
-              if (isDisabled) {
-                e.preventDefault();
-                return;
-              }
-              onDragStart(e, item.type, item.label);
-            }}
+            draggable
+            onDragStart={(e) => onDragStart(e, item.type, item.label)}
+            onClick={() => handleAddNode(item.type, item.label)}
             className={`
               flex items-center gap-2.5
-              rounded-md border px-3 py-2.5 text-sm font-medium
+              rounded-md border px-3 py-2.5 text-sm font-medium min-h-11
               transition-all
-              ${isDisabled
-                ? "opacity-50 cursor-not-allowed"
-                : "cursor-grab active:cursor-grabbing hover:shadow-md"}
+              cursor-grab active:cursor-grabbing hover:shadow-md active:scale-95
               ${isDark ? item.darkColour : item.colour}
             `}
           >
             <ShapeIndicator shape={item.shape} color={item.shapeColour} />
             <span>{item.label}</span>
           </div>
-        );
-      })}
+        ))}
 
-      {/* ── Canvas Authoring ──────────────────────────────── */}
-      <div
-        className={`mt-3 pt-3 border-t ${
-          isDark ? "border-slate-700" : "border-gray-200"
-        }`}
-      >
-        <h2
-          className={`text-xs font-bold uppercase tracking-wide mb-1 ${
-            isDark ? "text-slate-400" : "text-gray-500"
-          }`}
+        {/* ── Canvas Authoring ──────────────────────────────── */}
+        <div
+          className={`mt-3 pt-3 border-t ${isDark ? "border-slate-700" : "border-gray-200"
+            }`}
         >
-          Canvas Authoring
-        </h2>
+          <h2
+            className={`text-xs font-bold uppercase tracking-wide mb-1 ${isDark ? "text-slate-400" : "text-gray-500"
+              }`}
+          >
+            Canvas Authoring
+          </h2>
 
-        <div className="flex flex-col gap-1.5">
-          <div
-            draggable
-            onDragStart={(e) => onDragStart(e, "blankBoxNode" as WorkflowNodeType, "Group")}
-            className={`flex items-center gap-2.5 cursor-grab active:cursor-grabbing rounded-md border px-3 py-2.5 text-sm font-medium hover:shadow-md transition-all ${
-              isDark
+          <div className="flex flex-col gap-1.5">
+            <div
+              draggable
+              onDragStart={(e) => onDragStart(e, "blankBoxNode" as WorkflowNodeType, "Group")}
+              onClick={() => handleAddNode("blankBoxNode" as WorkflowNodeType, "Group")}
+              className={`flex items-center gap-2.5 cursor-grab active:cursor-grabbing rounded-md border px-3 py-2.5 text-sm font-medium min-h-11 hover:shadow-md active:scale-95 transition-all ${isDark
                 ? "bg-slate-800/40 border-slate-600 text-slate-300"
                 : "bg-gray-50 border-gray-300 text-gray-700"
-            }`}
-          >
-            <Square className="w-4 h-4 opacity-60" strokeDasharray="4 3" />
-            <span>Group Box</span>
-          </div>
+                }`}
+            >
+              <Square className="w-4 h-4 opacity-60" strokeDasharray="4 3" />
+              <span>Group Box</span>
+            </div>
 
-          <div
-            draggable
-            onDragStart={(e) => onDragStart(e, "textNode" as WorkflowNodeType, "Text")}
-            className={`flex items-center gap-2.5 cursor-grab active:cursor-grabbing rounded-md border px-3 py-2.5 text-sm font-medium hover:shadow-md transition-all ${
-              isDark
+            <div
+              draggable
+              onDragStart={(e) => onDragStart(e, "textNode" as WorkflowNodeType, "Text")}
+              onClick={() => handleAddNode("textNode" as WorkflowNodeType, "Text")}
+              className={`flex items-center gap-2.5 cursor-grab active:cursor-grabbing rounded-md border px-3 py-2.5 text-sm font-medium min-h-11 hover:shadow-md active:scale-95 transition-all ${isDark
                 ? "bg-violet-900/20 border-violet-700 text-violet-300"
                 : "bg-violet-50 border-violet-300 text-violet-700"
-            }`}
-          >
-            <Type className="w-4 h-4 opacity-60" />
-            <span>Text Label</span>
+                }`}
+            >
+              <Type className="w-4 h-4 opacity-60" />
+              <span>Text Label</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Saved Workflows ───────────────────────────────── */}
-      <div
-        className={`mt-3 pt-3 border-t ${
-          isDark ? "border-slate-700" : "border-gray-200"
-        }`}
-      >
-        <h2
-          className={`text-xs font-bold uppercase tracking-wide mb-2 ${
-            isDark ? "text-slate-400" : "text-gray-500"
-          }`}
-        >
-          {activeCanvasId ? "Workflows in this canvas" : "Saved Workflows"}
-          {scenarioList.length > 0 && (
-            <span className="ml-1 font-normal opacity-60">
-              ({scenarioList.length})
-            </span>
-          )}
-          {user && (
-            <span title="Synced with Supabase">
-              <Cloud className="inline w-3 h-3 ml-1 text-blue-400" />
-            </span>
-          )}
-        </h2>
-
-        {scenarioList.length === 0 && !supabaseLoading && (
-          <p
-            className={`text-[10px] italic ${
-              isDark ? "text-slate-500" : "text-gray-400"
+        {/* ── Saved Workflows ───────────────────────────────── */}
+        <div
+          className={`mt-3 pt-3 border-t ${isDark ? "border-slate-700" : "border-gray-200"
             }`}
+        >
+          <h2
+            className={`text-xs font-bold uppercase tracking-wide mb-2 ${isDark ? "text-slate-400" : "text-gray-500"
+              }`}
           >
-            No saved scenarios yet. Use <Save className="inline w-3 h-3 mx-0.5" /> Save in the header.
-          </p>
-        )}
+            {activeCanvasId ? "Workflows in this canvas" : "Saved Workflows"}
+            {scenarioList.length > 0 && (
+              <span className="ml-1 font-normal opacity-60">
+                ({scenarioList.length})
+              </span>
+            )}
+            {user && (
+              <span title="Synced with Supabase">
+                <Cloud className="inline w-3 h-3 ml-1 text-blue-400" />
+              </span>
+            )}
+          </h2>
 
-        {supabaseLoading && (
-          <p className={`text-[10px] italic ${isDark ? "text-slate-500" : "text-gray-400"}`}>
-            Loading workflows...
-          </p>
-        )}
+          {scenarioList.length === 0 && !supabaseLoading && (
+            <p
+              className={`text-[10px] italic ${isDark ? "text-slate-500" : "text-gray-400"
+                }`}
+            >
+              No saved scenarios yet. Use <Save className="inline w-3 h-3 mx-0.5" /> Save in the header.
+            </p>
+          )}
 
-        <div className="flex flex-col gap-1.5">
-          {scenarioList.map((sc) => {
-            const isSelected = selectedIds.includes(sc.id);
-            const isActive = sc.id === currentWorkflowId;
-            return (
-              <div
-                key={sc.id}
-                className={`rounded-md border px-2 py-1.5 text-xs transition ${
-                  isActive
+          {supabaseLoading && (
+            <p className={`text-[10px] italic ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+              Loading workflows...
+            </p>
+          )}
+
+          <div className="flex flex-col gap-1.5">
+            {scenarioList.map((sc) => {
+              const isSelected = selectedIds.includes(sc.id);
+              const isActive = sc.id === currentWorkflowId;
+              return (
+                <div
+                  key={sc.id}
+                  className={`rounded-md border px-2 py-1.5 text-xs transition ${isActive
                     ? isDark
                       ? "border-l-2 border-l-blue-400 border-blue-500 bg-blue-900/30"
                       : "border-l-2 border-l-blue-500 border-blue-400 bg-blue-50"
                     : isSelected
-                    ? isDark
-                      ? "border-blue-500 bg-blue-900/30"
-                      : "border-blue-400 bg-blue-50"
-                    : isDark
-                    ? "border-slate-700 bg-slate-800/60"
-                    : "border-gray-200 bg-white"
-                }`}
-              >
-                {/* Row 1: checkbox + name */}
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggleComparisonSelection(sc.id)}
-                    className="accent-blue-500 rounded shrink-0"
-                    title="Select for comparison"
-                  />
-                  {editingWorkflowId === sc.id ? (
+                      ? isDark
+                        ? "border-blue-500 bg-blue-900/30"
+                        : "border-blue-400 bg-blue-50"
+                      : isDark
+                        ? "border-slate-700 bg-slate-800/60 hover:bg-slate-700/60"
+                        : "border-gray-200 bg-white hover:bg-gray-50"
+                    }`}
+                >
+                  {/* Row 1: checkbox + name */}
+                  <div className="flex items-center gap-1.5">
                     <input
-                      autoFocus
-                      value={editingWorkflowName}
-                      onChange={(e) => setEditingWorkflowName(e.target.value)}
-                      onBlur={() => handleUpdateWorkflowName(sc.id, editingWorkflowName)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleUpdateWorkflowName(sc.id, editingWorkflowName);
-                        if (e.key === "Escape") setEditingWorkflowId(null);
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      className={`flex-1 min-w-0 rounded border px-1 py-0.5 text-xs ${
-                        isDark
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleComparisonSelection(sc.id)}
+                      className="accent-blue-500 rounded shrink-0"
+                      title="Select for comparison"
+                    />
+                    {editingWorkflowId === sc.id ? (
+                      <input
+                        autoFocus
+                        value={editingWorkflowName}
+                        onChange={(e) => setEditingWorkflowName(e.target.value)}
+                        onBlur={() => handleUpdateWorkflowName(sc.id, editingWorkflowName)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleUpdateWorkflowName(sc.id, editingWorkflowName);
+                          if (e.key === "Escape") setEditingWorkflowId(null);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className={`flex-1 min-w-0 rounded border px-1 py-0.5 text-xs ${isDark
                           ? "border-slate-600 bg-slate-800 text-slate-100"
                           : "border-gray-300 bg-white text-gray-800"
-                      }`}
-                    />
-                  ) : (
-                    <span
-                      className={`truncate flex-1 cursor-pointer ${
-                        isActive ? "font-bold" : "font-medium"
-                      } ${isDark ? "text-slate-200" : "text-gray-800"}`}
-                      onClick={() => {
-                        loadScenario(sc.id);
-                        setCurrentWorkflow(sc.id, sc.name);
-                        requestAnimationFrame(() => applyLayout());
-                      }}
-                      onDoubleClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setEditingWorkflowId(sc.id);
-                        setEditingWorkflowName(sc.name);
-                      }}
-                      title={`Load "${sc.name}" (double-click to rename)`}
-                    >
-                      {sc.name}
-                    </span>
-                  )}
-                </div>
+                          }`}
+                      />
+                    ) : (
+                      <span
+                        className={`truncate flex-1 cursor-pointer ${isActive ? "font-bold" : "font-medium"
+                          } ${isDark ? "text-slate-200" : "text-gray-800"}`}
+                        onClick={() => {
+                          loadScenario(sc.id);
+                          setCurrentWorkflow(sc.id, sc.name);
+                          requestAnimationFrame(() => applyLayout());
+                        }}
+                        onDoubleClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setEditingWorkflowId(sc.id);
+                          setEditingWorkflowName(sc.name);
+                        }}
+                        title={`Load "${sc.name}" (double-click to rename)`}
+                      >
+                        {sc.name}
+                      </span>
+                    )}
+                  </div>
 
-                {/* Row 2: metrics pill + actions */}
-                <div className="flex items-center justify-between mt-1">
-                  {sc.estimate ? (
-                    <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                        isDark
+                  {/* Row 2: metrics pill + actions */}
+                  <div className="flex items-center justify-between mt-1">
+                    {sc.estimate ? (
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded-full ${isDark
                           ? "bg-slate-700 text-slate-300"
                           : "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      ${sc.estimate.total_cost.toFixed(4)} /{" "}
-                      {sc.estimate.total_latency.toFixed(1)}s
-                    </span>
-                  ) : (
-                    <span
-                      className={`text-[10px] italic ${
-                        isDark ? "text-slate-600" : "text-gray-400"
-                      }`}
-                    >
-                      no estimate
-                    </span>
-                  )}
+                          }`}
+                      >
+                        ${sc.estimate.total_cost.toFixed(4)} /{" "}
+                        {sc.estimate.total_latency.toFixed(1)}s
+                      </span>
+                    ) : (
+                      <span
+                        className={`text-[10px] italic ${isDark ? "text-slate-600" : "text-gray-400"
+                          }`}
+                      >
+                        no estimate
+                      </span>
+                    )}
 
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => duplicateScenario(sc.id)}
-                      title="Duplicate"
-                      className="opacity-50 hover:opacity-100 text-[10px]"
-                    >
-                      <Copy className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (user) {
-                          deleteWorkflowFromSupabase(sc.id);
-                        } else {
-                          deleteScenario(sc.id);
-                        }
-                      }}
-                      title="Delete"
-                      className="opacity-50 hover:opacity-100 text-[10px]"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => duplicateScenario(sc.id)}
+                        title="Duplicate"
+                        className="opacity-50 hover:opacity-100 text-[10px]"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (user) {
+                            deleteWorkflowFromSupabase(sc.id);
+                          } else {
+                            deleteScenario(sc.id);
+                          }
+                        }}
+                        title="Delete"
+                        className="opacity-50 hover:opacity-100 text-[10px]"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
 
-        {/* Compare button */}
-        {scenarioList.length >= 2 && (
-          <button
-            onClick={handleCompare}
-            disabled={selectedIds.length < 2 || comparing}
-            className={`mt-2 w-full rounded-md border px-2 py-1.5 text-xs font-medium transition disabled:opacity-40 ${
-              isDark
+          {/* Compare button */}
+          {scenarioList.length >= 2 && (
+            <button
+              onClick={handleCompare}
+              disabled={selectedIds.length < 2 || comparing}
+              className={`mt-2 w-full rounded-md border px-2 py-1.5 text-xs font-medium transition disabled:opacity-40 ${isDark
                 ? "border-blue-600 text-blue-300 hover:bg-blue-800/40"
                 : "border-blue-300 text-blue-700 hover:bg-blue-50"
-            }`}
-          >
-            {comparing
-              ? "Comparing…"
-              : <><BarChart3 className="inline w-3.5 h-3.5 mr-1" /> Compare Selected ({selectedIds.length})</>}
-          </button>
-        )}
-      </div>
+                }`}
+            >
+              {comparing
+                ? "Comparing…"
+                : <><BarChart3 className="inline w-3.5 h-3.5 mr-1" /> Compare Selected ({selectedIds.length})</>}
+            </button>
+          )}
+        </div>
 
-      {/* ── Templates ─────────────────────────────────────── */}
-      <div
-        className={`mt-3 pt-3 border-t ${
-          isDark ? "border-slate-700" : "border-gray-200"
-        }`}
-      >
-        <h2
-          className={`text-xs font-bold uppercase tracking-wide mb-2 ${
-            isDark ? "text-slate-400" : "text-gray-500"
-          }`}
+        {/* ── Templates ─────────────────────────────────────── */}
+        <div
+          className={`mt-3 pt-3 border-t ${isDark ? "border-slate-700" : "border-gray-200"
+            }`}
         >
-          Templates
-        </h2>
-        <Link
-          href="/marketplace"
-          className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs font-medium transition ${
-            isDark
+          <h2
+            className={`text-xs font-bold uppercase tracking-wide mb-2 ${isDark ? "text-slate-400" : "text-gray-500"
+              }`}
+          >
+            Templates
+          </h2>
+          <Link
+            href="/marketplace"
+            className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs font-medium transition ${isDark
               ? "border-slate-600 text-slate-300 hover:bg-slate-700"
               : "border-gray-300 text-gray-600 hover:bg-gray-100"
-          }`}
-        >
-          <LayoutTemplate className="w-3.5 h-3.5" />
-          Browse marketplace
-        </Link>
-      </div>
+              }`}
+          >
+            <LayoutTemplate className="w-3.5 h-3.5" />
+            Browse marketplace
+          </Link>
+        </div>
 
-      <div className={`mt-auto pt-4 border-t text-[10px] ${isDark ? "border-slate-700 text-slate-500" : "border-gray-200 text-gray-400"}`}>
-        Drag a node onto the canvas
-      </div>
-    </aside>
+        <div className={`mt-auto pt-4 border-t text-[10px] ${isDark ? "border-slate-700 text-slate-500" : "border-gray-200 text-gray-400"}`}>
+          Drag a node onto the canvas
+        </div>
+      </aside>
     </>
   );
 }

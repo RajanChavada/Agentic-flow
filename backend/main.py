@@ -20,23 +20,11 @@ from models import (
     ToolCategoryDetailedInfo,
     ExternalWorkflowImportRequest,
     ImportedWorkflow,
-    SchemaGenerateRequest,
-    SchemaGenerateResponse,
-    SchemaValidateRequest,
-    SchemaValidateResponse,
-    ScaffoldRequest,
-    ScaffoldRefineRequest,
-    ScaffoldResponse,
-    ContractValidationRequest,
-    ContractValidationResponse,
 )
 from estimator import estimate_workflow
 from pricing_registry import registry
 from tool_registry import tool_registry
 from import_adapters import get_adapter
-from schema_generator import generate_schema, validate_schema
-from scaffold_generator import scaffold_workflow, refine_workflow
-from contract_validator import validate_contracts
 
 app = FastAPI(
     title="Neurovn",
@@ -124,62 +112,6 @@ async def import_workflow(request: ExternalWorkflowImportRequest):
             detail=f"Failed to import workflow: {exc}",
         )
 
-
-# ── Schema Generation ──────────────────────────────────────────
-
-@app.post("/api/generate-schema", response_model=SchemaGenerateResponse)
-async def generate_schema_endpoint(request: SchemaGenerateRequest):
-    """Generate a JSON schema from a natural language success description."""
-    schema = generate_schema(request.description, context=request.context)
-    return SchemaGenerateResponse(schema=schema, description=request.description)
-
-
-@app.post("/api/validate-schema", response_model=SchemaValidateResponse)
-async def validate_schema_endpoint(request: SchemaValidateRequest):
-    """Validate a JSON schema for correctness."""
-    is_valid, errors = validate_schema(request.schema_obj)
-    return SchemaValidateResponse(valid=is_valid, errors=errors)
-
-
-# ── Scaffold (NL-to-workflow) ─────────────────────────────────
-
-@app.post("/api/scaffold", response_model=ScaffoldResponse)
-async def scaffold_endpoint(request: ScaffoldRequest):
-    """Generate a workflow graph from a natural language description."""
-    result = scaffold_workflow(request.prompt)
-    return ScaffoldResponse(**result)
-
-
-@app.post("/api/scaffold/refine", response_model=ScaffoldResponse)
-async def scaffold_refine_endpoint(request: ScaffoldRefineRequest):
-    """Refine an existing workflow graph based on a follow-up instruction."""
-    current_graph = {
-        "nodes": [n.model_dump() for n in request.nodes],
-        "edges": [e.model_dump() for e in request.edges],
-    }
-    result = refine_workflow(
-        request.prompt,
-        current_graph["nodes"],
-        current_graph["edges"],
-    )
-    return ScaffoldResponse(**result)
-
-
-# ── Edge Data Contract Validation ─────────────────────────────
-
-@app.post("/api/validate-contracts", response_model=ContractValidationResponse)
-async def validate_contracts_endpoint(request: ContractValidationRequest):
-    """Validate schema contracts across all edges in a workflow.
-
-    Checks that each source node's ``output_schema`` structurally
-    satisfies the target node's ``input_schema`` using structural
-    subtyping (required fields + type compatibility).
-    """
-    edge_results, summary = validate_contracts(
-        [n.model_dump() for n in request.nodes],
-        [e.model_dump() for e in request.edges],
-    )
-    return ContractValidationResponse(edges=edge_results, summary=summary)
 
 
 # ── Provider & Model Registry ──────────────────────────────────

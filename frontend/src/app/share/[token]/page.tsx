@@ -14,9 +14,10 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import dagre from "@dagrejs/dagre";
-import { Copy, Loader2, LogIn } from "lucide-react";
+import { Copy, Loader2, LogIn, Sun, MoonStar } from "lucide-react";
 import { getShareByToken, copyWorkflowToCanvas, type ShareSnapshot, type CanvasShareSnapshot } from "@/lib/shareWorkflows";
 import { useAuthStore, useUser } from "@/store/useAuthStore";
+import { useWorkflowStore, useUIState } from "@/store/useWorkflowStore";
 import AuthModal from "@/components/AuthModal";
 import WorkflowNode from "@/components/nodes/WorkflowNode";
 import BlankBoxNode from "@/components/nodes/BlankBoxNode";
@@ -24,6 +25,7 @@ import TextNode from "@/components/nodes/TextNode";
 import AnnotationEdge from "@/components/edges/AnnotationEdge";
 import type { Node, Edge } from "@xyflow/react";
 import type { WorkflowNodeData } from "@/types/workflow";
+import { cn } from "@/lib/utils";
 
 const NODE_WIDTH = 220;
 const NODE_HEIGHT = 100;
@@ -102,6 +104,9 @@ function SharePageContent() {
   const token = params?.token as string | undefined;
   const user = useUser();
   const { openAuthModal } = useAuthStore();
+  const { theme } = useUIState();
+  const toggleTheme = useWorkflowStore((s) => s.toggleTheme);
+  const isDark = theme === "dark";
 
   const [share, setShare] = useState<{ snapshot: ShareSnapshot; shareType: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -219,41 +224,67 @@ function SharePageContent() {
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground">
-      <nav className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-lg">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5 font-semibold tracking-tight">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-[10px] font-bold text-background">
-              NV
-            </div>
-            <span className="hidden sm:inline">Neurovn</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleCopyToCanvas}
-              disabled={copying}
-              className="inline-flex items-center gap-2 rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90 disabled:opacity-50"
-            >
-              {copying ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : user ? (
-                <>
-                  <Copy className="h-4 w-4" />
-                  Copy to my canvas
-                </>
-              ) : (
-                <>
-                  <LogIn className="h-4 w-4" />
-                  Sign in to copy
-                </>
-              )}
-            </button>
+      <nav className={cn(
+        "sticky top-0 z-50 border-b backdrop-blur-lg flex h-14 items-center justify-between px-4 sm:px-6",
+        isDark ? "border-slate-700 bg-slate-900/80" : "border-gray-200 bg-white/80"
+      )}>
+        <Link href="/" className="flex items-center gap-2.5 font-semibold tracking-tight transition hover:opacity-80">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-[10px] font-bold text-background">
+            NV
           </div>
+          <span className="hidden sm:inline text-lg">Neurovn</span>
+        </Link>
+        <div className="flex items-center gap-2 sm:gap-4">
+          <button
+            onClick={toggleTheme}
+            className={cn(
+              "rounded-md border p-2 transition",
+              isDark
+                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                : "border-gray-300 text-gray-600 hover:bg-gray-100"
+            )}
+            title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {isDark ? <Sun className="w-4 h-4" /> : <MoonStar className="w-4 h-4" />}
+          </button>
+
+          <button
+            onClick={handleCopyToCanvas}
+            disabled={copying}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition hover:opacity-90 disabled:opacity-50",
+              isDark ? "bg-blue-600 text-white hover:bg-blue-500" : "bg-blue-600 text-white hover:bg-blue-700"
+            )}
+          >
+            {copying ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : user ? (
+              <>
+                <Copy className="h-4 w-4" />
+                Copy to my canvas
+              </>
+            ) : (
+              <>
+                <LogIn className="h-4 w-4" />
+                Sign in to copy
+              </>
+            )}
+          </button>
         </div>
       </nav>
 
-      <div className="flex flex-1 flex-col p-4">
-        <h1 className="mb-4 text-lg font-semibold">{title}</h1>
-        <div className="flex-1 rounded-lg border border-border bg-muted/20 min-h-[400px]">
+      <div className="flex flex-1 flex-col p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto">
+        <div className="mb-6 flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+            Read-only {share.shareType} view
+          </p>
+        </div>
+
+        <div className={cn(
+          "flex-1 rounded-xl border shadow-sm min-h-[500px] overflow-hidden relative",
+          isDark ? "border-slate-700 bg-slate-900" : "border-gray-200 bg-gray-50/50"
+        )}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -270,7 +301,7 @@ function SharePageContent() {
             proOptions={{ hideAttribution: true }}
           >
             <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
-            <Controls />
+            <Controls className={isDark ? "bg-slate-800 border-slate-700 fill-slate-300" : ""} />
             <FitViewEffect />
           </ReactFlow>
         </div>

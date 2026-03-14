@@ -150,11 +150,10 @@ function Step2Illustration() {
         {models.map((m, i) => (
           <motion.div
             key={m.name}
-            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition ${
-              m.active
+            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition ${m.active
                 ? "border-blue-400 bg-blue-50 text-blue-700 shadow-sm"
                 : "border-border/60 bg-card text-muted-foreground"
-            }`}
+              }`}
             initial={{ opacity: 0, x: -8 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
@@ -345,11 +344,10 @@ export default function HowItWorks() {
               <motion.button
                 key={step.n}
                 onMouseEnter={() => handleHover(i)}
-                className={`group relative w-full rounded-xl border p-5 text-left transition-all ${
-                  isActive
+                className={`group relative w-full rounded-xl border p-5 text-left transition-colors duration-200 ${isActive
                     ? "border-border bg-card shadow-sm"
                     : "border-transparent hover:border-border/40 hover:bg-card/50"
-                }`}
+                  }`}
                 initial={{ opacity: 0, x: 16 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
@@ -366,11 +364,10 @@ export default function HowItWorks() {
 
                 <div className="flex items-start gap-3">
                   <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition ${
-                      isActive
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition ${isActive
                         ? `${step.accent} text-white`
                         : "bg-secondary text-muted-foreground"
-                    }`}
+                      }`}
                   >
                     {step.n}
                   </span>

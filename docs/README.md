@@ -207,7 +207,6 @@ The canvas even shows **inline estimation badges** on each node after running an
 | **Tool** | Orange | External tool invocation (web search, database, API call) |
 | **Condition** | Yellow | Routing logic / branching |
 | **Finish** | Red | Terminal node |
-| **Ideal State** | Teal | Target state for optimization comparison |
 
 ### Canvas Authoring
 

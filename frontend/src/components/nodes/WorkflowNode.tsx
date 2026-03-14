@@ -129,8 +129,8 @@ function WorkflowNode({ id, data, selected }: NodeProps & { data: WorkflowNodeDa
   const borderClass = heatmap
     ? (isDark ? heatmap.darkBorder : heatmap.border)
     : cycleRing
-    ? (isDark ? "border-purple-400" : "border-purple-500")
-    : (isDark ? s.darkBorder : s.border);
+      ? (isDark ? "border-purple-400" : "border-purple-500")
+      : (isDark ? s.darkBorder : s.border);
   const glowClass = heatmap?.glow ?? (cycleRing ? (isDark ? "shadow-purple-400/30 shadow-md" : "shadow-purple-300/40 shadow-md") : "");
 
   // Has meaningful metrics to show?
@@ -142,7 +142,7 @@ function WorkflowNode({ id, data, selected }: NodeProps & { data: WorkflowNodeDa
         rounded-lg border-2 min-w-[170px] max-w-[220px] text-center transition-all duration-300
         ${hasMetrics ? "px-3 py-2.5" : "px-4 py-3"}
         ${isDark ? s.darkBg : s.bg} ${borderClass} ${glowClass}
-        ${selected ? "ring-2 ring-offset-2 ring-blue-400" : ""}
+        ${selected ? "ring-4 ring-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.6)]" : ""}
       `}
     >
       {/* ── Target handles (all 4 sides) — hidden for startNode ── */}
@@ -178,12 +178,6 @@ function WorkflowNode({ id, data, selected }: NodeProps & { data: WorkflowNodeDa
         </p>
       )}
 
-      {/* Actions badge */}
-      {data.type === "agentNode" && (data.allowedActions as string[] | undefined)?.length ? (
-        <p className={`text-[9px] mt-0.5 truncate ${isDark ? "text-zinc-400" : "text-zinc-500"}`}>
-          {(data.allowedActions as string[]).length} action{(data.allowedActions as string[]).length !== 1 ? "s" : ""}
-        </p>
-      ) : null}
 
       {data.type === "toolNode" && data.toolId && (
         <p className={`text-[10px] mt-1 truncate ${isDark ? "text-amber-400/70" : "text-orange-500"}`}>
@@ -245,15 +239,14 @@ function WorkflowNode({ id, data, selected }: NodeProps & { data: WorkflowNodeDa
       {severity && severity !== "low" && (costShare > 0 || latencyShare > 0) && (
         <div className="flex items-center justify-center gap-1 mt-1.5">
           <span
-            className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${
-              severity === "high"
-                ? isDark
-                  ? "bg-red-900/50 text-red-300"
-                  : "bg-red-100 text-red-700"
-                : isDark
+            className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${severity === "high"
+              ? isDark
+                ? "bg-red-900/50 text-red-300"
+                : "bg-red-100 text-red-700"
+              : isDark
                 ? "bg-yellow-900/50 text-yellow-300"
                 : "bg-yellow-100 text-yellow-700"
-            }`}
+              }`}
           >
             {severity === "high" ? <Flame className="inline w-3 h-3" /> : <Zap className="inline w-3 h-3" />}{" "}
             {Math.round(Math.max(costShare, latencyShare) * 100)}%
@@ -265,15 +258,14 @@ function WorkflowNode({ id, data, selected }: NodeProps & { data: WorkflowNodeDa
       {inCycle && nodeCycle && (
         <div className="flex items-center justify-center gap-1 mt-1">
           <span
-            className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${
-              nodeCycle.risk_level === "critical"
-                ? isDark ? "bg-red-900/60 text-red-200" : "bg-red-100 text-red-800"
-                : nodeCycle.risk_level === "high"
+            className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${nodeCycle.risk_level === "critical"
+              ? isDark ? "bg-red-900/60 text-red-200" : "bg-red-100 text-red-800"
+              : nodeCycle.risk_level === "high"
                 ? isDark ? "bg-orange-900/50 text-orange-300" : "bg-orange-100 text-orange-700"
                 : nodeCycle.risk_level === "medium"
-                ? isDark ? "bg-purple-900/50 text-purple-300" : "bg-purple-100 text-purple-700"
-                : isDark ? "bg-slate-700 text-slate-400" : "bg-gray-100 text-gray-600"
-            }`}
+                  ? isDark ? "bg-purple-900/50 text-purple-300" : "bg-purple-100 text-purple-700"
+                  : isDark ? "bg-slate-700 text-slate-400" : "bg-gray-100 text-gray-600"
+              }`}
           >
             <RefreshCw className="inline w-3 h-3 mr-0.5" /> Loop ×{nodeCycle.expected_iterations}
             {nodeCycle.risk_level && nodeCycle.risk_level !== "low" && (

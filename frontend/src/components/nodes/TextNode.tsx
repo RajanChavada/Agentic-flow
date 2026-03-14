@@ -69,10 +69,10 @@ function TextNode({ id, data, selected }: NodeProps & { data: WorkflowNodeData }
         ? "bg-slate-700/60 px-3 py-1 rounded-full"
         : "bg-gray-100 px-3 py-1 rounded-full"
       : style.background === "badge"
-      ? isDark
-        ? "bg-slate-700/80 px-2.5 py-1 rounded-md"
-        : "bg-gray-100 px-2.5 py-1 rounded-md"
-      : "";
+        ? isDark
+          ? "bg-slate-700/80 px-2.5 py-1 rounded-md"
+          : "bg-gray-100 px-2.5 py-1 rounded-md"
+        : "";
 
   const bgInline =
     style.background !== "none" && style.backgroundColor
@@ -81,9 +81,8 @@ function TextNode({ id, data, selected }: NodeProps & { data: WorkflowNodeData }
 
   return (
     <div
-      className={`cursor-default select-none ${bgClass} ${
-        selected ? "ring-2 ring-blue-400 ring-offset-1 rounded" : ""
-      }`}
+      className={`cursor-default select-none transition-all duration-300 ${bgClass} ${selected ? "ring-4 ring-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.6)] rounded" : ""
+        }`}
       style={bgInline}
       onDoubleClick={(e) => {
         e.stopPropagation();

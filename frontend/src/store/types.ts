@@ -11,8 +11,6 @@ import type {
   ActualNodeStats,
   ProviderDetailed,
   ToolCategoryDetailed,
-  EdgeContractResult,
-  ContractSummary,
 } from '@/types/workflow';
 
 // Forward exports for slice use
@@ -29,7 +27,6 @@ export interface UIState {
   needsLayout: boolean;
   isSidebarOpen: boolean;
   hasSeenBlankOverlay: boolean;
-  isRefineBarOpen: boolean;
 }
 
 // Scaling params for what-if analysis
@@ -40,4 +37,4 @@ export interface ScalingParams {
 
 // Re-export workflow types
 export type WorkflowNode = Node<WorkflowNodeData>;
-export type { BatchEstimateResult, ActualNodeStats, ProviderDetailed, ToolCategoryDetailed, EdgeContractResult, ContractSummary };
+export type { BatchEstimateResult, ActualNodeStats, ProviderDetailed, ToolCategoryDetailed };

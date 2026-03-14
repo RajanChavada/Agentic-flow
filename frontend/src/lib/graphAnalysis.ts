@@ -31,7 +31,6 @@ export interface GraphMetrics {
   toolRiskSurface: ToolRiskSurface;     // tool category breakdown
   riskScore: number;                    // aggregate point score
   riskLevel: "Low" | "Medium" | "High"; // risk threshold classification
-  idealStateReachable: boolean | null;  // null = no ideal state node on canvas
 }
 
 /**
@@ -81,9 +80,6 @@ export function analyzeGraph(
     workflowNodeCount
   );
 
-  // Check ideal state reachability
-  const idealStateReachable = checkIdealStateReachability(workflowNodes, edges);
-
   return {
     nodeCount,
     workflowNodeCount,
@@ -92,7 +88,6 @@ export function analyzeGraph(
     toolRiskSurface,
     riskScore,
     riskLevel,
-    idealStateReachable,
   };
 }
 
@@ -285,62 +280,3 @@ function computeRiskScore(
   return { score, level };
 }
 
-/**
- * Check if ideal state node is reachable from start node via BFS
- *
- * Returns:
- * - null: no idealStateNode on canvas
- * - false: no startNode or no path exists
- * - true: path exists from start to ideal state
- */
-function checkIdealStateReachability(
-  nodes: Node<WorkflowNodeData>[],
-  edges: Edge[]
-): boolean | null {
-  // Find ideal state node (by type or legacy id fallback)
-  const idealStateNode = nodes.find((n) => n.type === "idealStateNode" || n.id === "idealState");
-  if (!idealStateNode) {
-    return null;
-  }
-
-  // Find start node
-  const startNode = nodes.find((n) => n.data.type === "startNode");
-  if (!startNode) {
-    return false;
-  }
-
-  // Build adjacency list
-  const adj = new Map<string, string[]>();
-  nodes.forEach((node) => {
-    adj.set(node.id, []);
-  });
-  edges.forEach((edge) => {
-    const neighbors = adj.get(edge.source);
-    if (neighbors) {
-      neighbors.push(edge.target);
-    }
-  });
-
-  // BFS from start to find ideal state
-  const visited = new Set<string>();
-  const queue: string[] = [startNode.id];
-  visited.add(startNode.id);
-
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-
-    if (current === idealStateNode.id) {
-      return true;
-    }
-
-    const neighbors = adj.get(current) || [];
-    for (const neighbor of neighbors) {
-      if (!visited.has(neighbor)) {
-        visited.add(neighbor);
-        queue.push(neighbor);
-      }
-    }
-  }
-
-  return false;
-}

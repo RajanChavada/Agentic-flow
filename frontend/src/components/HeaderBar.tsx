@@ -22,8 +22,7 @@ import {
   HelpCircle,
   PanelLeft,
   MoreHorizontal,
-  ShieldCheck,
-  X,
+
 } from "lucide-react";
 import {
   useWorkflowStore,
@@ -73,13 +72,7 @@ export default function HeaderBar() {
   const autoLayout = useAutoLayout();
   const [overflowOpen, setOverflowOpen] = useState(false);
   const overflowRef = useRef<HTMLDivElement>(null);
-  const [validating, setValidating] = useState(false);
-  const [contractToast, setContractToast] = useState<{
-    total: number;
-    compatible: number;
-    incompatible: number;
-    unvalidated: number;
-  } | null>(null);
+
 
   // Auth
   const user = useUser();
@@ -185,44 +178,6 @@ export default function HeaderBar() {
     }
   };
 
-  // ── Contract toast auto-dismiss ─────────────────────────────
-  useEffect(() => {
-    if (contractToast) {
-      const timer = setTimeout(() => setContractToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [contractToast]);
-
-  // ── Validate Contracts ──────────────────────────────────────
-  const handleValidateContracts = async () => {
-    setValidating(true);
-    setErrorBanner(undefined);
-    try {
-      const res = await fetch(`${API_BASE}/api/validate-contracts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nodes: nodesToPayload(nodes),
-          edges: edgesToPayload(edges),
-        }),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || res.statusText);
-      }
-      const data = await res.json();
-      useWorkflowStore
-        .getState()
-        .setContractResults(data.edges, data.summary);
-      setContractToast(data.summary);
-    } catch (err: unknown) {
-      setErrorBanner(
-        err instanceof Error ? err.message : "Contract validation failed"
-      );
-    } finally {
-      setValidating(false);
-    }
-  };
 
   // ── New Workflow ───────────────────────────────────────────
   const handleNew = () => {
@@ -315,21 +270,19 @@ export default function HeaderBar() {
 
   return (
     <header
-      className={`flex items-center justify-between border-b px-3 sm:px-6 h-14 shrink-0 transition-colors ${
-        isDark
-          ? "border-slate-700 bg-slate-900"
-          : "border-gray-200 bg-white"
-      }`}
+      className={`flex items-center justify-between border-b px-3 sm:px-6 h-14 shrink-0 transition-colors ${isDark
+        ? "border-slate-700 bg-slate-900"
+        : "border-gray-200 bg-white"
+        }`}
     >
       {/* ── Left side: brand + workflow name + status ── */}
       <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
         <Link
           href="/canvases"
-          className={`inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 -ml-1 transition ${
-            isDark
-              ? "text-slate-100 hover:bg-slate-800 hover:text-white"
-              : "text-gray-800 hover:bg-gray-100 hover:text-gray-900"
-          }`}
+          className={`inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 -ml-1 transition ${isDark
+            ? "text-slate-100 hover:bg-slate-800 hover:text-white"
+            : "text-gray-800 hover:bg-gray-100 hover:text-gray-900"
+            }`}
           title="Back to My Canvases"
         >
           <Home className="h-4 w-4 shrink-0" />
@@ -341,9 +294,8 @@ export default function HeaderBar() {
             <span className={`text-sm ${isDark ? "text-slate-600" : "text-gray-300"}`}>/</span>
             <Link
               href="/canvases"
-              className={`inline-flex items-center gap-1 text-sm font-medium transition hover:underline ${
-                isDark ? "text-slate-400 hover:text-slate-200" : "text-gray-500 hover:text-gray-800"
-              }`}
+              className={`inline-flex items-center gap-1 text-sm font-medium transition hover:underline ${isDark ? "text-slate-400 hover:text-slate-200" : "text-gray-500 hover:text-gray-800"
+                }`}
               title="Back to My Canvases"
             >
               <LayoutGrid className="h-3.5 w-3.5" /> My Canvases
@@ -364,20 +316,18 @@ export default function HeaderBar() {
               if (e.key === "Enter") commitName();
               if (e.key === "Escape") setEditingName(false);
             }}
-            className={`text-sm font-medium px-1.5 py-0.5 rounded border outline-none w-24 sm:w-48 ${
-              isDark
-                ? "bg-slate-800 border-slate-600 text-slate-100 focus:border-blue-500"
-                : "bg-white border-gray-300 text-gray-800 focus:border-blue-500"
-            }`}
+            className={`text-sm font-medium px-1.5 py-0.5 rounded border outline-none w-24 sm:w-48 transition-shadow ${isDark
+              ? "bg-slate-800 border-slate-600 text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              : "bg-white border-gray-300 text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              }`}
           />
         ) : (
           <button
             onClick={() => setEditingName(true)}
-            className={`text-sm font-medium px-1.5 py-0.5 rounded hover:bg-opacity-50 transition truncate max-w-24 sm:max-w-48 ${
-              isDark
-                ? "text-slate-300 hover:bg-slate-800"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
+            className={`text-sm font-medium px-1.5 py-0.5 rounded hover:bg-opacity-50 transition truncate max-w-24 sm:max-w-48 ${isDark
+              ? "text-slate-300 hover:bg-slate-800"
+              : "text-gray-600 hover:bg-gray-100"
+              }`}
             title="Click to rename workflow"
           >
             {currentWorkflowName}
@@ -393,18 +343,16 @@ export default function HeaderBar() {
         <span className="hidden sm:inline-flex items-center w-20 shrink-0">
           {isSaving && (
             <span
-              className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap ${
-                isDark ? "bg-amber-900/30 text-amber-400" : "bg-amber-50 text-amber-600"
-              }`}
+              className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap ${isDark ? "bg-amber-900/30 text-amber-400" : "bg-amber-50 text-amber-600"
+                }`}
             >
               <Loader2 className="w-3 h-3 animate-spin" /> Saving...
             </span>
           )}
           {showSaved && !isSaving && (
             <span
-              className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap ${
-                isDark ? "bg-green-900/30 text-green-400" : "bg-green-50 text-green-700"
-              }`}
+              className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap ${isDark ? "bg-green-900/30 text-green-400" : "bg-green-50 text-green-700"
+                }`}
             >
               <Check className="w-3 h-3" /> Saved
             </span>
@@ -420,11 +368,10 @@ export default function HeaderBar() {
         {/* Sidebar toggle (visible below lg) */}
         <button
           onClick={() => useWorkflowStore.getState().toggleSidebar()}
-          className={`lg:hidden rounded-md border p-1.5 transition ${
-            isDark
-              ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-              : "border-gray-300 text-gray-600 hover:bg-gray-100"
-          }`}
+          className={`lg:hidden rounded-md border p-1.5 transition ${isDark
+            ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+            : "border-gray-300 text-gray-600 hover:bg-gray-100"
+            }`}
           title="Toggle sidebar"
         >
           <PanelLeft className="h-4 w-4" />
@@ -435,11 +382,10 @@ export default function HeaderBar() {
           {/* Help */}
           <button
             onClick={openTutorial}
-            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${
-              isDark
-                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-                : "border-gray-300 text-gray-600 hover:bg-gray-100"
-            }`}
+            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${isDark
+              ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+              : "border-gray-300 text-gray-600 hover:bg-gray-100"
+              }`}
             title="Canvas tutorial"
           >
             <HelpCircle className="w-3.5 h-3.5" />
@@ -449,11 +395,10 @@ export default function HeaderBar() {
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${
-              isDark
-                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-                : "border-gray-300 text-gray-600 hover:bg-gray-100"
-            }`}
+            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${isDark
+              ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+              : "border-gray-300 text-gray-600 hover:bg-gray-100"
+              }`}
             title={isDark ? "Switch to light mode" : "Switch to dark mode"}
           >
             {isDark ? <Sun className="w-3.5 h-3.5" /> : <MoonStar className="w-3.5 h-3.5" />}
@@ -463,11 +408,10 @@ export default function HeaderBar() {
           {/* Templates */}
           <Link
             href="/marketplace"
-            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${
-              isDark
-                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-                : "border-gray-300 text-gray-600 hover:bg-gray-100"
-            }`}
+            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${isDark
+              ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+              : "border-gray-300 text-gray-600 hover:bg-gray-100"
+              }`}
             title="Browse workflow templates"
           >
             <LayoutTemplate className="w-3.5 h-3.5" />
@@ -477,11 +421,10 @@ export default function HeaderBar() {
           {/* New Workflow */}
           <button
             onClick={handleNew}
-            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${
-              isDark
-                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-                : "border-gray-300 text-gray-600 hover:bg-gray-100"
-            }`}
+            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${isDark
+              ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+              : "border-gray-300 text-gray-600 hover:bg-gray-100"
+              }`}
             title="New blank workflow"
           >
             <FilePlus className="w-3.5 h-3.5" />
@@ -493,11 +436,10 @@ export default function HeaderBar() {
             <button
               onClick={() => setIsPublishOpen(true)}
               disabled={nodes.length === 0}
-              className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center ${
-                isDark
-                  ? "border-amber-700 text-amber-300 hover:bg-amber-800/40"
-                  : "border-amber-300 text-amber-700 hover:bg-amber-50"
-              }`}
+              className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center ${isDark
+                ? "border-amber-700 text-amber-300 hover:bg-amber-800/40"
+                : "border-amber-300 text-amber-700 hover:bg-amber-50"
+                }`}
               title="Publish this workflow to the marketplace"
             >
               <UploadCloud className="w-3.5 h-3.5" />
@@ -510,11 +452,10 @@ export default function HeaderBar() {
             <div className="relative" ref={shareDropdownRef}>
               <button
                 onClick={() => setIsShareOpen((o) => !o)}
-                className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 ${
-                  isDark
-                    ? "border-sky-700 text-sky-300 hover:bg-sky-800/40"
-                    : "border-sky-300 text-sky-700 hover:bg-sky-50"
-                }`}
+                className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 ${isDark
+                  ? "border-sky-700 text-sky-300 hover:bg-sky-800/40"
+                  : "border-sky-300 text-sky-700 hover:bg-sky-50"
+                  }`}
                 title="Share workflow or canvas"
               >
                 <Share2 className="w-3.5 h-3.5" />
@@ -529,9 +470,8 @@ export default function HeaderBar() {
                     aria-hidden
                   />
                   <div
-                    className={`absolute right-0 top-full mt-1 z-50 min-w-48 rounded-md border py-1 shadow-lg ${
-                      isDark ? "border-slate-600 bg-slate-900" : "border-gray-200 bg-white"
-                    }`}
+                    className={`absolute right-0 top-full mt-1 z-50 min-w-48 rounded-md border py-1 shadow-lg ${isDark ? "border-slate-600 bg-slate-900" : "border-gray-200 bg-white"
+                      }`}
                   >
                     <button
                       onClick={() => {
@@ -539,9 +479,8 @@ export default function HeaderBar() {
                         setIsShareOpen(false);
                       }}
                       disabled={nodes.length === 0}
-                      className={`w-full px-3 py-2 text-left text-sm transition disabled:opacity-40 ${
-                        isDark ? "hover:bg-slate-800" : "hover:bg-gray-100"
-                      }`}
+                      className={`w-full px-3 py-2 text-left text-sm transition disabled:opacity-40 ${isDark ? "hover:bg-slate-800" : "hover:bg-gray-100"
+                        }`}
                     >
                       Share this workflow
                     </button>
@@ -550,9 +489,8 @@ export default function HeaderBar() {
                         setShareMode("canvas");
                         setIsShareOpen(false);
                       }}
-                      className={`w-full px-3 py-2 text-left text-sm transition ${
-                        isDark ? "hover:bg-slate-800" : "hover:bg-gray-100"
-                      }`}
+                      className={`w-full px-3 py-2 text-left text-sm transition ${isDark ? "hover:bg-slate-800" : "hover:bg-gray-100"
+                        }`}
                     >
                       Share this canvas
                     </button>
@@ -567,11 +505,10 @@ export default function HeaderBar() {
             <button
               onClick={handleSaveAs}
               disabled={nodes.length === 0 || isSaving}
-              className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center ${
-                isDark
-                  ? "border-teal-700 text-teal-300 hover:bg-teal-800/40"
-                  : "border-teal-300 text-teal-700 hover:bg-teal-50"
-              }`}
+              className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center ${isDark
+                ? "border-teal-700 text-teal-300 hover:bg-teal-800/40"
+                : "border-teal-300 text-teal-700 hover:bg-teal-50"
+                }`}
               title="Save a copy as a new workflow"
             >
               <SaveAll className="w-3.5 h-3.5" />
@@ -582,11 +519,10 @@ export default function HeaderBar() {
           {/* Import */}
           <button
             onClick={handleImport}
-            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${
-              isDark
-                ? "border-violet-700 text-violet-300 hover:bg-violet-800/40"
-                : "border-violet-300 text-violet-700 hover:bg-violet-50"
-            }`}
+            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${isDark
+              ? "border-violet-700 text-violet-300 hover:bg-violet-800/40"
+              : "border-violet-300 text-violet-700 hover:bg-violet-50"
+              }`}
             title="Import a workflow from JSON (Generic / LangGraph)"
           >
             <Download className="w-3.5 h-3.5" />
@@ -597,11 +533,10 @@ export default function HeaderBar() {
           {activeCanvasId && user && (
             <button
               onClick={() => setIsPullOpen(true)}
-              className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${
-                isDark
-                  ? "border-violet-700 text-violet-300 hover:bg-violet-800/40"
-                  : "border-violet-300 text-violet-700 hover:bg-violet-50"
-              }`}
+              className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${isDark
+                ? "border-violet-700 text-violet-300 hover:bg-violet-800/40"
+                : "border-violet-300 text-violet-700 hover:bg-violet-50"
+                }`}
               title="Pull workflows from another canvas"
             >
               <GitBranch className="w-3.5 h-3.5" />
@@ -613,11 +548,10 @@ export default function HeaderBar() {
           <button
             onClick={() => autoLayout()}
             disabled={nodes.length === 0}
-            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center ${
-              isDark
-                ? "border-cyan-700 text-cyan-300 hover:bg-cyan-800/40"
-                : "border-cyan-300 text-cyan-700 hover:bg-cyan-50"
-            }`}
+            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center ${isDark
+              ? "border-cyan-700 text-cyan-300 hover:bg-cyan-800/40"
+              : "border-cyan-300 text-cyan-700 hover:bg-cyan-50"
+              }`}
             title="Auto-arrange nodes using dagre layout"
           >
             <LayoutDashboard className="w-3.5 h-3.5" />
@@ -632,11 +566,10 @@ export default function HeaderBar() {
         <div className="md:hidden relative" ref={overflowRef}>
           <button
             onClick={() => setOverflowOpen((v) => !v)}
-            className={`rounded-md border p-1.5 transition ${
-              isDark
-                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-                : "border-gray-300 text-gray-600 hover:bg-gray-100"
-            }`}
+            className={`rounded-md border p-1.5 transition ${isDark
+              ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+              : "border-gray-300 text-gray-600 hover:bg-gray-100"
+              }`}
             title="More actions"
           >
             <MoreHorizontal className="h-4 w-4" />
@@ -645,19 +578,18 @@ export default function HeaderBar() {
             <>
               <div className="fixed inset-0 z-40" onClick={() => setOverflowOpen(false)} aria-hidden />
               <div
-                className={`absolute right-0 top-full mt-1 z-50 min-w-52 rounded-md border py-1 shadow-lg ${
-                  isDark ? "border-slate-600 bg-slate-900" : "border-gray-200 bg-white"
-                }`}
+                className={`absolute right-0 top-full mt-1 z-50 min-w-52 rounded-md border py-1 shadow-lg ${isDark ? "border-slate-600 bg-slate-900" : "border-gray-200 bg-white"
+                  }`}
               >
                 <button
                   onClick={() => { openTutorial(); setOverflowOpen(false); }}
-                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                  className={`w-full flex items-center gap-2 px-3 py-2 min-h-11 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
                 >
                   <HelpCircle className="w-4 h-4 shrink-0" /> Help & Tutorial
                 </button>
                 <button
                   onClick={() => { toggleTheme(); setOverflowOpen(false); }}
-                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                  className={`w-full flex items-center gap-2 px-3 py-2 min-h-11 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
                 >
                   {isDark ? <Sun className="w-4 h-4 shrink-0" /> : <MoonStar className="w-4 h-4 shrink-0" />}
                   {isDark ? "Light mode" : "Dark mode"}
@@ -666,26 +598,26 @@ export default function HeaderBar() {
                 <a
                   href="/marketplace"
                   onClick={() => setOverflowOpen(false)}
-                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                  className={`w-full flex items-center gap-2 px-3 py-2 min-h-11 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
                 >
                   <LayoutTemplate className="w-4 h-4 shrink-0" /> Templates
                 </a>
                 <button
                   onClick={() => { handleNew(); setOverflowOpen(false); }}
-                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                  className={`w-full flex items-center gap-2 px-3 py-2 min-h-11 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
                 >
                   <FilePlus className="w-4 h-4 shrink-0" /> New workflow
                 </button>
                 <button
                   onClick={() => { handleImport(); setOverflowOpen(false); }}
-                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                  className={`w-full flex items-center gap-2 px-3 py-2 min-h-11 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
                 >
                   <Download className="w-4 h-4 shrink-0" /> Import
                 </button>
                 {activeCanvasId && user && (
                   <button
                     onClick={() => { setIsPullOpen(true); setOverflowOpen(false); }}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                    className={`w-full flex items-center gap-2 px-3 py-2 min-h-11 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
                   >
                     <GitBranch className="w-4 h-4 shrink-0" /> Pull from canvas
                   </button>
@@ -693,7 +625,7 @@ export default function HeaderBar() {
                 <button
                   onClick={() => { autoLayout(); setOverflowOpen(false); }}
                   disabled={nodes.length === 0}
-                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition disabled:opacity-40 ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                  className={`w-full flex items-center gap-2 px-3 py-2 min-h-11 text-left text-sm transition disabled:opacity-40 ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
                 >
                   <LayoutDashboard className="w-4 h-4 shrink-0" /> Auto-layout
                 </button>
@@ -702,7 +634,7 @@ export default function HeaderBar() {
                   <button
                     onClick={() => { setIsPublishOpen(true); setOverflowOpen(false); }}
                     disabled={nodes.length === 0}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition disabled:opacity-40 ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                    className={`w-full flex items-center gap-2 px-3 py-2 min-h-11 text-left text-sm transition disabled:opacity-40 disabled:pointer-events-none ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
                   >
                     <UploadCloud className="w-4 h-4 shrink-0" /> Publish
                   </button>
@@ -712,13 +644,13 @@ export default function HeaderBar() {
                     <button
                       onClick={() => { setShareMode("workflow"); setOverflowOpen(false); }}
                       disabled={nodes.length === 0}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition disabled:opacity-40 ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                      className={`w-full flex items-center gap-2 px-3 py-2 min-h-11 text-left text-sm transition disabled:opacity-40 disabled:pointer-events-none ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
                     >
                       <Share2 className="w-4 h-4 shrink-0" /> Share workflow
                     </button>
                     <button
                       onClick={() => { setShareMode("canvas"); setOverflowOpen(false); }}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                      className={`w-full flex items-center gap-2 px-3 py-2 min-h-11 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
                     >
                       <Share2 className="w-4 h-4 shrink-0" /> Share canvas
                     </button>
@@ -728,7 +660,7 @@ export default function HeaderBar() {
                   <button
                     onClick={() => { handleSaveAs(); setOverflowOpen(false); }}
                     disabled={nodes.length === 0 || isSaving}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition disabled:opacity-40 ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
+                    className={`w-full flex items-center gap-2 px-3 py-2 min-h-11 text-left text-sm transition disabled:opacity-40 disabled:pointer-events-none ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
                   >
                     <SaveAll className="w-4 h-4 shrink-0" /> Save As
                   </button>
@@ -742,11 +674,10 @@ export default function HeaderBar() {
         <button
           onClick={handleSave}
           disabled={nodes.length === 0 || isSaving}
-          className={`rounded-md border px-2 sm:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center ${
-            isDark
-              ? "border-emerald-700 text-emerald-300 hover:bg-emerald-800/40"
-              : "border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-          }`}
+          className={`rounded-md border px-2 sm:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center ${isDark
+            ? "border-emerald-700 text-emerald-300 hover:bg-emerald-800/40"
+            : "border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+            }`}
           title={currentWorkflowId ? "Save changes to current workflow" : "Save as new workflow"}
         >
           <Save className="w-3.5 h-3.5" />
@@ -754,21 +685,6 @@ export default function HeaderBar() {
         </button>
 
         {/* Estimate — always visible, responsive text */}
-        <button
-          onClick={handleValidateContracts}
-          disabled={validating || edges.length === 0}
-          className={`rounded-md border px-2 sm:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center ${
-            isDark
-              ? "border-emerald-700 text-emerald-300 hover:bg-emerald-800/40"
-              : "border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-          }`}
-          title="Validate schema contracts on all edges"
-        >
-          <ShieldCheck className="w-3.5 h-3.5" />
-          <span className="hidden lg:inline ml-1">
-            {validating ? "Validating\u2026" : "Validate"}
-          </span>
-        </button>
         <button
           onClick={handleEstimate}
           disabled={loading}
@@ -785,9 +701,8 @@ export default function HeaderBar() {
 
         {/* ── Auth controls ── */}
         <div
-          className={`ml-1 sm:ml-2 pl-1 sm:pl-2 border-l flex items-center ${
-            isDark ? "border-slate-700" : "border-gray-200"
-          }`}
+          className={`ml-1 sm:ml-2 pl-1 sm:pl-2 border-l flex items-center ${isDark ? "border-slate-700" : "border-gray-200"
+            }`}
         >
           <NavProfile />
         </div>
@@ -831,37 +746,7 @@ export default function HeaderBar() {
         />
       )}
 
-      {/* Contract validation toast */}
-      {contractToast && (
-        <div
-          className={`fixed bottom-4 right-4 z-50 rounded-lg border shadow-lg px-4 py-3 text-sm animate-in slide-in-from-bottom-2 ${
-            isDark
-              ? "bg-slate-900 border-slate-700 text-slate-200"
-              : "bg-white border-stone-200 text-stone-800"
-          }`}
-        >
-          <p className="font-medium mb-1">Contract Validation</p>
-          <div className="flex items-center gap-3 text-xs">
-            {contractToast.compatible > 0 && (
-              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                <Check className="w-3 h-3" />
-                {contractToast.compatible} valid
-              </span>
-            )}
-            {contractToast.incompatible > 0 && (
-              <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
-                <X className="w-3 h-3" />
-                {contractToast.incompatible} incompatible
-              </span>
-            )}
-            {contractToast.unvalidated > 0 && (
-              <span className={`flex items-center gap-1 ${isDark ? "text-slate-400" : "text-stone-500"}`}>
-                {contractToast.unvalidated} unvalidated
-              </span>
-            )}
-          </div>
-        </div>
-      )}
+
     </header>
   );
 }

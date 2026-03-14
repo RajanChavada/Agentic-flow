@@ -66,6 +66,12 @@ function FooterSection() {
                 Features
               </a>
               <a
+                href="/docs"
+                className="block transition-colors hover:text-foreground text-muted-foreground"
+              >
+                Documentation
+              </a>
+              <a
                 href="#how-it-works"
                 className="block transition-colors hover:text-foreground text-muted-foreground"
               >

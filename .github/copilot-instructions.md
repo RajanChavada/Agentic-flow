@@ -123,3 +123,19 @@ When fixing a bug, follow root-cause-first thinking:
    - Task title, agent type, files changed, root causes fixed (if bug), next steps
 2. If a non-obvious decision or lesson was learned, append to `Context/memory/AGENT_MEMORY.md`
    with context, decision, and "don't repeat" notes
+
+## Mobile compatibility
+
+Every UI change must be verified for mobile compatibility. After editing any `.tsx` component, run the mobile-compat skill:
+
+1. Read `.cursor/skills/mobile-compat/SKILL.md` and follow its 8-step process
+2. Use `useIsMobile()` / `useBreakpoint()` from `@/hooks/useBreakpoint` for JS-level breakpoint logic
+3. Prefer CSS-only Tailwind responsive classes (`sm:`, `md:`, `lg:`) over JS breakpoints
+4. Ensure all touch targets are minimum 44x44px (`min-h-11 min-w-11`)
+5. Run `npx tsc --noEmit` after changes to verify type safety
+
+Key mobile rules:
+- React Flow canvas: hide MiniMap on mobile, enable `zoomOnPinch`, disable `nodesDraggable`
+- Modals: fullscreen on mobile (`fixed inset-0`), constrained on desktop
+- Sidebar: collapsed by default on mobile, opens as overlay
+- No emojis in production UI — Lucide icons only
