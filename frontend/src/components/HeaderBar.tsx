@@ -534,21 +534,6 @@ export default function HeaderBar() {
             </button>
           )}
 
-          {/* Layout */}
-          <button
-            onClick={() => autoLayout()}
-            disabled={nodes.length === 0}
-            className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
-              ? "border-cyan-700 text-cyan-300 hover:bg-cyan-800/40"
-              : "border-cyan-300 text-cyan-700 hover:bg-cyan-50"
-              }`}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" />
-            <span>Layout</span>
-          </button>
-
-          {/* Export */}
-          <ExportDropdown isDark={isDark} />
         </div>
 
         {/* ── Mobile overflow menu (below md) ── */}
@@ -651,6 +636,24 @@ export default function HeaderBar() {
               </div>
             </>
           )}
+        </div>
+
+        {/* Layout — moved out of overflow area to remain accessible */}
+        <button
+          onClick={() => autoLayout()}
+          disabled={nodes.length === 0}
+          className={`hidden lg:inline-flex rounded-md border px-2.5 py-1.5 text-sm font-medium transition disabled:opacity-40 items-center gap-1 shrink-0 whitespace-nowrap ${isDark
+            ? "border-cyan-700 text-cyan-300 hover:bg-cyan-800/40"
+            : "border-cyan-300 text-cyan-700 hover:bg-cyan-50"
+            }`}
+        >
+          <LayoutDashboard className="w-3.5 h-3.5" />
+          <span>Layout</span>
+        </button>
+
+        {/* Export — moved out of overflow area to prevent dropdown menu clipping */}
+        <div className="hidden lg:block shrink-0">
+          <ExportDropdown isDark={isDark} />
         </div>
 
         {/* Save — always visible */}
