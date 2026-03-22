@@ -12,6 +12,8 @@ import {
   FileCode,
   ChevronDown,
   DownloadCloud,
+  Code2,
+  X,
 } from "lucide-react";
 import {
   useWorkflowNodes,
@@ -733,6 +735,15 @@ async function generatePdfReport(
   doc.save("neurovn-report.pdf");
 }
 
+// ── LangGraph export types ───────────────────────────────────
+
+interface LangGraphExportResponse {
+  python_file: string;
+  requirements_txt: string;
+  env_example: string;
+  filename: string;
+}
+
 interface Props {
   isDark: boolean;
 }
@@ -741,6 +752,11 @@ export default function ExportDropdown({ isDark }: Props) {
   const [open, setOpen] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // LangGraph export modal state
+  const [lgModal, setLgModal] = useState<"prompt" | "download" | null>(null);
+  const [lgFiles, setLgFiles] = useState<LangGraphExportResponse | null>(null);
+  const [lgError, setLgError] = useState<string | null>(null);
   const estimation = useEstimation();
   const nodes = useWorkflowNodes();
   const edges = useWorkflowEdges();
@@ -895,12 +911,81 @@ export default function ExportDropdown({ isDark }: Props) {
     }
   }, [estimation, isDark]);
 
+  // ── LangGraph export handler ─────────────────────────────
+  const callLangGraphExport = useCallback(async (includeEstimation: boolean) => {
+    setLgModal(null);
+    setLgError(null);
+    setExporting("langgraph");
+    try {
+      // Build workflow_json from current canvas state (same shape as .neurovn.json)
+      const workflowJson = {
+        name: (nodes[0] as any)?.data?.workflowName ||
+              (typeof window !== "undefined" ? (document.title || "Workflow") : "Workflow"),
+        nodes: nodes.map((n: any) => ({
+          id: n.id,
+          type: n.type,
+          data: n.data,
+          position: n.position,
+        })),
+        edges: edges.map((e: any) => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          sourceHandle: e.sourceHandle,
+          targetHandle: e.targetHandle,
+        })),
+      };
+
+      const body: Record<string, unknown> = { workflow_json: workflowJson };
+      if (includeEstimation && estimation) {
+        body.estimation_report = estimation;
+      }
+
+      const apiBase =
+        process.env.NEXT_PUBLIC_BACKEND_URL ||
+        process.env.NEXT_PUBLIC_API_URL ||
+        "http://localhost:8000";
+
+      const res = await fetch(`${apiBase}/api/export/langgraph`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Server error ${res.status}`);
+      }
+
+      const data: LangGraphExportResponse = await res.json();
+      setLgFiles(data);
+      setLgModal("download");
+    } catch (err: any) {
+      console.error("LangGraph export failed:", err);
+      setLgError(err?.message || "Export failed. Please try again.");
+      setLgModal("download"); // show modal with error state
+    } finally {
+      setExporting(null);
+      setOpen(false);
+    }
+  }, [nodes, edges, estimation]);
+
+  const handleLangGraphClick = useCallback(() => {
+    if (!estimation) {
+      setLgModal("prompt");
+      setOpen(false);
+    } else {
+      callLangGraphExport(true);
+    }
+  }, [estimation, callLangGraphExport]);
+
   const hasEstimation = estimation != null;
 
   const btnBase = `w-full text-left px-3 py-2 text-sm transition rounded ${isDark ? "hover:bg-slate-600" : "hover:bg-gray-100"
     }`;
 
   return (
+    <>
     <div ref={dropdownRef} className="relative">
       <button
         onClick={handleToggle}
@@ -931,6 +1016,17 @@ export default function ExportDropdown({ isDark }: Props) {
               className={`${btnBase} disabled:opacity-40`}
             >
               <DownloadCloud className="inline w-3.5 h-3.5 mr-1" /> Export (.neurovn.json)
+            </button>
+            {/* LangGraph Python Export */}
+            <button
+              onClick={handleLangGraphClick}
+              disabled={nodes.length === 0 || exporting === "langgraph"}
+              className={`${btnBase} disabled:opacity-40`}
+              title={nodes.length === 0 ? "Add nodes to the canvas first" : "Export as a LangGraph Python scaffold"}
+            >
+              {exporting === "langgraph"
+                ? "Generating…"
+                : <><Code2 className="inline w-3.5 h-3.5 mr-1" /> Export as Python (LangGraph)</>}
             </button>
             <div className={`my-1 border-t ${isDark ? "border-slate-600" : "border-gray-200"}`} />
 
@@ -1014,5 +1110,116 @@ export default function ExportDropdown({ isDark }: Props) {
         </div>
       )}
     </div>
+
+    {/* ── LangGraph Prompt Modal (no estimation) ─────────────────── */}
+    {lgModal === "prompt" && (
+      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className={`relative w-full max-w-sm rounded-xl border p-6 shadow-2xl ${
+          isDark ? "border-slate-600 bg-slate-800 text-slate-100" : "border-gray-200 bg-white text-gray-900"
+        }`}>
+          <button
+            onClick={() => setLgModal(null)}
+            className="absolute right-4 top-4 opacity-50 hover:opacity-100"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <div className="mb-1 flex items-center gap-2">
+            <Code2 className="w-5 h-5 text-amber-400" />
+            <h2 className="text-base font-semibold">Export as Python (LangGraph)</h2>
+          </div>
+          <p className={`mb-5 text-sm ${ isDark ? "text-slate-400" : "text-gray-500" }`}>
+            Run estimation first to include cost &amp; latency comments in your exported file.
+          </p>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => { setLgModal(null); }}
+              className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                isDark
+                  ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                  : "border-gray-300 text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              Run Estimation First
+            </button>
+            <button
+              onClick={() => callLangGraphExport(false)}
+              className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 transition"
+            >
+              Export Without Estimates
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── LangGraph Download Modal ────────────────────────────────── */}
+    {lgModal === "download" && (
+      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className={`relative w-full max-w-md rounded-xl border p-6 shadow-2xl ${
+          isDark ? "border-slate-600 bg-slate-800 text-slate-100" : "border-gray-200 bg-white text-gray-900"
+        }`}>
+          <button
+            onClick={() => { setLgModal(null); setLgFiles(null); setLgError(null); }}
+            className="absolute right-4 top-4 opacity-50 hover:opacity-100"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <div className="mb-1 flex items-center gap-2">
+            <Code2 className="w-5 h-5 text-amber-400" />
+            <h2 className="text-base font-semibold">LangGraph Export Ready</h2>
+          </div>
+
+          {lgError ? (
+            <p className="mt-3 text-sm text-red-400">{lgError}</p>
+          ) : lgFiles ? (
+            <>
+              <p className={`mb-4 text-sm ${ isDark ? "text-slate-400" : "text-gray-500" }`}>
+                Your LangGraph scaffold is ready. Download each file below.
+              </p>
+              <div className="flex flex-col gap-2">
+                {/* Python file */}
+                <button
+                  onClick={() => downloadBlob(lgFiles.python_file, lgFiles.filename, "text/x-python")}
+                  className="flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-amber-600 transition text-left"
+                >
+                  <Code2 className="w-4 h-4 flex-shrink-0" />
+                  <span className="truncate">Download {lgFiles.filename}</span>
+                </button>
+                {/* requirements.txt */}
+                <button
+                  onClick={() => downloadBlob(lgFiles.requirements_txt, "requirements.txt", "text/plain")}
+                  className={`flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition text-left ${
+                    isDark
+                      ? "border-slate-600 text-slate-200 hover:bg-slate-700"
+                      : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <FileText className="w-4 h-4 flex-shrink-0" />
+                  Download requirements.txt
+                </button>
+                {/* .env.example */}
+                <button
+                  onClick={() => downloadBlob(lgFiles.env_example, ".env.example", "text/plain")}
+                  className={`flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition text-left ${
+                    isDark
+                      ? "border-slate-600 text-slate-200 hover:bg-slate-700"
+                      : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <FileCode className="w-4 h-4 flex-shrink-0" />
+                  Download .env.example
+                </button>
+              </div>
+              <p className={`mt-4 text-xs ${ isDark ? "text-slate-500" : "text-gray-400" }`}>
+                This is a scaffold — see the file comments for what to implement.
+              </p>
+            </>
+          ) : (
+            <p className="mt-3 text-sm text-slate-400">Loading…</p>
+          )}
+        </div>
+      </div>
+    )}
+    </>
   );
 }

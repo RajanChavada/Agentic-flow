@@ -321,7 +321,7 @@ export default function HeaderBar() {
 
   return (
     <header
-      className={`flex items-center justify-between border-b px-3 sm:px-6 h-14 shrink-0 transition-colors ${isDark
+      className={`flex items-center justify-between gap-4 border-b px-3 sm:px-6 h-14 shrink-0 transition-colors ${isDark
         ? "border-slate-700 bg-slate-900"
         : "border-gray-200 bg-white"
         }`}
@@ -415,7 +415,7 @@ export default function HeaderBar() {
       </div>
 
       {/* ── Right side: action buttons ── */}
-      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+      <div className="flex items-center justify-end gap-1 sm:gap-2 overflow-x-auto flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {/* Sidebar toggle (visible below lg) */}
         <button
           onClick={() => useWorkflowStore.getState().toggleSidebar()}

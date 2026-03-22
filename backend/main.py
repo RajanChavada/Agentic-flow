@@ -22,6 +22,8 @@ from models import (
     ToolCategoryDetailedInfo,
     ExternalWorkflowImportRequest,
     ImportedWorkflow,
+    LangGraphExportRequest,
+    LangGraphExportResponse,
 )
 from estimator import estimate_workflow, compute_graph_complexity
 from quick_estimate import quick_estimate
@@ -130,7 +132,42 @@ async def import_workflow(request: ExternalWorkflowImportRequest):
 
 
 
-# ── Provider & Model Registry ──────────────────────────────────
+# ── LangGraph Code Export ────────────────────────────────────────────
+
+@app.post("/api/export/langgraph", response_model=LangGraphExportResponse)
+async def export_langgraph(request: LangGraphExportRequest):
+    """Generate a deterministic LangGraph Python scaffold from a .neurovn.json workflow.
+
+    Pure algorithmic transpilation — no LLM calls, no external API calls.
+    Returns the .py file contents, requirements.txt, and .env.example.
+    """
+    from transpiler.langgraph_exporter import (
+        generate_full_file,
+        generate_requirements_txt,
+        generate_env_example,
+        build_node_map,
+        label_to_identifier,
+    )
+
+    try:
+        node_map = build_node_map(request.workflow_json)
+        workflow_name = request.workflow_json.get("name", "workflow")
+        # Build a safe filename from the workflow name
+        base_name = label_to_identifier(workflow_name) or "workflow"
+        filename = f"{base_name}_langgraph.py"
+
+        return LangGraphExportResponse(
+            python_file=generate_full_file(request.workflow_json, request.estimation_report),
+            requirements_txt=generate_requirements_txt(node_map),
+            env_example=generate_env_example(node_map),
+            filename=filename,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to generate LangGraph export: {exc}",
+        )
+
 
 @app.get("/api/providers", response_model=list[ProviderSummary])
 async def get_providers():

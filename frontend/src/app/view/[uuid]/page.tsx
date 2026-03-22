@@ -197,7 +197,7 @@ function ViewCanvasContent() {
     </nav>
 
     <div className="mx-auto w-full max-w-[1600px] p-4 sm:p-6 lg:p-8">
-      <div className={cn("relative min-h-[70vh] overflow-hidden rounded-xl border", isDark ? "border-slate-700 bg-slate-900" : "border-gray-200 bg-gray-50/50") }>
+      <div className={cn("relative h-[70vh] overflow-hidden rounded-xl border", isDark ? "border-slate-700 bg-slate-900" : "border-gray-200 bg-gray-50/50") }>
         <ReactFlowProvider>
           <ReactFlow nodes={preview.nodes as Node[]} edges={preview.edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} defaultEdgeOptions={defaultEdgeOptions} nodesDraggable={false} nodesConnectable={false} elementsSelectable={false} panOnDrag zoomOnScroll fitView fitViewOptions={{ padding: 0.2 }} proOptions={{ hideAttribution: true }}>
             <Background variant={BackgroundVariant.Dots} gap={16} size={1} />

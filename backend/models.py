@@ -476,3 +476,24 @@ class ImportedWorkflow(BaseModel):
     nodes: List[NodeConfig]
     edges: List[EdgeConfig]
     metadata: dict = Field(default_factory=dict, description="Source-specific extra info")
+
+
+# ── LangGraph export models ───────────────────────────────────────────────────
+
+class LangGraphExportRequest(BaseModel):
+    """POST /api/export/langgraph – generate a LangGraph Python scaffold."""
+    workflow_json: dict = Field(
+        ..., description="The .neurovn.json workflow definition (nodes + edges + name)"
+    )
+    estimation_report: Optional[dict] = Field(
+        default=None,
+        description="Optional WorkflowEstimation dict; if present, populates the cost/latency header comment",
+    )
+
+
+class LangGraphExportResponse(BaseModel):
+    """Response from POST /api/export/langgraph."""
+    python_file: str = Field(..., description="Full contents of the generated .py file")
+    requirements_txt: str = Field(..., description="requirements.txt content")
+    env_example: str = Field(..., description=".env.example content")
+    filename: str = Field(..., description="Suggested filename: {workflow_name}_langgraph.py")
