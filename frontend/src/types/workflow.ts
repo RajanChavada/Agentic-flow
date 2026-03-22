@@ -30,6 +30,24 @@ export type BlankBoxStyle = {
   connectable: boolean;
 };
 
+/** Tool binding stored on an agent node. */
+export interface WorkflowToolBinding {
+  id: string;
+  displayName: string;
+  schemaTokens: number;
+  avgResponseTokens: number;
+  latencyMs: number;
+}
+
+/** Tool binding payload used in persisted/imported node data. */
+export interface NodeToolBindingPayload {
+  id: string;
+  display_name: string;
+  schema_tokens: number;
+  avg_response_tokens: number;
+  latency_ms: number;
+}
+
 /** Data payload attached to every custom React Flow node. */
 export type WorkflowNodeData = {
   label: string;
@@ -40,6 +58,12 @@ export type WorkflowNodeData = {
   toolId?: string;
   toolCategory?: string;
   maxSteps?: number | null;
+  maxOutputTokens?: number | null;
+  temperature?: number | null;
+  retryBudget?: number | null;
+  tools?: WorkflowToolBinding[];
+  quickEstimateCostPerCall?: number | null;
+  quickEstimateLatencyMs?: number | null;
   /** Context-aware estimation fields (agent nodes). */
   taskType?: string;
   expectedOutputSize?: string;
@@ -71,6 +95,12 @@ export interface NodeConfigPayload {
   tool_id?: string;
   tool_category?: string;
   max_steps?: number | null;
+  max_output_tokens?: number | null;
+  temperature?: number | null;
+  retry_budget?: number | null;
+  tools?: NodeToolBindingPayload[] | null;
+  quick_estimate_cost_per_call?: number | null;
+  quick_estimate_latency_ms?: number | null;
   /** Context-aware estimation fields. */
   task_type?: string | null;
   expected_output_size?: string | null;
@@ -86,6 +116,12 @@ export interface EdgeConfigPayload {
   source: string;
   target: string;
   source_handle?: string | null;
+}
+
+/** Response from POST /api/quick-estimate. */
+export interface QuickEstimateResponse {
+  cost_per_call: number;
+  latency_ms: number;
 }
 
 /** Shape of the full estimation request. */
@@ -150,6 +186,9 @@ export interface NodeEstimation {
   node_name: string;
   tokens: number;
   input_tokens: number;
+  ancestor_tokens: number;
+  tool_tokens: number;
+  total_input_tokens: number;
   output_tokens: number;
   cost: number;
   input_cost: number;
@@ -210,6 +249,59 @@ export interface ParallelStep {
   parallelism: number;      // number of nodes that run in parallel
 }
 
+export interface GraphPreprocessing {
+  forks: Record<string, string[]>;
+  cycles: [string, string][];
+  topological_order: string[];
+}
+
+export interface ContextAccumulationNode {
+  node_id: string;
+  label: string;
+  ancestor_token_contribution: number;
+  without_accumulation_cost_usd: number;
+  with_accumulation_cost_usd: number;
+  accumulation_overhead_pct: number;
+}
+
+export interface ContextAccumulationReport {
+  note: string;
+  breakdown: ContextAccumulationNode[];
+}
+
+export interface ParallelBranchReport {
+  fork_node: string;
+  branches: string[];
+  branch_latencies_ms: number[];
+  effective_latency_ms: number;
+  note: string;
+}
+
+export interface LatencyReport {
+  critical_path_ms: number;
+  critical_path_nodes: string[];
+  parallel_branches: ParallelBranchReport[];
+  worst_case_latency_ms: number;
+}
+
+export interface CostReport {
+  best_case_usd: number;
+  worst_case_usd: number;
+  breakdown: NodeEstimation[];
+}
+
+export interface EstimationSummary {
+  total_nodes: number;
+  agent_nodes: number;
+  tool_nodes: number;
+  condition_nodes: number;
+  loops_detected: number;
+  parallel_forks_detected: number;
+  graph_depth: number;
+  complexity_score: number;
+  complexity_label: "Low" | "Medium" | "High" | "Very High";
+}
+
 /** Full workflow estimation response from the backend. */
 export interface WorkflowEstimation {
   total_tokens: number;
@@ -219,7 +311,9 @@ export interface WorkflowEstimation {
   total_latency: number;
   total_tool_latency: number;
   graph_type: "DAG" | "CYCLIC";
+  graph: GraphPreprocessing;
   breakdown: NodeEstimation[];
+  context_accumulation: ContextAccumulationReport | null;
   critical_path: string[];
   detected_cycles: CycleInfo[];
   token_range: EstimationRange | null;
@@ -230,6 +324,15 @@ export interface WorkflowEstimation {
   parallel_steps: ParallelStep[];
   /** Total latency along the critical (longest) path. */
   critical_path_latency: number;
+  best_case_cost: number;
+  best_case_latency: number;
+  worst_case_cost: number;
+  worst_case_latency: number;
+  complexity_score: number;
+  complexity_label: "Low" | "Medium" | "High" | "Very High";
+  cost: CostReport | null;
+  latency: LatencyReport | null;
+  summary: EstimationSummary | null;
   /** Scaling projection (populated when runs_per_day is provided). */
   scaling_projection: ScalingProjection | null;
   /** Cost/latency sensitivity across loop assumptions. */
@@ -255,6 +358,7 @@ export interface ModelInfo {
 export interface ProviderSummary {
   id: string;
   name: string;
+  last_updated: string;
   model_count: number;
 }
 
@@ -262,6 +366,7 @@ export interface ProviderSummary {
 export interface ProviderDetailed {
   id: string;
   name: string;
+  last_updated: string;
   models: ModelInfo[];
 }
 
@@ -293,6 +398,9 @@ export interface Canvas {
   name: string;
   createdAt: string;
   updatedAt: string;
+  isPublic?: boolean;
+  publicUuid?: string;
+  lastEstimationReport?: WorkflowEstimation | null;
   workflowCount?: number;
   thumbnailUrl?: string | null;
 }

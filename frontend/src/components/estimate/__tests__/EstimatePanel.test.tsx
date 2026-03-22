@@ -32,6 +32,12 @@ const mockEstimation = {
     parallel_steps: [],
     critical_path: [],
     critical_path_latency: 0,
+    best_case_cost: 0,
+    best_case_latency: 0,
+    worst_case_cost: 0,
+    worst_case_latency: 0,
+    complexity_score: 0,
+    complexity_label: 'Low',
     recursion_limit: 25,
     breakdown: [],
     scaling_projection: {

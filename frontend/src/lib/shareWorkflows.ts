@@ -6,6 +6,7 @@
 import { supabase } from "@/lib/supabase";
 import type { Node } from "@xyflow/react";
 import type { WorkflowNodeData } from "@/types/workflow";
+import { nodesToPayload } from "@/store/utils";
 
 /** Generate a URL-safe share token (12 hex chars). */
 export function generateShareToken(): string {
@@ -48,6 +49,39 @@ export interface WorkflowShareRow {
   snapshot: ShareSnapshot;
   expires_at: string | null;
   created_at: string;
+}
+
+export async function getShareForEntity(
+  shareType: ShareType,
+  options: { workflowId?: string; canvasId?: string }
+): Promise<WorkflowShareRow | null> {
+  let query = supabase
+    .from("workflow_shares")
+    .select("*")
+    .eq("share_type", shareType);
+
+  if (options.workflowId) {
+    query = query.eq("workflow_id", options.workflowId);
+  }
+  if (options.canvasId) {
+    query = query.eq("canvas_id", options.canvasId);
+  }
+
+  const { data, error } = await query.order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (error) {
+    console.error("Failed to look up share:", error);
+    return null;
+  }
+  return (data as WorkflowShareRow | null) ?? null;
+}
+
+export async function deleteShareById(id: string): Promise<boolean> {
+  const { error } = await supabase.from("workflow_shares").delete().eq("id", id);
+  if (error) {
+    console.error("Failed to delete share:", error);
+    return false;
+  }
+  return true;
 }
 
 /**
@@ -126,20 +160,7 @@ export async function copyWorkflowToCanvas(
 
     for (const wf of snapshot.workflows) {
       const graph = {
-        nodes: wf.nodes.map((n) => ({
-          id: n.id,
-          type: n.data?.type ?? n.type,
-          label: n.data?.label ?? n.type,
-          model_provider: n.data?.modelProvider,
-          model_name: n.data?.modelName,
-          context: n.data?.context,
-          tool_id: n.data?.toolId,
-          tool_category: n.data?.toolCategory,
-          max_steps: n.data?.maxSteps ?? null,
-          task_type: n.data?.taskType ?? null,
-          expected_output_size: n.data?.expectedOutputSize ?? null,
-          expected_calls_per_run: n.data?.expectedCallsPerRun ?? null,
-        })),
+        nodes: nodesToPayload(wf.nodes),
         edges: wf.edges.map((e) => ({
           id: e.id ?? `${e.source}-${e.target}`,
           source: e.source,
@@ -174,20 +195,7 @@ export async function copyWorkflowToCanvas(
     }
 
     const graph = {
-      nodes: snapshot.nodes.map((n) => ({
-        id: n.id,
-        type: n.data?.type ?? n.type,
-        label: n.data?.label ?? n.type,
-        model_provider: n.data?.modelProvider,
-        model_name: n.data?.modelName,
-        context: n.data?.context,
-        tool_id: n.data?.toolId,
-        tool_category: n.data?.toolCategory,
-        max_steps: n.data?.maxSteps ?? null,
-        task_type: n.data?.taskType ?? null,
-        expected_output_size: n.data?.expectedOutputSize ?? null,
-        expected_calls_per_run: n.data?.expectedCallsPerRun ?? null,
-      })),
+      nodes: nodesToPayload(snapshot.nodes),
       edges: snapshot.edges.map((e) => ({
         id: e.id ?? `${e.source}-${e.target}`,
         source: e.source,

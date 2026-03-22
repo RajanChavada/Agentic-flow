@@ -12,6 +12,8 @@ from models import (
     BatchEstimateRequest,
     BatchEstimateResponse,
     BatchEstimateResult,
+    QuickEstimateRequest,
+    QuickEstimateResponse,
     ProviderSummary,
     ProviderModelsResponse,
     ModelInfo,
@@ -21,7 +23,8 @@ from models import (
     ExternalWorkflowImportRequest,
     ImportedWorkflow,
 )
-from estimator import estimate_workflow
+from estimator import estimate_workflow, compute_graph_complexity
+from quick_estimate import quick_estimate
 from pricing_registry import registry
 from tool_registry import tool_registry
 from import_adapters import get_adapter
@@ -91,6 +94,19 @@ async def estimate_batch(request: BatchEstimateRequest):
     return BatchEstimateResponse(results=results)
 
 
+@app.post("/api/quick-estimate", response_model=QuickEstimateResponse)
+async def estimate_quick(request: QuickEstimateRequest):
+    """Return a lightweight single-node preview estimate."""
+    return quick_estimate(request)
+
+
+@app.post("/api/complexity")
+async def estimate_complexity(request: WorkflowRequest):
+    """Return live complexity score based purely on graph topology."""
+    return compute_graph_complexity(request.nodes, request.edges)
+
+
+
 # ── Import Workflow ─────────────────────────────────────────────
 
 @app.post("/api/import-workflow", response_model=ImportedWorkflow)
@@ -123,6 +139,7 @@ async def get_providers():
         ProviderSummary(
             id=p.id,
             name=p.name,
+            last_updated=p.last_updated,
             model_count=len(p.models),
         )
         for p in registry.get_providers()
@@ -136,6 +153,7 @@ async def get_providers_detailed():
         ProviderModelsResponse(
             id=p.id,
             name=p.name,
+            last_updated=p.last_updated,
             models=[
                 ModelInfo(**m.model_dump())
                 for m in p.models

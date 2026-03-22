@@ -2,8 +2,8 @@
  * Graph analysis utility for computing canvas metadata metrics.
  * Pure functions operating on React Flow Node[] and Edge[] arrays.
  *
- * Computes: node count, max depth, loop count, tool risk surface,
- * aggregate risk score, and BFS reachability from Start to Ideal State.
+ * Computes: node count, max depth, loop count, branches, complexity,
+ * plus legacy risk metrics used by existing parts of the app.
  */
 
 import type { Node, Edge } from "@xyflow/react";
@@ -26,8 +26,13 @@ export interface ToolRiskSurface {
 export interface GraphMetrics {
   nodeCount: number;                    // total nodes including annotations
   workflowNodeCount: number;            // excludes blankBoxNode, textNode
-  maxDepth: number;                     // longest BFS path from startNode
+  nonTerminalNodeCount: number;         // all non-startNode/non-finishNode canvas nodes
+  maxDepth: number;                     // longest Start -> Finish path in hops
   loopCount: number;                    // number of cycles detected via DFS
+  branchCount: number;                  // number of condition nodes
+  hasParallelFork: boolean;             // true if any node has >1 outgoing edge
+  complexityScore: number;              // additive complexity score
+  complexityLevel: "Low" | "Medium" | "High" | "Very High";
   toolRiskSurface: ToolRiskSurface;     // tool category breakdown
   riskScore: number;                    // aggregate point score
   riskLevel: "Low" | "Medium" | "High"; // risk threshold classification
@@ -59,15 +64,27 @@ export function analyzeGraph(
     (n) => n.data.type !== "blankBoxNode" && n.data.type !== "textNode"
   );
   const workflowNodeCount = workflowNodes.length;
+  const nonTerminalNodeCount = nodes.filter(
+    (n) => n.data.type !== "startNode" && n.data.type !== "finishNode"
+  ).length;
 
   // Build adjacency list from workflow nodes only
   const adjacencyList = buildAdjacencyList(workflowNodes, edges);
 
-  // Compute depth via BFS from startNode
+  // Compute depth as longest Start -> Finish path in hops
   const maxDepth = computeMaxDepth(workflowNodes, adjacencyList);
 
   // Detect cycles via DFS
   const loopCount = countCycles(workflowNodes, adjacencyList);
+  const branchCount = countConditionNodes(nodes);
+  const hasParallelFork = detectParallelFork(workflowNodes, adjacencyList);
+  const { score: complexityScore, level: complexityLevel } = computeComplexity(
+    nonTerminalNodeCount,
+    maxDepth,
+    loopCount,
+    branchCount,
+    hasParallelFork
+  );
 
   // Compute tool risk surface
   const toolRiskSurface = computeToolRiskSurface(workflowNodes);
@@ -83,8 +100,13 @@ export function analyzeGraph(
   return {
     nodeCount,
     workflowNodeCount,
+    nonTerminalNodeCount,
     maxDepth,
     loopCount,
+    branchCount,
+    hasParallelFork,
+    complexityScore,
+    complexityLevel,
     toolRiskSurface,
     riskScore,
     riskLevel,
@@ -117,40 +139,81 @@ function buildAdjacencyList(
 }
 
 /**
- * Compute maximum depth from startNode via BFS
- * Returns 0 if no startNode or no edges
+ * Compute longest Start -> Finish path length in hops.
+ * Falls back to longest simple path in the current graph when there is no
+ * reachable Start -> Finish path (useful while users are still wiring nodes).
  */
 function computeMaxDepth(
   nodes: Node<WorkflowNodeData>[],
   adjacencyList: Map<string, string[]>
 ): number {
-  // Find start node
   const startNode = nodes.find((n) => n.data.type === "startNode");
-  if (!startNode) return 0;
-
-  // BFS with depth tracking
-  const depths = new Map<string, number>();
-  const queue: string[] = [startNode.id];
-  depths.set(startNode.id, 0);
-
-  let maxDepth = 0;
-
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    const currentDepth = depths.get(current)!;
-
-    const neighbors = adjacencyList.get(current) || [];
-    for (const neighbor of neighbors) {
-      if (!depths.has(neighbor)) {
-        const neighborDepth = currentDepth + 1;
-        depths.set(neighbor, neighborDepth);
-        queue.push(neighbor);
-        maxDepth = Math.max(maxDepth, neighborDepth);
-      }
-    }
+  const finishIds = new Set(
+    nodes.filter((n) => n.data.type === "finishNode").map((n) => n.id)
+  );
+  if (!startNode || finishIds.size === 0) {
+    return computeLongestSimplePath(nodes, adjacencyList);
   }
 
-  return maxDepth;
+  let maxDepth = -1;
+  const pathVisited = new Set<string>();
+
+  const dfs = (nodeId: string, depth: number): void => {
+    if (finishIds.has(nodeId)) {
+      maxDepth = Math.max(maxDepth, depth);
+      return;
+    }
+
+    pathVisited.add(nodeId);
+    const neighbors = adjacencyList.get(nodeId) || [];
+    for (const neighbor of neighbors) {
+      // Prevent infinite recursion in cyclic graphs by exploring only simple paths.
+      if (!pathVisited.has(neighbor)) {
+        dfs(neighbor, depth + 1);
+      }
+    }
+    pathVisited.delete(nodeId);
+  };
+
+  dfs(startNode.id, 0);
+  if (maxDepth >= 0) {
+    return maxDepth;
+  }
+
+  return computeLongestSimplePath(nodes, adjacencyList);
+}
+
+/**
+ * Compute longest simple path in the graph regardless of node types.
+ * Used as fallback when Start -> Finish path does not exist yet.
+ */
+function computeLongestSimplePath(
+  nodes: Node<WorkflowNodeData>[],
+  adjacencyList: Map<string, string[]>
+): number {
+  let longest = 0;
+
+  for (const node of nodes) {
+    const pathVisited = new Set<string>();
+
+    const dfs = (nodeId: string, depth: number): void => {
+      longest = Math.max(longest, depth);
+      pathVisited.add(nodeId);
+
+      const neighbors = adjacencyList.get(nodeId) || [];
+      for (const neighbor of neighbors) {
+        if (!pathVisited.has(neighbor)) {
+          dfs(neighbor, depth + 1);
+        }
+      }
+
+      pathVisited.delete(nodeId);
+    };
+
+    dfs(node.id, 0);
+  }
+
+  return longest;
 }
 
 /**
@@ -193,6 +256,76 @@ function countCycles(
   }
 
   return cycleCount;
+}
+
+/**
+ * Count condition nodes (branching points)
+ */
+function countConditionNodes(nodes: Node<WorkflowNodeData>[]): number {
+  return nodes.filter((node) => node.data.type === "conditionNode").length;
+}
+
+/**
+ * Detect whether graph has any parallel fork:
+ * one non-condition source node has 2+ outgoing targets.
+ */
+function detectParallelFork(
+  nodes: Node<WorkflowNodeData>[],
+  adjacencyList: Map<string, string[]>
+): boolean {
+  const nodeTypeById = new Map(nodes.map((n) => [n.id, n.data.type]));
+
+  for (const [sourceId, neighbors] of adjacencyList.entries()) {
+    const sourceType = nodeTypeById.get(sourceId);
+    if (sourceType === "conditionNode") {
+      continue;
+    }
+    if (new Set(neighbors).size > 1) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Compute additive complexity score/label for canvas stats bar.
+ *
+ * Scoring:
+ * - nodes > 5: +1
+ * - nodes > 10: +1
+ * - depth > 4: +1
+ * - loops >= 1: +1
+ * - loops > 3: +1
+ * - branches >= 2: +1
+ * - parallel fork detected: +1
+ *
+ * Thresholds:
+ * - 0-1: Low
+ * - 2-3: Medium
+ * - 4-5: High
+ * - 6+: Very High
+ */
+function computeComplexity(
+  nodeCount: number,
+  depth: number,
+  loops: number,
+  branches: number,
+  hasParallelFork: boolean
+): { score: number; level: "Low" | "Medium" | "High" | "Very High" } {
+  let score = 0;
+
+  if (nodeCount > 5) score += 1;
+  if (nodeCount > 10) score += 1;
+  if (depth > 4) score += 1;
+  if (loops >= 1) score += 1;
+  if (loops > 3) score += 1;
+  if (branches >= 2) score += 1;
+  if (hasParallelFork) score += 1;
+
+  if (score >= 6) return { score, level: "Very High" };
+  if (score >= 4) return { score, level: "High" };
+  if (score >= 2) return { score, level: "Medium" };
+  return { score, level: "Low" };
 }
 
 /**
@@ -279,4 +412,3 @@ function computeRiskScore(
 
   return { score, level };
 }
-

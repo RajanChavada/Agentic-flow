@@ -18,6 +18,7 @@ vi.mock("lucide-react", () => ({
 
 vi.mock("@/store/useWorkflowStore", () => ({
   useWorkflowStore: vi.fn(),
+  useEstimation: vi.fn(),
 }));
 
 describe("CanvasMetadataOverlay", () => {
@@ -39,8 +40,13 @@ describe("CanvasMetadataOverlay", () => {
     const mockMetrics: GraphMetrics = {
       nodeCount: 1,
       workflowNodeCount: 1,
+      nonTerminalNodeCount: 0,
       maxDepth: 0,
       loopCount: 0,
+      branchCount: 0,
+      hasParallelFork: false,
+      complexityScore: 0,
+      complexityLevel: "Low",
       toolRiskSurface: { read: 0, write: 0, exec: 0, network: 0, other: 0 },
       riskScore: 0,
       riskLevel: "Low",
@@ -77,29 +83,37 @@ describe("CanvasMetadataOverlay", () => {
       const state = { nodes: mockNodes, edges: mockEdges };
       return selector(state);
     });
+    vi.mocked(store.useEstimation).mockReturnValue(null as any);
 
     // Mock analyzeGraph with specific metrics
     const mockMetrics: GraphMetrics = {
       nodeCount: 7,
       workflowNodeCount: 5,
+      nonTerminalNodeCount: 5,
       maxDepth: 3,
       loopCount: 1,
+      branchCount: 2,
+      hasParallelFork: true,
+      complexityScore: 3,
+      complexityLevel: "Medium",
       toolRiskSurface: { read: 1, write: 2, exec: 1, network: 1, other: 0 },
       riskScore: 6,
       riskLevel: "Medium",
     };
     vi.mocked(graphAnalysis.analyzeGraph).mockReturnValue(mockMetrics);
+    vi.mocked(store.useEstimation).mockReturnValue({
+      complexity_score: 3,
+      complexity_label: "Medium",
+    } as any);
 
     render(<CanvasMetadataOverlay />);
 
     // Verify rendered metrics
-    expect(screen.getByText("5 nodes")).toBeDefined();
-    expect(screen.getByText("depth 3")).toBeDefined();
-    expect(screen.getByText("1 loops")).toBeDefined();
-    expect(screen.getByText("R:1")).toBeDefined();
-    expect(screen.getByText("W:2")).toBeDefined();
-    expect(screen.getByText("X:1")).toBeDefined();
-    expect(screen.getByText("N:1")).toBeDefined();
+    expect(screen.getByText("nodes: 5")).toBeDefined();
+    expect(screen.getByText("depth: 3")).toBeDefined();
+    expect(screen.getByText("loops: 1")).toBeDefined();
+    expect(screen.getByText("branches: 2")).toBeDefined();
+    expect(screen.getByText("complexity:")).toBeDefined();
     expect(screen.getByText("Medium")).toBeDefined();
   });
 

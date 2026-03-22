@@ -12,7 +12,7 @@ import type {
   BatchEstimateResult,
   ActualNodeStats,
 } from '@/types/workflow';
-import { nodesToPayload, edgesToPayload } from '../utils';
+import { nodesToPayload, edgesToPayload, workflowNodeDataFromPayload } from '../utils';
 import type { ScalingParams } from '../types';
 
 // Import other slice types for combined state
@@ -99,19 +99,7 @@ export const createEstimationSlice: StateCreator<CombinedState, [], [], Estimati
       id: n.id,
       type: n.type,
       position: { x: 200 + (i % 3) * 280, y: 100 + Math.floor(i / 3) * 180 },
-      data: {
-        label: n.label ?? n.type,
-        type: n.type,
-        modelProvider: n.model_provider,
-        modelName: n.model_name,
-        context: n.context,
-        toolId: n.tool_id,
-        toolCategory: n.tool_category,
-        maxSteps: n.max_steps,
-        taskType: n.task_type ?? undefined,
-        expectedOutputSize: n.expected_output_size ?? undefined,
-        expectedCallsPerRun: n.expected_calls_per_run ?? undefined,
-      },
+      data: workflowNodeDataFromPayload(n),
     }));
 
     const rfEdges: Edge[] = scenario.graph.edges.map((e) => ({
@@ -123,6 +111,8 @@ export const createEstimationSlice: StateCreator<CombinedState, [], [], Estimati
     set({
       nodes: rfNodes,
       edges: rfEdges,
+      historyStack: [],
+      redoStack: [],
       estimation: scenario.estimate ?? null,
       currentScenarioId: id,
     });

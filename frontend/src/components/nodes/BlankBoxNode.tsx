@@ -5,6 +5,7 @@ import React, { memo } from "react";
 import { Handle, Position, NodeResizer, type NodeProps } from "@xyflow/react";
 import { cn } from "@/lib/utils";
 import type { WorkflowNodeData, LabelPosition, BlankBoxStyle } from "@/types/workflow";
+import { useWorkflowEdges } from "@/store/useWorkflowStore";
 
 const DEFAULT_STYLE: BlankBoxStyle = {
   label: "Group",
@@ -69,11 +70,17 @@ function LabelTag({
   );
 }
 
-function BlankBoxNode({ data, selected }: NodeProps & { data: WorkflowNodeData }) {
+function BlankBoxNode({ id, data, selected }: NodeProps & { data: WorkflowNodeData }) {
   const s: BlankBoxStyle = { ...DEFAULT_STYLE, ...data.blankBoxStyle };
+  const edges = useWorkflowEdges();
+  const hasAnyEdge = edges.some((e) => e.source === id || e.target === id);
+  const isDisconnected = !hasAnyEdge;
 
   return (
-    <div className="relative w-full h-full">
+    <div
+      className="relative w-full h-full"
+      title={isDisconnected ? "This node is not connected and won't be included in estimation. Connect it or delete it." : undefined}
+    >
       <NodeResizer
         isVisible={selected}
         minWidth={120}
@@ -92,9 +99,11 @@ function BlankBoxNode({ data, selected }: NodeProps & { data: WorkflowNodeData }
       <div
         className="pointer-events-none absolute inset-0 rounded-md"
         style={{
-          border: s.borderStyle === "none"
-            ? "none"
-            : `${s.borderWidth}px ${s.borderStyle} ${s.borderColor}`,
+          border: isDisconnected
+            ? "2px dashed #ef4444"
+            : s.borderStyle === "none"
+              ? "none"
+              : `${s.borderWidth}px ${s.borderStyle} ${s.borderColor}`,
           backgroundColor: hexToRgba(s.backgroundColor, s.backgroundOpacity / 100),
         }}
       >

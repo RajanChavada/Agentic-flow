@@ -1,10 +1,10 @@
 "use client";
 "use no memo";
 
-import React, { memo } from "react";
+import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import type { WorkflowNodeData } from "@/types/workflow";
-import { useEstimation } from "@/store/useWorkflowStore";
+import type { WorkflowNodeData, WorkflowToolBinding } from "@/types/workflow";
+import { useEstimation, useWorkflowEdges, useWorkflowStore } from "@/store/useWorkflowStore";
 import {
   Wrench,
   Flame,
@@ -101,9 +101,27 @@ function NodeShape({ shape, color }: { shape: string; color: string }) {
   }
 }
 
+function getToolDisplayName(tool: WorkflowToolBinding | string | Record<string, unknown>): string {
+  if (typeof tool === "string") return tool;
+  const record = tool as Record<string, unknown>;
+  if (typeof record.displayName === "string") return record.displayName;
+  if (typeof record.display_name === "string") return record.display_name;
+  if (typeof record.name === "string") return record.name;
+  if (typeof record.label === "string") return record.label;
+  if (typeof record.id === "string") return record.id;
+  return "Tool";
+}
+
 function WorkflowNode({ id, data, selected }: NodeProps & { data: WorkflowNodeData }) {
   const s = STYLE[data.type] ?? STYLE.agentNode;
   const estimation = useEstimation();
+  const edges = useWorkflowEdges();
+  const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
+  const [isEditingLabel, setIsEditingLabel] = useState(false);
+  const [labelDraft, setLabelDraft] = useState(data.label);
+  const labelInputRef = useRef<HTMLInputElement>(null);
+  const isReadOnly = Boolean((data as Record<string, unknown>).readOnly);
+  const isConfigurable = (data.type === "agentNode" || data.type === "toolNode") && !isReadOnly;
 
   // Detect dark mode via html class
   const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
@@ -120,21 +138,87 @@ function WorkflowNode({ id, data, selected }: NodeProps & { data: WorkflowNodeDa
     ? estimation?.detected_cycles?.find((c) => c.node_ids.includes(id))
     : null;
 
+  const hasAnyEdge = edges.some((e) => e.source === id || e.target === id);
+  const isDisconnected = data.type !== "startNode" && data.type !== "finishNode" && !hasAnyEdge;
+  const toolBindings = Array.isArray(data.tools) ? data.tools : [];
+  const quickPreviewCost = typeof data.quickEstimateCostPerCall === "number" ? data.quickEstimateCostPerCall : null;
+  const hasAgentConfig = Boolean(
+    data.modelProvider ||
+    data.modelName ||
+    data.context ||
+    data.maxSteps != null ||
+    data.maxOutputTokens != null ||
+    data.temperature != null ||
+    data.retryBudget != null ||
+    data.taskType ||
+    data.expectedOutputSize ||
+    data.expectedCallsPerRun != null ||
+    toolBindings.length > 0
+  );
+
   // Determine heatmap overrides
   const heatmap = severity && severity !== "low" ? HEATMAP_STYLES[severity] : null;
 
   // Cycle ring: purple border/glow for loop nodes (when no heatmap override)
   const cycleRing = !heatmap && inCycle;
 
-  const borderClass = heatmap
+  const borderClass = isDisconnected
+    ? (isDark ? "border-red-400 border-dashed" : "border-red-500 border-dashed")
+    : heatmap
     ? (isDark ? heatmap.darkBorder : heatmap.border)
     : cycleRing
       ? (isDark ? "border-purple-400" : "border-purple-500")
       : (isDark ? s.darkBorder : s.border);
-  const glowClass = heatmap?.glow ?? (cycleRing ? (isDark ? "shadow-purple-400/30 shadow-md" : "shadow-purple-300/40 shadow-md") : "");
+  const glowClass = isDisconnected
+    ? ""
+    : heatmap?.glow ?? (cycleRing ? (isDark ? "shadow-purple-400/30 shadow-md" : "shadow-purple-300/40 shadow-md") : "");
 
   // Has meaningful metrics to show?
   const hasMetrics = nodeEstimation && (nodeEstimation.tokens > 0 || nodeEstimation.latency > 0 || nodeEstimation.cost > 0);
+
+  useEffect(() => {
+    if (!isEditingLabel) {
+      setLabelDraft(data.label);
+    }
+  }, [data.label, isEditingLabel]);
+
+  useEffect(() => {
+    if (!isEditingLabel || !labelInputRef.current) return;
+    labelInputRef.current.focus();
+    labelInputRef.current.select();
+  }, [isEditingLabel]);
+
+  const commitLabelEdit = useCallback(() => {
+    setIsEditingLabel(false);
+    const trimmed = labelDraft.trim();
+    if (!trimmed || trimmed === data.label) return;
+    updateNodeData(id, { label: trimmed });
+  }, [data.label, id, labelDraft, updateNodeData]);
+
+  const cancelLabelEdit = useCallback(() => {
+    setLabelDraft(data.label);
+    setIsEditingLabel(false);
+  }, [data.label]);
+
+  const beginLabelEdit = useCallback((e: React.MouseEvent) => {
+    if (!isConfigurable) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setLabelDraft(data.label);
+    setIsEditingLabel(true);
+  }, [data.label, isConfigurable]);
+
+  const handleLabelKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commitLabelEdit();
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      cancelLabelEdit();
+    }
+  }, [cancelLabelEdit, commitLabelEdit]);
 
   return (
     <div
@@ -144,6 +228,7 @@ function WorkflowNode({ id, data, selected }: NodeProps & { data: WorkflowNodeDa
         ${isDark ? s.darkBg : s.bg} ${borderClass} ${glowClass}
         ${selected ? "ring-4 ring-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.6)]" : ""}
       `}
+      title={isDisconnected ? "This node is not connected and won't be included in estimation. Connect it or delete it." : undefined}
     >
       {/* ── Target handles (all 4 sides) — hidden for startNode ── */}
       {data.type !== "startNode" && (
@@ -157,14 +242,53 @@ function WorkflowNode({ id, data, selected }: NodeProps & { data: WorkflowNodeDa
 
       <div className="flex items-center justify-center gap-2">
         <NodeShape shape={s.shape} color={s.shapeColour} />
-        <span className={`font-semibold text-sm truncate max-w-[120px] ${isDark ? "text-slate-100" : "text-gray-800"}`}>
-          {data.label}
-        </span>
+        {isEditingLabel ? (
+          <input
+            ref={labelInputRef}
+            value={labelDraft}
+            onChange={(e) => setLabelDraft(e.target.value)}
+            onBlur={commitLabelEdit}
+            onKeyDown={handleLabelKeyDown}
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => e.stopPropagation()}
+            maxLength={40}
+            className={`nodrag nopan w-[120px] rounded border px-1 py-0.5 text-sm font-semibold text-center bg-transparent outline-none ${
+              isDark
+                ? "text-slate-100 border-slate-400/50"
+                : "text-gray-800 border-gray-400/70"
+            }`}
+          />
+        ) : (
+          <span
+            className={`font-semibold text-sm truncate max-w-[120px] ${
+              isDark ? "text-slate-100" : "text-gray-800"
+            } ${isConfigurable ? "cursor-text nodrag nopan" : ""}`}
+            onClick={isConfigurable ? (e) => e.stopPropagation() : undefined}
+            onDoubleClick={isConfigurable ? beginLabelEdit : undefined}
+            title={isConfigurable ? "Double-click to rename" : undefined}
+          >
+            {data.label}
+          </span>
+        )}
       </div>
 
       {data.type === "agentNode" && data.modelProvider && (
         <p className={`text-[10px] mt-1 truncate ${isDark ? "text-slate-400" : "text-gray-500"}`}>
           {data.modelProvider} / {data.modelName}
+        </p>
+      )}
+
+      {data.type === "agentNode" && (
+        <p
+          className={`text-[9px] mt-0.5 truncate ${
+            quickPreviewCost != null
+              ? isDark
+                ? "text-slate-400"
+                : "text-gray-500"
+              : `italic ${isDark ? "text-slate-500" : "text-gray-400"}`
+          }`}
+        >
+          {quickPreviewCost != null ? `~$${quickPreviewCost.toFixed(5)} / call` : "configure to estimate"}
         </p>
       )}
 
@@ -185,7 +309,35 @@ function WorkflowNode({ id, data, selected }: NodeProps & { data: WorkflowNodeDa
         </p>
       )}
 
-      {(data.type === "agentNode" || data.type === "toolNode") && !data.modelProvider && !data.toolId && (
+      {data.type === "agentNode" && toolBindings.length > 0 && (
+        <div className="mt-1 flex flex-wrap justify-center gap-1">
+          {toolBindings.slice(0, 3).map((tool, index) => (
+            <span
+              key={`${id}-tool-${index}-${typeof tool === "string" ? tool : tool.id}`}
+              className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${
+                isDark
+                  ? "border-slate-600 bg-slate-800/80 text-slate-300"
+                  : "border-slate-200 bg-white text-slate-600"
+              }`}
+            >
+              <span className="max-w-[90px] truncate">🔧 {getToolDisplayName(tool)}</span>
+            </span>
+          ))}
+          {toolBindings.length > 3 && (
+            <span
+              className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${
+                isDark
+                  ? "border-slate-600 bg-slate-800/80 text-slate-400"
+                  : "border-slate-200 bg-white text-slate-500"
+              }`}
+            >
+              +{toolBindings.length - 3} more
+            </span>
+          )}
+        </div>
+      )}
+
+      {(data.type === "agentNode" || data.type === "toolNode") && !hasAgentConfig && !data.toolId && (
         <p className={`text-[9px] mt-1 italic ${isDark ? "text-slate-500" : "text-gray-400"}`}>
           double-click to configure
         </p>

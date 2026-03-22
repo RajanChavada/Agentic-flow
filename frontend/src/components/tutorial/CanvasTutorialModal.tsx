@@ -9,6 +9,7 @@ import {
   BarChart3,
   Paintbrush,
   Lightbulb,
+  Keyboard,
   X,
 } from "lucide-react";
 import { useTutorial } from "@/hooks/useTutorial";
@@ -24,6 +25,7 @@ import SaveManageTab from "./tabs/SaveManageTab";
 import EstimationTab from "./tabs/EstimationTab";
 import CanvasGuideTab from "./tabs/CanvasGuideTab";
 import TipsTab from "./tabs/TipsTab";
+import ShortcutsTab from "./tabs/ShortcutsTab";
 
 // ── Walkthrough steps ───────────────────────────────────────
 const STEPS = [
@@ -74,6 +76,7 @@ const TABS: TabDef[] = [
   { key: "save-manage", label: "Save & Manage", icon: Save, Component: SaveManageTab },
   { key: "estimation", label: "Estimation", icon: BarChart3, Component: EstimationTab },
   { key: "canvas-guide", label: "Canvas Guide", icon: Paintbrush, Component: CanvasGuideTab },
+  { key: "shortcuts", label: "Shortcuts", icon: Keyboard, Component: ShortcutsTab },
   { key: "tips", label: "Tips", icon: Lightbulb, Component: TipsTab },
 ];
 

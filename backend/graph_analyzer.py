@@ -116,6 +116,49 @@ class GraphAnalyzer:
         order = self.topological_order()
         return order if order else self.node_ids  # fallback for cyclic graphs
 
+    def compute_critical_path(self, latency_map: Dict[str, float]) -> List[str]:
+        """Compute the longest-latency path through the graph.
+
+        Uses latency-weighted dynamic programming on the DAG. For cyclic
+        graphs, returns a best-effort fallback path based on the current node
+        ordering so callers still get a stable path summary.
+        """
+        order = self.topological_order()
+        if not order:
+            return self.node_ids
+        return self.weighted_critical_path(latency_map)
+
+    def compute_parallel_branch_latency(self, latency_map: Dict[str, float]) -> float:
+        """Estimate latency contributed by parallel branches.
+
+        For each non-condition fork node with multiple outgoing edges, compute
+        the longest downstream latency among its outgoing branches and treat
+        that as the parallel branch latency for the fork. The return value is
+        the largest such branch latency, which is a useful summary of the
+        workflow's widest parallel fan-out.
+        """
+        order = self.topological_order()
+        if not order:
+            return sum(latency_map.get(nid, 0.0) for nid in self.node_ids)
+
+        downstream: Dict[str, float] = {nid: latency_map.get(nid, 0.0) for nid in self.node_ids}
+        for u in reversed(order):
+            children = self.adj.get(u, [])
+            if not children:
+                continue
+            child_latencies = [downstream.get(v, latency_map.get(v, 0.0)) for v in children]
+            downstream[u] = latency_map.get(u, 0.0) + max(child_latencies)
+
+        fork_latencies: List[float] = []
+        for u in order:
+            children = self.adj.get(u, [])
+            if len(children) <= 1:
+                continue
+            branch_latencies = [downstream.get(v, latency_map.get(v, 0.0)) for v in children]
+            fork_latencies.append(max(branch_latencies))
+
+        return max(fork_latencies) if fork_latencies else 0.0
+
     def weighted_critical_path(self, latency_map: Dict[str, float]) -> List[str]:
         """Latency-weighted critical path using longest-path through the DAG.
 

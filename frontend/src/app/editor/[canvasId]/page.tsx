@@ -16,6 +16,8 @@ import ComparisonDrawer from "@/components/ComparisonDrawer";
 import AuthModal from "@/components/AuthModal";
 import NameWorkflowModal from "@/components/NameWorkflowModal";
 import CanvasTutorialModal from "@/components/tutorial/CanvasTutorialModal";
+import TemplateLibraryOverlay from "@/components/marketplace/TemplateLibraryOverlay";
+import MobileFallback from "@/components/MobileFallback";
 import { useAuthStore, useUser } from "@/store/useAuthStore";
 import { useWorkflowStore } from "@/store/useWorkflowStore";
 import { useAutoSave } from "@/hooks/useAutoSave";
@@ -127,6 +129,7 @@ function EditorContent() {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
+      <MobileFallback />
       <HeaderBar />
       <ErrorBanner />
       <SuccessBanner />
@@ -143,6 +146,7 @@ function EditorContent() {
       <AuthModal />
       <NameWorkflowModal />
       <CanvasTutorialModal />
+      <TemplateLibraryOverlay />
     </div>
   );
 }

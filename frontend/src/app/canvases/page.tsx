@@ -405,10 +405,8 @@ export default function CanvasesPage() {
           <ShareWorkflowModal
             isOpen={!!shareCanvas}
             onClose={() => setShareCanvas(null)}
-            shareType="canvas"
             canvasId={shareCanvas?.id}
             canvasName={shareCanvas?.name}
-            userId={user.id}
           />
         )}
       </div>

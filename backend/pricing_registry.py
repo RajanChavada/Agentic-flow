@@ -35,6 +35,7 @@ class ProviderInfo(BaseModel):
     """A provider with its list of models."""
     id: str
     name: str
+    last_updated: str
     models: List[ModelPricing]
 
 

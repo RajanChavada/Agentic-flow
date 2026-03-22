@@ -36,6 +36,7 @@ describe("graphAnalysis", () => {
       // 4 workflow nodes (start, agent1, agent2, finish) + 2 annotations (blank, text) = 6 total
       expect(result.nodeCount).toBe(6);
       expect(result.workflowNodeCount).toBe(4);
+      expect(result.nonTerminalNodeCount).toBe(4); // agent1, agent2, blankBox, text
     });
 
     it("excludes blankBoxNode and textNode from workflowNodeCount", () => {
@@ -153,6 +154,29 @@ describe("graphAnalysis", () => {
 
       // Should detect 2 cycles: main<->finish and x<->y
       expect(result.loopCount).toBe(2);
+    });
+  });
+
+  describe("Branches & Complexity", () => {
+    it("counts condition nodes as branches", () => {
+      const { nodes, edges } = conditionBranchGraph();
+      const result = analyzeGraph(nodes, edges);
+
+      expect(result.branchCount).toBe(1);
+    });
+
+    it("detects parallel fork only for non-condition source nodes", () => {
+      const { nodes, edges } = diamondGraph();
+      const result = analyzeGraph(nodes, edges);
+
+      expect(result.hasParallelFork).toBe(true);
+    });
+
+    it("does not count condition split as parallel fork", () => {
+      const { nodes, edges } = conditionBranchGraph();
+      const result = analyzeGraph(nodes, edges);
+
+      expect(result.hasParallelFork).toBe(false);
     });
   });
 
@@ -387,16 +411,26 @@ describe("graphAnalysis", () => {
 
       expect(result).toHaveProperty("nodeCount");
       expect(result).toHaveProperty("workflowNodeCount");
+      expect(result).toHaveProperty("nonTerminalNodeCount");
       expect(result).toHaveProperty("maxDepth");
       expect(result).toHaveProperty("loopCount");
+      expect(result).toHaveProperty("branchCount");
+      expect(result).toHaveProperty("hasParallelFork");
+      expect(result).toHaveProperty("complexityScore");
+      expect(result).toHaveProperty("complexityLevel");
       expect(result).toHaveProperty("toolRiskSurface");
       expect(result).toHaveProperty("riskScore");
       expect(result).toHaveProperty("riskLevel");
 
       expect(typeof result.nodeCount).toBe("number");
       expect(typeof result.workflowNodeCount).toBe("number");
+      expect(typeof result.nonTerminalNodeCount).toBe("number");
       expect(typeof result.maxDepth).toBe("number");
       expect(typeof result.loopCount).toBe("number");
+      expect(typeof result.branchCount).toBe("number");
+      expect(typeof result.hasParallelFork).toBe("boolean");
+      expect(typeof result.complexityScore).toBe("number");
+      expect(["Low", "Medium", "High", "Very High"]).toContain(result.complexityLevel);
       expect(typeof result.toolRiskSurface).toBe("object");
       expect(typeof result.riskScore).toBe("number");
       expect(["Low", "Medium", "High"]).toContain(result.riskLevel);

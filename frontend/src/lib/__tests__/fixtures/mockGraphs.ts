@@ -302,8 +302,8 @@ export function conditionBranchGraph(): { nodes: MockNode[]; edges: MockEdge[] }
       },
       {
         id: "condition",
-        type: "agentNode", // conditionNode not yet implemented, use agentNode
-        data: { label: "Condition", type: "agentNode" },
+        type: "conditionNode",
+        data: { label: "Condition", type: "conditionNode" },
         position: { x: 100, y: 100 },
       },
       {

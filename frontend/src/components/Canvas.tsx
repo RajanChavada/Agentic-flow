@@ -11,7 +11,6 @@ import {
   type Connection,
   type Edge,
   MarkerType,
-  addEdge,
   useReactFlow,
   SelectionMode,
 } from "@xyflow/react";
@@ -80,13 +79,15 @@ export default function Canvas() {
   const {
     onNodesChange,
     onEdgesChange,
-    setEdges,
+    addEdge: addWorkflowEdge,
     addNode,
     setSelectedNodeId,
     openConfigModal,
     closeConfigModal,
     restoreFromLocalStorage,
     deleteNode,
+    undo,
+    redo,
     selectedNodeId,
   } = useWorkflowStore();
 
@@ -94,8 +95,20 @@ export default function Canvas() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       // Ignore if user is typing in an input or textarea
-      const isTyping = ["INPUT", "TEXTAREA"].includes((event.target as HTMLElement)?.tagName);
+      const target = event.target as HTMLElement | null;
+      const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName ?? "") || Boolean(target?.isContentEditable);
       if (isTyping) return;
+
+      const key = event.key.toLowerCase();
+      if ((event.metaKey || event.ctrlKey) && key === "z") {
+        event.preventDefault();
+        if (event.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+        return;
+      }
 
       if ((event.key === "Delete" || event.key === "Backspace") && selectedNodeId) {
         deleteNode(selectedNodeId);
@@ -106,7 +119,7 @@ export default function Canvas() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedNodeId, deleteNode, setSelectedNodeId, closeConfigModal]);
+  }, [selectedNodeId, deleteNode, setSelectedNodeId, closeConfigModal, undo, redo]);
 
 
   // ── Restore local storage guest snapshot on mount ───────────
@@ -205,7 +218,6 @@ export default function Canvas() {
   const onConnect = useCallback(
     (connection: Connection) => {
       const currentNodes = useWorkflowStore.getState().nodes;
-      const currentEdges = useWorkflowStore.getState().edges;
 
       const sourceNode = currentNodes.find((n) => n.id === connection.source);
       const targetNode = currentNodes.find((n) => n.id === connection.target);
@@ -237,9 +249,9 @@ export default function Canvas() {
           target: connection.target,
         };
 
-      setEdges(addEdge(newEdge, currentEdges));
+      addWorkflowEdge(newEdge);
     },
-    [setEdges]
+    [addWorkflowEdge]
   );
 
   // ── Drop a new node from the sidebar ─────────────────────────

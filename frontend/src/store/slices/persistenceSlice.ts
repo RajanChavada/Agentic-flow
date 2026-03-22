@@ -19,7 +19,7 @@ import type {
 import { supabase } from '@/lib/supabase';
 import { saveGuestWorkflow, loadGuestWorkflow, clearGuestWorkflow } from '@/lib/guestWorkflow';
 import { getTemplate } from '@/lib/marketplacePersistence';
-import { nodesToPayload, edgesToPayload } from '../utils';
+import { nodesToPayload, edgesToPayload, workflowNodeDataFromPayload } from '../utils';
 
 // Import other slice types for combined state
 import type { WorkflowSlice } from './workflowSlice';
@@ -115,6 +115,8 @@ export const createPersistenceSlice: StateCreator<CombinedState, [], [], Persist
       isDirty: false,
       nodes: [],
       edges: [],
+      historyStack: [],
+      redoStack: [],
       estimation: null,
     }),
 
@@ -175,6 +177,8 @@ export const createPersistenceSlice: StateCreator<CombinedState, [], [], Persist
     set({
       nodes: snapshot.nodes as Node<WorkflowNodeData>[],
       edges: snapshot.edges,
+      historyStack: [],
+      redoStack: [],
       ...(snapshot.currentWorkflowId ? {
         currentWorkflowId: snapshot.currentWorkflowId,
         currentWorkflowName: snapshot.currentWorkflowName ?? 'Untitled Workflow',
@@ -279,6 +283,16 @@ export const createPersistenceSlice: StateCreator<CombinedState, [], [], Persist
         set({ isSaving: false });
         return null;
       }
+      if (canvasId && s.estimation) {
+        const { error: canvasError } = await supabase
+          .from('canvases')
+          .update({ last_estimation_report: s.estimation })
+          .eq('id', canvasId)
+          .eq('user_id', user.id);
+        if (canvasError) {
+          console.error('Failed to save canvas estimation report:', canvasError);
+        }
+      }
       const now = new Date().toISOString();
       const existing = s.scenarios[s.currentWorkflowId];
       set((prev) => ({
@@ -316,6 +330,16 @@ export const createPersistenceSlice: StateCreator<CombinedState, [], [], Persist
         console.error('Supabase insert error:', error);
         set({ isSaving: false });
         return null;
+      }
+      if (canvasId && s.estimation) {
+        const { error: canvasError } = await supabase
+          .from('canvases')
+          .update({ last_estimation_report: s.estimation })
+          .eq('id', canvasId)
+          .eq('user_id', user.id);
+        if (canvasError) {
+          console.error('Failed to save canvas estimation report:', canvasError);
+        }
       }
       const scenario: WorkflowScenario = {
         id,
@@ -425,19 +449,7 @@ export const createPersistenceSlice: StateCreator<CombinedState, [], [], Persist
           id: newId,
           type: n.type as WorkflowNodeType,
           position: { x: wOffsetX + (i % 3) * 280, y: wOffsetY + Math.floor(i / 3) * 180 },
-          data: {
-            label: n.label ?? n.type,
-            type: n.type,
-            modelProvider: n.model_provider,
-            modelName: n.model_name,
-            context: n.context,
-            toolId: n.tool_id,
-            toolCategory: n.tool_category,
-            maxSteps: n.max_steps,
-            taskType: n.task_type ?? undefined,
-            expectedOutputSize: n.expected_output_size ?? undefined,
-            expectedCallsPerRun: n.expected_calls_per_run ?? undefined,
-          },
+          data: workflowNodeDataFromPayload(n),
         });
       }
 
@@ -493,19 +505,7 @@ export const createPersistenceSlice: StateCreator<CombinedState, [], [], Persist
       id: n.id,
       type: n.type,
       position: { x: 200 + (i % 3) * 280, y: 100 + Math.floor(i / 3) * 180 },
-      data: {
-        label: n.label ?? n.type,
-        type: n.type,
-        modelProvider: n.model_provider,
-        modelName: n.model_name,
-        context: n.context,
-        toolId: n.tool_id,
-        toolCategory: n.tool_category,
-        maxSteps: n.max_steps,
-        taskType: n.task_type ?? undefined,
-        expectedOutputSize: n.expected_output_size ?? undefined,
-        expectedCallsPerRun: n.expected_calls_per_run ?? undefined,
-      },
+      data: workflowNodeDataFromPayload(n),
     }));
 
     const rfEdges: Edge[] = edges.map((e) => ({
@@ -517,6 +517,8 @@ export const createPersistenceSlice: StateCreator<CombinedState, [], [], Persist
     set({
       nodes: rfNodes,
       edges: rfEdges,
+      historyStack: [],
+      redoStack: [],
       estimation: null,
       currentScenarioId: null,
       currentWorkflowId: null,

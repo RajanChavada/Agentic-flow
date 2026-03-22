@@ -4,7 +4,7 @@
 import React, { memo, useState, useCallback, useRef, useEffect } from "react";
 import { type NodeProps } from "@xyflow/react";
 import type { WorkflowNodeData } from "@/types/workflow";
-import { useWorkflowStore } from "@/store/useWorkflowStore";
+import { useWorkflowEdges, useWorkflowStore } from "@/store/useWorkflowStore";
 
 const DEFAULT_STYLE = {
   content: "Text",
@@ -23,6 +23,7 @@ const FONT_SIZE_MAP: Record<string, string> = {
 
 function TextNode({ id, data, selected }: NodeProps & { data: WorkflowNodeData }) {
   const style = { ...DEFAULT_STYLE, ...data.textNodeStyle };
+  const edges = useWorkflowEdges();
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(style.content);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -31,6 +32,8 @@ function TextNode({ id, data, selected }: NodeProps & { data: WorkflowNodeData }
   const isDark =
     typeof document !== "undefined" &&
     document.documentElement.classList.contains("dark");
+  const hasAnyEdge = edges.some((e) => e.source === id || e.target === id);
+  const isDisconnected = !hasAnyEdge;
 
   useEffect(() => {
     if (editing && inputRef.current) {
@@ -81,9 +84,14 @@ function TextNode({ id, data, selected }: NodeProps & { data: WorkflowNodeData }
 
   return (
     <div
-      className={`cursor-default select-none transition-all duration-300 ${bgClass} ${selected ? "ring-4 ring-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.6)] rounded" : ""
+      className={`cursor-default select-none transition-all duration-300 ${bgClass} ${
+        isDisconnected
+          ? `${isDark ? "border-red-400" : "border-red-500"} border-2 border-dashed rounded-md px-2 py-1`
+          : ""
+      } ${selected ? "ring-4 ring-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.6)] rounded" : ""
         }`}
       style={bgInline}
+      title={isDisconnected ? "This node is not connected and won't be included in estimation. Connect it or delete it." : undefined}
       onDoubleClick={(e) => {
         e.stopPropagation();
         setEditValue(style.content);

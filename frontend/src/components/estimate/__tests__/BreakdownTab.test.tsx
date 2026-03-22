@@ -25,6 +25,12 @@ const mockEstimation = {
     parallel_steps: [],
     critical_path: ['agent-1'],
     critical_path_latency: 1.5,
+    best_case_cost: 0.02,
+    best_case_latency: 1.0,
+    worst_case_cost: 0.08,
+    worst_case_latency: 3.0,
+    complexity_score: 0,
+    complexity_label: 'Low' as const,
     recursion_limit: 25,
     breakdown: [
         {

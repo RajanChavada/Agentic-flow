@@ -1,7 +1,7 @@
 """Pydantic request / response schemas for the estimation API."""
 
-from typing import List, Optional, Literal
-from pydantic import BaseModel, Field, field_validator
+from typing import List, Optional, Literal, Union
+from pydantic import AliasChoices, BaseModel, Field, field_validator
 
 
 class EstimationRange(BaseModel):
@@ -19,6 +19,13 @@ class ParallelStep(BaseModel):
     total_latency: float = 0.0      # max latency in this step (parallel = max, not sum)
     total_cost: float = 0.0         # sum of costs in this step
     parallelism: int = 0            # number of nodes that run in parallel
+
+
+class GraphPreprocessing(BaseModel):
+    """Graph preprocessing summary used by the estimator."""
+    forks: dict[str, List[str]] = Field(default_factory=dict)
+    cycles: List[List[str]] = Field(default_factory=list)
+    topological_order: List[str] = Field(default_factory=list)
 
 
 # ── Request models ──────────────────────────────────────────────
@@ -51,6 +58,12 @@ class NodeConfig(BaseModel):
         ge=1,
         le=100,
         description="Maximum loop iterations this agent will perform when in a cycle (default: 10)",
+    )
+    retry_budget: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=5,
+        description="Maximum retries before this node fails",
     )
     # ── Context-aware estimation fields ─────────────────────────
     task_type: Optional[Literal[
@@ -125,6 +138,44 @@ class WorkflowRequest(BaseModel):
     )
 
 
+# ── Quick estimate request / response models ───────────────────
+
+class QuickEstimateToolRef(BaseModel):
+    """A tool reference used by the quick estimate endpoint."""
+    tool_id: str = Field(
+        validation_alias=AliasChoices("tool_id", "toolId", "id"),
+    )
+
+
+class QuickEstimateRequest(BaseModel):
+    """POST /api/quick-estimate payload."""
+    model_provider: str = Field(
+        validation_alias=AliasChoices("model_provider", "modelProvider", "provider"),
+    )
+    model_name: str = Field(
+        validation_alias=AliasChoices("model_name", "modelName", "model"),
+    )
+    context: Optional[str] = ""
+    expected_output_size: Optional[Literal[
+        "short", "medium", "long", "very_long"
+    ]] = Field(
+        default=None,
+        validation_alias=AliasChoices("expected_output_size", "expectedOutputSize"),
+    )
+    max_output_tokens: Optional[int] = Field(
+        default=None,
+        ge=1,
+        validation_alias=AliasChoices("max_output_tokens", "maxOutputTokens"),
+    )
+    tools: List[Union[str, QuickEstimateToolRef]] = Field(default_factory=list)
+
+
+class QuickEstimateResponse(BaseModel):
+    """Response from POST /api/quick-estimate."""
+    cost_per_call: float
+    latency_ms: int
+
+
 # ── Estimation response models ──────────────────────────────────
 
 class ToolImpact(BaseModel):
@@ -142,6 +193,9 @@ class NodeEstimation(BaseModel):
     node_name: str
     tokens: int
     input_tokens: int
+    ancestor_tokens: int = 0
+    tool_tokens: int = 0
+    total_input_tokens: int = 0
     output_tokens: int
     cost: float
     input_cost: float
@@ -206,6 +260,55 @@ class ScalingProjection(BaseModel):
     cost_per_1k_runs: float             # total_cost * 1000
 
 
+class ContextAccumulationNode(BaseModel):
+    """Per-node context accumulation breakdown from preprocessing."""
+    node_id: str
+    label: str
+    ancestor_token_contribution: int
+    without_accumulation_cost_usd: float
+    with_accumulation_cost_usd: float
+    accumulation_overhead_pct: int
+
+
+class ContextAccumulationReport(BaseModel):
+    """Summary of accumulated context across the workflow graph."""
+    note: str
+    breakdown: List[ContextAccumulationNode]
+
+
+class ParallelBranchReport(BaseModel):
+    fork_node: str
+    branches: List[str]
+    branch_latencies_ms: List[int]
+    effective_latency_ms: int
+    note: str
+
+
+class LatencyReport(BaseModel):
+    critical_path_ms: int
+    critical_path_nodes: List[str]
+    parallel_branches: List[ParallelBranchReport]
+    worst_case_latency_ms: int
+
+
+class CostReport(BaseModel):
+    best_case_usd: float
+    worst_case_usd: float
+    breakdown: List[NodeEstimation]
+
+
+class EstimationSummary(BaseModel):
+    total_nodes: int
+    agent_nodes: int
+    tool_nodes: int
+    condition_nodes: int
+    loops_detected: int
+    parallel_forks_detected: int
+    graph_depth: int
+    complexity_score: int
+    complexity_label: Literal["Low", "Medium", "High", "Very High"]
+
+
 class SensitivityReadout(BaseModel):
     """Cost/latency range across min/avg/max loop assumptions."""
     cost_min: float
@@ -224,7 +327,9 @@ class WorkflowEstimation(BaseModel):
     total_latency: float
     total_tool_latency: float
     graph_type: Literal["DAG", "CYCLIC"]
+    graph: GraphPreprocessing
     breakdown: List[NodeEstimation]
+    context_accumulation: Optional[ContextAccumulationReport] = None
     critical_path: List[str]
     # Cycle-aware estimation fields (populated when graph_type == "CYCLIC")
     detected_cycles: List[CycleInfo] = []
@@ -235,6 +340,15 @@ class WorkflowEstimation(BaseModel):
     # Concurrency / parallelism analysis
     parallel_steps: List[ParallelStep] = []
     critical_path_latency: float = 0.0   # total latency along the critical path
+    best_case_cost: float = 0.0
+    best_case_latency: float = 0.0
+    worst_case_cost: float = 0.0
+    worst_case_latency: float = 0.0
+    complexity_score: int = 0
+    complexity_label: Literal["Low", "Medium", "High", "Very High"] = "Low"
+    cost: Optional[CostReport] = None
+    latency: Optional[LatencyReport] = None
+    summary: Optional[EstimationSummary] = None
     # Scaling / what-if analysis
     scaling_projection: Optional[ScalingProjection] = None
     sensitivity: Optional[SensitivityReadout] = None
@@ -267,6 +381,7 @@ class ProviderSummary(BaseModel):
     """A provider entry returned by GET /api/providers."""
     id: str
     name: str
+    last_updated: str
     model_count: int
 
 
@@ -274,6 +389,7 @@ class ProviderModelsResponse(BaseModel):
     """Full provider + models response for GET /api/providers (detailed)."""
     id: str
     name: str
+    last_updated: str
     models: List[ModelInfo]
 
 
@@ -360,5 +476,3 @@ class ImportedWorkflow(BaseModel):
     nodes: List[NodeConfig]
     edges: List[EdgeConfig]
     metadata: dict = Field(default_factory=dict, description="Source-specific extra info")
-
-

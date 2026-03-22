@@ -18,7 +18,6 @@ import {
   LayoutGrid,
   Home,
   Share2,
-  ChevronDown,
   HelpCircle,
   PanelLeft,
   MoreHorizontal,
@@ -65,8 +64,9 @@ export default function HeaderBar() {
   const [isPublishOpen, setIsPublishOpen] = useState(false);
   const [isNewConfirmOpen, setIsNewConfirmOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
-  const [shareMode, setShareMode] = useState<"workflow" | "canvas" | null>(null);
-  const shareDropdownRef = React.useRef<HTMLDivElement>(null);
+  const [disconnectedForEstimate, setDisconnectedForEstimate] = useState<
+    Array<{ id: string; label: string; type: string }>
+  >([]);
   const activeCanvasId = useActiveCanvasId();
   const isDark = theme === "dark";
   const autoLayout = useAutoLayout();
@@ -84,6 +84,7 @@ export default function HeaderBar() {
   const isDirty = useIsDirty();
   const isSaving = useWorkflowStore((s) => s.isSaving);
   const lastSavedAt = useWorkflowStore((s) => s.lastSavedAt);
+  const openTemplateLibrary = useWorkflowStore((s) => s.openTemplateLibrary);
 
   // Inline name editing
   const [editingName, setEditingName] = useState(false);
@@ -203,19 +204,28 @@ export default function HeaderBar() {
     setIsImportOpen(true);
   };
 
-  const handleEstimate = async () => {
-    const hasStart = nodes.some((n) => n.type === "startNode");
-    const hasFinish = nodes.some((n) => n.type === "finishNode");
-    if (!hasStart || !hasFinish) {
-      setErrorBanner("Workflow must have at least one Start and one Finish node.");
-      return;
-    }
+  const formatNodeType = (type: string) =>
+    type
+      .replace(/Node$/, "")
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/^./, (s) => s.toUpperCase());
+
+  const runEstimateForGraph = async (
+    estimateNodes: typeof nodes,
+    estimateEdges: typeof edges
+  ) => {
+    if (estimateNodes.length === 0) return;
+
+    const estimateNodeIds = new Set(estimateNodes.map((n) => n.id));
+    const boundedEdges = estimateEdges.filter(
+      (e) => estimateNodeIds.has(e.source) && estimateNodeIds.has(e.target)
+    );
 
     setErrorBanner(undefined);
     setLoading(true);
 
     const payload: EstimateRequestPayload = {
-      nodes: nodes.map<NodeConfigPayload>((n) => ({
+      nodes: estimateNodes.map<NodeConfigPayload>((n) => ({
         id: n.id,
         type: n.data.type,
         label: n.data.label,
@@ -225,13 +235,14 @@ export default function HeaderBar() {
         tool_id: n.data.toolId,
         tool_category: n.data.toolCategory,
         max_steps: n.data.maxSteps ?? null,
+        retry_budget: n.data.retryBudget ?? null,
         task_type: n.data.taskType ?? null,
         expected_output_size: n.data.expectedOutputSize ?? null,
         expected_calls_per_run: n.data.expectedCallsPerRun ?? null,
         condition_expression: n.data.conditionExpression ?? null,
         probability: n.data.probability ?? null,
       })),
-      edges: edges.map<EdgeConfigPayload>((e) => ({
+      edges: boundedEdges.map<EdgeConfigPayload>((e) => ({
         id: e.id,
         source: e.source,
         target: e.target,
@@ -266,6 +277,46 @@ export default function HeaderBar() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getDisconnectedNodes = () => {
+    return nodes
+      .filter((n) => n.type !== "startNode" && n.type !== "finishNode")
+      .filter((n) => !edges.some((e) => e.source === n.id || e.target === n.id))
+      .map((n) => ({
+        id: n.id,
+        label: n.data.label ?? n.type ?? "Node",
+        type: formatNodeType(n.type ?? n.data.type ?? "node"),
+      }));
+  };
+
+  const handleEstimate = async () => {
+    const hasStart = nodes.some((n) => n.type === "startNode");
+    const hasFinish = nodes.some((n) => n.type === "finishNode");
+    if (!hasStart || !hasFinish) {
+      setErrorBanner("Workflow must have at least one Start and one Finish node.");
+      return;
+    }
+
+    const disconnected = getDisconnectedNodes();
+    if (disconnected.length > 0) {
+      setDisconnectedForEstimate(disconnected);
+      return;
+    }
+
+    await runEstimateForGraph(nodes, edges);
+  };
+
+  const handleProceedWithDisconnected = async () => {
+    const disconnectedIds = new Set(disconnectedForEstimate.map((n) => n.id));
+    const filteredNodes = nodes.filter((n) => !disconnectedIds.has(n.id));
+    const filteredNodeIds = new Set(filteredNodes.map((n) => n.id));
+    const filteredEdges = edges.filter(
+      (e) => filteredNodeIds.has(e.source) && filteredNodeIds.has(e.target)
+    );
+
+    setDisconnectedForEstimate([]);
+    await runEstimateForGraph(filteredNodes, filteredEdges);
   };
 
   return (
@@ -383,8 +434,8 @@ export default function HeaderBar() {
           <button
             onClick={openTutorial}
             className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${isDark
-              ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-              : "border-gray-300 text-gray-600 hover:bg-gray-100"
+              ? "border-sky-600 text-sky-400 hover:bg-sky-900/40"
+              : "border-sky-500 text-sky-600 hover:bg-sky-50"
               }`}
             title="Canvas tutorial"
           >
@@ -406,8 +457,8 @@ export default function HeaderBar() {
           </button>
 
           {/* Templates */}
-          <Link
-            href="/marketplace"
+          <button
+            onClick={openTemplateLibrary}
             className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${isDark
               ? "border-slate-600 text-slate-300 hover:bg-slate-700"
               : "border-gray-300 text-gray-600 hover:bg-gray-100"
@@ -416,7 +467,7 @@ export default function HeaderBar() {
           >
             <LayoutTemplate className="w-3.5 h-3.5" />
             <span className="hidden lg:inline ml-1">Templates</span>
-          </Link>
+          </button>
 
           {/* New Workflow */}
           <button
@@ -445,59 +496,6 @@ export default function HeaderBar() {
               <UploadCloud className="w-3.5 h-3.5" />
               <span className="hidden lg:inline ml-1">Publish</span>
             </button>
-          )}
-
-          {/* Share (workflow or canvas) */}
-          {activeCanvasId && user && (
-            <div className="relative" ref={shareDropdownRef}>
-              <button
-                onClick={() => setIsShareOpen((o) => !o)}
-                className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 ${isDark
-                  ? "border-sky-700 text-sky-300 hover:bg-sky-800/40"
-                  : "border-sky-300 text-sky-700 hover:bg-sky-50"
-                  }`}
-                title="Share workflow or canvas"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-                <span className="hidden lg:inline">Share</span>
-                <ChevronDown className="w-3 h-3 hidden lg:inline" />
-              </button>
-              {isShareOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setIsShareOpen(false)}
-                    aria-hidden
-                  />
-                  <div
-                    className={`absolute right-0 top-full mt-1 z-50 min-w-48 rounded-md border py-1 shadow-lg ${isDark ? "border-slate-600 bg-slate-900" : "border-gray-200 bg-white"
-                      }`}
-                  >
-                    <button
-                      onClick={() => {
-                        setShareMode("workflow");
-                        setIsShareOpen(false);
-                      }}
-                      disabled={nodes.length === 0}
-                      className={`w-full px-3 py-2 text-left text-sm transition disabled:opacity-40 ${isDark ? "hover:bg-slate-800" : "hover:bg-gray-100"
-                        }`}
-                    >
-                      Share this workflow
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShareMode("canvas");
-                        setIsShareOpen(false);
-                      }}
-                      className={`w-full px-3 py-2 text-left text-sm transition ${isDark ? "hover:bg-slate-800" : "hover:bg-gray-100"
-                        }`}
-                    >
-                      Share this canvas
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
           )}
 
           {/* Save As */}
@@ -642,17 +640,11 @@ export default function HeaderBar() {
                 {activeCanvasId && user && (
                   <>
                     <button
-                      onClick={() => { setShareMode("workflow"); setOverflowOpen(false); }}
+                      onClick={() => { setIsShareOpen(true); setOverflowOpen(false); }}
                       disabled={nodes.length === 0}
                       className={`w-full flex items-center gap-2 px-3 py-2 min-h-11 text-left text-sm transition disabled:opacity-40 disabled:pointer-events-none ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
                     >
-                      <Share2 className="w-4 h-4 shrink-0" /> Share workflow
-                    </button>
-                    <button
-                      onClick={() => { setShareMode("canvas"); setOverflowOpen(false); }}
-                      className={`w-full flex items-center gap-2 px-3 py-2 min-h-11 text-left text-sm transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-100 text-gray-700"}`}
-                    >
-                      <Share2 className="w-4 h-4 shrink-0" /> Share canvas
+                      <Share2 className="w-4 h-4 shrink-0" /> Share
                     </button>
                   </>
                 )}
@@ -683,6 +675,22 @@ export default function HeaderBar() {
           <Save className="w-3.5 h-3.5" />
           <span className="hidden sm:inline ml-1">{isSaving ? "Saving\u2026" : "Save"}</span>
         </button>
+
+        {/* Share canvas */}
+        {activeCanvasId && user && (
+          <button
+            onClick={() => setIsShareOpen(true)}
+            disabled={nodes.length === 0}
+            className={`rounded-md border px-2 sm:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 ${isDark
+              ? "border-sky-700 text-sky-300 hover:bg-sky-800/40"
+              : "border-sky-300 text-sky-700 hover:bg-sky-50"
+              }`}
+            title="Share this canvas"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline ml-1">Share</span>
+          </button>
+        )}
 
         {/* Estimate — always visible, responsive text */}
         <button
@@ -733,17 +741,55 @@ export default function HeaderBar() {
       {/* Share modal */}
       {user && (
         <ShareWorkflowModal
-          isOpen={shareMode !== null}
-          onClose={() => setShareMode(null)}
-          shareType={shareMode ?? "workflow"}
-          workflowId={currentWorkflowId ?? undefined}
+          isOpen={isShareOpen}
+          onClose={() => setIsShareOpen(false)}
           canvasId={activeCanvasId ?? undefined}
-          workflowName={currentWorkflowName}
-          canvasName={undefined}
-          nodes={shareMode === "workflow" ? nodes : undefined}
-          edges={shareMode === "workflow" ? edges : undefined}
-          userId={user.id}
+          canvasName={currentWorkflowName}
         />
+      )}
+
+      {disconnectedForEstimate.length > 0 && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={() => setDisconnectedForEstimate([])}
+        >
+          <div
+            className={`w-full max-w-md rounded-lg border p-5 shadow-xl ${
+              isDark ? "border-gray-700 bg-gray-900" : "border-gray-200 bg-white"
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className={`text-lg font-semibold mb-3 ${isDark ? "text-slate-100" : "text-gray-900"}`}>
+              ⚠ Disconnected Nodes Detected
+            </h2>
+            <p className={`text-sm mb-2 ${isDark ? "text-slate-300" : "text-gray-600"}`}>
+              The following nodes are not connected to the workflow and will be excluded from estimation:
+            </p>
+            <ul className={`mb-5 space-y-1 text-sm ${isDark ? "text-slate-200" : "text-gray-700"}`}>
+              {disconnectedForEstimate.map((node) => (
+                <li key={node.id}>{`• ${node.label} (${node.type})`}</li>
+              ))}
+            </ul>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDisconnectedForEstimate([])}
+                className={`rounded-md border px-4 py-2 text-sm font-medium transition ${
+                  isDark
+                    ? "border-gray-600 text-gray-300 hover:bg-gray-800"
+                    : "border-gray-300 text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                Go Back
+              </button>
+              <button
+                onClick={handleProceedWithDisconnected}
+                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+              >
+                Proceed Anyway
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
 

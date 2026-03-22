@@ -12,9 +12,11 @@ import type { PersistenceSlice } from './persistenceSlice';
 
 export interface UISlice {
   // State
-  ui: UIState;
+  ui: UIState & { isTemplateLibraryOpen?: boolean };
 
   // Actions
+  openTemplateLibrary: () => void;
+  closeTemplateLibrary: () => void;
   openConfigModal: () => void;
   closeConfigModal: () => void;
   toggleEstimatePanel: () => void;
@@ -32,6 +34,7 @@ type CombinedState = WorkflowSlice & EstimationSlice & UISlice & PersistenceSlic
 
 export const createUISlice: StateCreator<CombinedState, [], [], UISlice> = (set) => ({
   ui: {
+    isTemplateLibraryOpen: false,
     isConfigModalOpen: false,
     isEstimatePanelOpen: false,
     isComparisonOpen: false,
@@ -43,6 +46,10 @@ export const createUISlice: StateCreator<CombinedState, [], [], UISlice> = (set)
       : false,
   },
 
+  openTemplateLibrary: () =>
+    set((s) => ({ ui: { ...s.ui, isTemplateLibraryOpen: true } })),
+  closeTemplateLibrary: () =>
+    set((s) => ({ ui: { ...s.ui, isTemplateLibraryOpen: false } })),
   openConfigModal: () =>
     set((s) => ({ ui: { ...s.ui, isConfigModalOpen: true } })),
   closeConfigModal: () =>

@@ -361,6 +361,13 @@ export default function EstimatePanel() {
                       <Info className="w-3 h-3" />
                     </button>
                   </div>
+
+                  <div className="flex items-center gap-1 text-[10px] sm:text-xs text-fuchsia-500 font-medium">
+                    <span>Complexity</span>
+                    <span className="font-semibold">
+                      {estimation.complexity_label} ({estimation.complexity_score})
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

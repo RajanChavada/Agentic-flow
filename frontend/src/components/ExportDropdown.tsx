@@ -61,9 +61,14 @@ function buildMarkdownReport(est: WorkflowEstimation): string {
   lines.push(`| Input tokens | ${est.total_input_tokens.toLocaleString()} |`);
   lines.push(`| Output tokens | ${est.total_output_tokens.toLocaleString()} |`);
   lines.push(`| Total cost | $${est.total_cost.toFixed(5)} |`);
+  lines.push(`| Best-case cost | $${est.best_case_cost.toFixed(5)} |`);
+  lines.push(`| Worst-case cost | $${est.worst_case_cost.toFixed(5)} |`);
   lines.push(`| Total latency | ${(est.total_latency * 1000).toFixed(0)} ms |`);
+  lines.push(`| Best-case latency | ${(est.best_case_latency * 1000).toFixed(0)} ms |`);
+  lines.push(`| Worst-case latency | ${(est.worst_case_latency * 1000).toFixed(0)} ms |`);
   lines.push(`| Tool latency | ${(est.total_tool_latency * 1000).toFixed(0)} ms |`);
   lines.push(`| Critical-path latency | ${(est.critical_path_latency * 1000).toFixed(0)} ms |`);
+  lines.push(`| Complexity | ${est.complexity_label} (${est.complexity_score}) |`);
   lines.push("");
 
   // Health score
@@ -93,7 +98,9 @@ function buildMarkdownReport(est: WorkflowEstimation): string {
     const pathLabels = est.critical_path.map((id) => idToLabel[id] ?? id);
     lines.push("## Critical Path\n");
     lines.push(pathLabels.join(" → "));
-    lines.push(`\n*Total critical-path latency: ${(est.critical_path_latency * 1000).toFixed(0)} ms*`);
+    lines.push(`\n*Critical-path latency: ${(est.critical_path_latency * 1000).toFixed(0)} ms*`);
+    lines.push(`*Best-case latency: ${(est.best_case_latency * 1000).toFixed(0)} ms*`);
+    lines.push(`*Worst-case latency: ${(est.worst_case_latency * 1000).toFixed(0)} ms*`);
     lines.push("");
   }
 
@@ -368,9 +375,14 @@ async function generatePdfReport(
     ["  - Input", est.total_input_tokens.toLocaleString()],
     ["  - Output", est.total_output_tokens.toLocaleString()],
     ["Total Cost", `$${est.total_cost.toFixed(5)}`],
+    ["Best-Case Cost", `$${est.best_case_cost.toFixed(5)}`],
+    ["Worst-Case Cost", `$${est.worst_case_cost.toFixed(5)}`],
     ["Total Latency", `${(est.total_latency * 1000).toFixed(0)} ms`],
+    ["Best-Case Latency", `${(est.best_case_latency * 1000).toFixed(0)} ms`],
+    ["Worst-Case Latency", `${(est.worst_case_latency * 1000).toFixed(0)} ms`],
     ["Tool Latency", `${(est.total_tool_latency * 1000).toFixed(0)} ms`],
     ["Critical-Path Latency", `${(est.critical_path_latency * 1000).toFixed(0)} ms`],
+    ["Complexity", `${est.complexity_label} (${est.complexity_score})`],
     ["Nodes", String(est.breakdown.length)],
   ];
 

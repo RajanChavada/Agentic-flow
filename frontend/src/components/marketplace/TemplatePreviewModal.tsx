@@ -14,6 +14,7 @@ import BlankBoxNode from "@/components/nodes/BlankBoxNode";
 import TextNode from "@/components/nodes/TextNode";
 import AnnotationEdge from "@/components/edges/AnnotationEdge";
 import { cn } from "@/lib/utils";
+import { workflowNodeDataFromPayload } from "@/store/utils";
 
 const CATEGORY_LABELS: Record<string, string> = {
   rag: "RAG",
@@ -116,19 +117,7 @@ export default function TemplatePreviewModal({
       id: n.id,
       type: n.type,
       position: { x: 200 + (i % 3) * 220, y: 100 + Math.floor(i / 3) * 160 },
-      data: {
-        label: n.label ?? n.type,
-        type: n.type,
-        modelProvider: n.model_provider,
-        modelName: n.model_name,
-        context: n.context,
-        toolId: n.tool_id,
-        toolCategory: n.tool_category,
-        maxSteps: n.max_steps,
-        taskType: n.task_type ?? undefined,
-        expectedOutputSize: n.expected_output_size ?? undefined,
-        expectedCallsPerRun: n.expected_calls_per_run ?? undefined,
-      },
+      data: workflowNodeDataFromPayload(n),
     }));
 
     const rawEdges: Edge[] = (template.graph.edges ?? []).map((e) => ({

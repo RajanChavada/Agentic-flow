@@ -38,9 +38,21 @@ from __future__ import annotations
 
 import math
 from collections import defaultdict
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, cast
 
-import tiktoken
+try:
+    import tiktoken
+except ModuleNotFoundError:  # pragma: no cover - fallback for test environments
+    class _FallbackEncoding:
+        def encode(self, text: str) -> List[str]:
+            return text.split() if text else []
+
+    class _FallbackTikToken:
+        @staticmethod
+        def get_encoding(_name: str) -> _FallbackEncoding:
+            return _FallbackEncoding()
+
+    tiktoken = _FallbackTikToken()  # type: ignore[assignment]
 
 from models import (
     NodeConfig,
@@ -48,10 +60,18 @@ from models import (
     ToolImpact,
     CycleInfo,
     EstimationRange,
+    ContextAccumulationNode,
+    ContextAccumulationReport,
+    ContextAccumulationNode,
+    GraphPreprocessing,
     ParallelStep,
     ScalingProjection,
     SensitivityReadout,
     HealthScore,
+    ParallelBranchReport,
+    CostReport,
+    LatencyReport,
+    EstimationSummary,
     WorkflowEstimation,
     EdgeConfig,
 )
@@ -129,6 +149,271 @@ def count_tokens(text: str) -> int:
     return len(_DEFAULT_ENCODING.encode(text)) if text else 0
 
 
+def build_graph(
+    nodes: List[NodeConfig],
+    edges: List[EdgeConfig],
+) -> tuple[Dict[str, NodeConfig], Dict[str, List[str]], Dict[str, List[str]]]:
+    """Build adjacency structures used by the graph preprocessing layer."""
+    node_map: Dict[str, NodeConfig] = {n.id: n for n in nodes}
+    successors: Dict[str, List[str]] = {n.id: [] for n in nodes}
+    predecessors: Dict[str, List[str]] = {n.id: [] for n in nodes}
+
+    for edge in edges:
+        successors.setdefault(edge.source, []).append(edge.target)
+        predecessors.setdefault(edge.target, []).append(edge.source)
+
+    for node_id in list(successors.keys()):
+        successors[node_id] = list(dict.fromkeys(successors[node_id]))
+    for node_id in list(predecessors.keys()):
+        predecessors[node_id] = list(dict.fromkeys(predecessors[node_id]))
+
+    return node_map, successors, predecessors
+
+
+def detect_forks(
+    node_map: Dict[str, NodeConfig],
+    successors: Dict[str, List[str]],
+) -> Dict[str, List[str]]:
+    """Return a map of fork source ids to their parallel target ids."""
+    forks: Dict[str, List[str]] = {}
+    for node_id, targets in successors.items():
+        if len(targets) < 2:
+            continue
+        node = node_map.get(node_id)
+        if node and node.type == "conditionNode":
+            continue
+        forks[node_id] = list(dict.fromkeys(targets))
+    return forks
+
+
+def detect_cycles(
+    node_map: Dict[str, NodeConfig],
+    successors: Dict[str, List[str]],
+) -> tuple[List[tuple[str, str]], Set[tuple[str, str]]]:
+    """Detect DFS back edges to identify cycles."""
+    WHITE, GRAY, BLACK = 0, 1, 2
+    color: Dict[str, int] = {nid: WHITE for nid in node_map}
+    back_edges: List[tuple[str, str]] = []
+    seen_back_edges: Set[tuple[str, str]] = set()
+
+    def _dfs(node_id: str) -> None:
+        color[node_id] = GRAY
+        for neighbor in successors.get(node_id, []):
+            if color.get(neighbor, WHITE) == WHITE:
+                _dfs(neighbor)
+            elif color.get(neighbor) == GRAY:
+                edge = (node_id, neighbor)
+                if edge not in seen_back_edges:
+                    seen_back_edges.add(edge)
+                    back_edges.append(edge)
+        color[node_id] = BLACK
+
+    for node_id in node_map:
+        if color[node_id] == WHITE:
+            _dfs(node_id)
+
+    return back_edges, seen_back_edges
+
+
+def topological_sort(
+    node_map: Dict[str, NodeConfig],
+    successors: Dict[str, List[str]],
+    back_edges: Set[tuple[str, str]],
+) -> List[str]:
+    """Return a topological order after removing DFS back edges."""
+    in_degree: Dict[str, int] = {nid: 0 for nid in node_map}
+    for source, targets in successors.items():
+        for target in targets:
+            if (source, target) in back_edges:
+                continue
+            if target in in_degree:
+                in_degree[target] += 1
+
+    queue: List[str] = [nid for nid in node_map if in_degree.get(nid, 0) == 0]
+    order: List[str] = []
+    idx = 0
+    while idx < len(queue):
+        node_id = queue[idx]
+        idx += 1
+        order.append(node_id)
+        for neighbor in successors.get(node_id, []):
+            if (node_id, neighbor) in back_edges or neighbor not in in_degree:
+                continue
+            in_degree[neighbor] -= 1
+            if in_degree[neighbor] == 0:
+                queue.append(neighbor)
+
+    if len(order) != len(node_map):
+        remaining = [nid for nid in node_map if nid not in order]
+        order.extend(remaining)
+    return order
+
+
+def compute_critical_path(
+    node_ids: List[str],
+    successors: Dict[str, List[str]],
+    node_latencies: Dict[str, float],
+    topo_order: List[str],
+) -> tuple[int, List[str]]:
+    """Compute critical path latency (ms) and node ids."""
+    order = [nid for nid in topo_order if nid in node_ids]
+    if not order:
+        return 0, []
+
+    dist: Dict[str, float] = {nid: float("-inf") for nid in order}
+    parent: Dict[str, Optional[str]] = {nid: None for nid in order}
+    for nid in order:
+        if dist[nid] == float("-inf"):
+            dist[nid] = 0.0
+        for succ in successors.get(nid, []):
+            if succ not in dist:
+                continue
+            new_dist = dist[nid] + node_latencies.get(nid, 0.0)
+            if new_dist >= dist[succ]:
+                dist[succ] = new_dist
+                parent[succ] = nid
+
+    sinks = [nid for nid in order if not successors.get(nid)]
+    candidates = sinks if sinks else order
+    end_node = max(candidates, key=lambda n: dist[n] + node_latencies.get(n, 0.0))
+
+    path: List[str] = [end_node]
+    current = end_node
+    while parent[current] is not None:
+        current = parent[current]  # type: ignore[assignment]
+        path.append(current)
+    path.reverse()
+
+    total_latency_ms = int(round((dist[end_node] + node_latencies.get(end_node, 0.0)) * 1000))
+    return total_latency_ms, path
+
+
+def _compute_graph_depth(
+    topo_order: List[str],
+    successors: Dict[str, List[str]],
+    node_map: Dict[str, NodeConfig],
+) -> int:
+    """Compute longest path from Start to Finish in hops."""
+    start_nodes = {nid for nid, n in node_map.items() if n.type == "startNode"}
+    finish_nodes = {nid for nid, n in node_map.items() if n.type == "finishNode"}
+
+    if not topo_order:
+        return 0
+
+    depth: Dict[str, int] = {nid: -10**9 for nid in topo_order}
+    for nid in topo_order:
+        if nid in start_nodes:
+            depth[nid] = 0
+
+    for nid in topo_order:
+        if depth.get(nid, -10**9) < -1_000_000:
+            continue
+        for succ in successors.get(nid, []):
+            if succ in depth:
+                depth[succ] = max(depth[succ], depth[nid] + 1)
+
+    if finish_nodes:
+        finish_depths = [depth[nid] for nid in finish_nodes if nid in depth and depth[nid] >= 0]
+        if finish_depths:
+            return max(finish_depths)
+
+    # Fallback: longest path across all nodes
+    valid_depths = [d for d in depth.values() if d >= 0]
+    return max(valid_depths) if valid_depths else 0
+
+
+def _reachable_from(
+    start: str,
+    successors: Dict[str, List[str]],
+) -> Set[str]:
+    visited: Set[str] = set()
+    stack = [start]
+    while stack:
+        node = stack.pop()
+        if node in visited:
+            continue
+        visited.add(node)
+        for nxt in successors.get(node, []):
+            if nxt not in visited:
+                stack.append(nxt)
+    return visited
+
+
+def _longest_path_latency(
+    start: str,
+    end: Optional[str],
+    successors: Dict[str, List[str]],
+    node_latencies: Dict[str, float],
+    topo_order: List[str],
+) -> float:
+    allowed = _reachable_from(start, successors)
+    if end:
+        if end not in allowed:
+            return 0.0
+        # restrict to nodes that can reach end
+        reverse: Dict[str, List[str]] = defaultdict(list)
+        for src, targets in successors.items():
+            for tgt in targets:
+                reverse[tgt].append(src)
+        can_reach_end = _reachable_from(end, reverse)
+        allowed &= can_reach_end
+
+    order = [nid for nid in topo_order if nid in allowed]
+    if not order:
+        return 0.0
+
+    dist: Dict[str, float] = {nid: float("-inf") for nid in order}
+    dist[start] = node_latencies.get(start, 0.0)
+    for nid in order:
+        if dist[nid] == float("-inf"):
+            continue
+        for succ in successors.get(nid, []):
+            if succ not in dist:
+                continue
+            new_dist = dist[nid] + node_latencies.get(succ, 0.0)
+            if new_dist > dist[succ]:
+                dist[succ] = new_dist
+
+    if end:
+        return max(dist.get(end, 0.0), 0.0)
+    return max((v for v in dist.values() if v != float("-inf")), default=0.0)
+
+
+def compute_parallel_branch_latency(
+    fork_id: str,
+    parallel_targets: List[str],
+    successors: Dict[str, List[str]],
+    node_latencies: Dict[str, float],
+    topo_order: List[str],
+) -> tuple[List[int], int]:
+    """Compute per-branch latencies (ms) and effective (max) latency."""
+    if not parallel_targets:
+        return [], 0
+
+    reachable_sets = [_reachable_from(t, successors) for t in parallel_targets]
+    join_candidates = set.intersection(*reachable_sets) if reachable_sets else set()
+    join_node = None
+    if join_candidates:
+        for nid in topo_order:
+            if nid in join_candidates and nid != fork_id:
+                join_node = nid
+                break
+
+    branch_latencies_ms: List[int] = []
+    for target in parallel_targets:
+        branch_latency = _longest_path_latency(
+            target,
+            join_node,
+            successors,
+            node_latencies,
+            topo_order,
+        )
+        branch_latencies_ms.append(int(round(branch_latency * 1000)))
+
+    effective_latency = max(branch_latencies_ms) if branch_latencies_ms else 0
+    return branch_latencies_ms, effective_latency
+
+
 def _build_tool_connections(
     nodes: List[NodeConfig],
     edges: List[EdgeConfig],
@@ -156,6 +441,91 @@ def _build_tool_connections(
                     agent_tools[tgt.id].append(src.id)
 
     return dict(agent_tools)
+
+
+def compute_accumulated_context(
+    topo_order: List[str],
+    node_map: Dict[str, NodeConfig],
+    breakdown_map: Dict[str, NodeEstimation],
+    successors: Dict[str, List[str]],
+) -> Optional[ContextAccumulationReport]:
+    """Compute accumulated upstream context in topological order."""
+    parents: Dict[str, List[str]] = defaultdict(list)
+    for src, targets in successors.items():
+        for tgt in targets:
+            parents[tgt].append(src)
+
+    accumulated_outputs: Dict[str, int] = {nid: 0 for nid in topo_order}
+    breakdown_rows: List[ContextAccumulationNode] = []
+
+    for nid in topo_order:
+        node = node_map.get(nid)
+        est = breakdown_map.get(nid)
+        if node is None or est is None:
+            continue
+
+        ancestor_tokens = 0
+        for parent_id in parents.get(nid, []):
+            parent_node = node_map.get(parent_id)
+            parent_est = breakdown_map.get(parent_id)
+            if parent_node is None or parent_est is None:
+                continue
+            parent_output = parent_est.output_tokens if parent_node.type == "agentNode" else 0
+            ancestor_tokens = max(
+                ancestor_tokens,
+                accumulated_outputs.get(parent_id, 0) + parent_output,
+            )
+
+        if node.type == "agentNode":
+            est.ancestor_tokens = ancestor_tokens
+            est.tool_tokens = est.tool_schema_tokens + est.tool_response_tokens
+            est.total_input_tokens = est.input_tokens + ancestor_tokens
+            est.tokens = est.total_input_tokens + est.output_tokens
+            pricing = None
+            if est.model_provider and est.model_name:
+                pricing = registry.get(est.model_provider, est.model_name)
+            if pricing:
+                input_cost = (est.total_input_tokens / 1_000_000) * pricing.input_per_million
+                output_cost = (est.output_tokens / 1_000_000) * pricing.output_per_million
+                est.input_cost = round(input_cost, 8)
+                est.output_cost = round(output_cost, 8)
+                est.cost = round(input_cost + output_cost, 8)
+        else:
+            est.ancestor_tokens = 0
+            est.tool_tokens = est.tool_schema_tokens + est.tool_response_tokens
+            est.total_input_tokens = est.input_tokens
+
+        accumulated_outputs[nid] = (
+            ancestor_tokens + (est.output_tokens if node.type == "agentNode" else 0)
+        )
+
+        if ancestor_tokens > 0 and node.type == "agentNode":
+            without_cost = est.cost
+            if est.model_provider and est.model_name:
+                pricing = registry.get(est.model_provider, est.model_name)
+                if pricing:
+                    input_cost = (est.input_tokens / 1_000_000) * pricing.input_per_million
+                    output_cost = (est.output_tokens / 1_000_000) * pricing.output_per_million
+                    without_cost = round(input_cost + output_cost, 8)
+            with_cost = est.cost
+            overhead_pct = int(round(((with_cost - without_cost) / max(without_cost, 1e-9)) * 100)) if without_cost > 0 else 0
+
+            breakdown_rows.append(ContextAccumulationNode(
+                node_id=nid,
+                label=node.label or nid,
+                ancestor_token_contribution=ancestor_tokens,
+                without_accumulation_cost_usd=round(without_cost, 8),
+                with_accumulation_cost_usd=round(with_cost, 8),
+                accumulation_overhead_pct=overhead_pct,
+            ))
+
+    if not breakdown_rows:
+        return None
+
+    return ContextAccumulationReport(
+        note="Accumulated context adds upstream output tokens to each node's input",
+        breakdown=breakdown_rows,
+    )
 
 
 def _get_tool_impact(tool_node: NodeConfig) -> ToolImpact:
@@ -649,9 +1019,17 @@ def estimate_workflow(
       • Total min/avg/max are computed by multiplying cycle-zone costs
         by iteration counts
     """
-    node_map: Dict[str, NodeConfig] = {n.id: n for n in nodes}
+    node_map, successors, predecessors = build_graph(nodes, edges)
     node_ids = [n.id for n in nodes]
     analyzer = GraphAnalyzer(node_ids, edges)
+    graph_cycles, back_edges = detect_cycles(node_map, successors)  # DFS back-edge detection
+    graph_forks = detect_forks(node_map, successors)
+    graph_topological_order = topological_sort(node_map, successors, back_edges)
+    graph_summary = GraphPreprocessing(
+        forks=graph_forks,
+        cycles=[list(edge) for edge in graph_cycles],
+        topological_order=graph_topological_order,
+    )
 
     # Build agent → [tool_nodes] mapping
     agent_tools = _build_tool_connections(nodes, edges)
@@ -674,6 +1052,14 @@ def estimate_workflow(
             breakdown.append(estimate_condition_node(node, in_cycle))
         else:
             breakdown.append(estimate_node(node, in_cycle))
+
+    breakdown_map: Dict[str, NodeEstimation] = {b.node_id: b for b in breakdown}
+    context_accumulation = compute_accumulated_context(
+        graph_topological_order,
+        node_map,
+        breakdown_map,
+        successors,
+    )
 
     # ── Build CycleInfo objects + compute iteration counts ──────
     detected_cycles: List[CycleInfo] = []
@@ -715,7 +1101,10 @@ def estimate_workflow(
 
     # ── Aggregate totals (single-pass = what the breakdown shows) ──
     total_tokens = sum(b.tokens for b in breakdown)
-    total_input = sum(b.input_tokens for b in breakdown)
+    total_input = sum(
+        b.total_input_tokens if b.total_input_tokens else b.input_tokens
+        for b in breakdown
+    )
     total_output = sum(b.output_tokens for b in breakdown)
     total_cost = round(sum(b.cost for b in breakdown), 8)
     total_latency = round(sum(b.latency for b in breakdown), 3)
@@ -806,8 +1195,8 @@ def estimate_workflow(
         # The "totals" in the response represent the average case
         total_tokens = int(token_range.avg)
         total_input = int(sum(
-            b.input_tokens * (node_cycle_iterations.get(b.node_id, 1) // 2 or 1)
-            if b.in_cycle else b.input_tokens
+            (b.total_input_tokens or b.input_tokens) * (node_cycle_iterations.get(b.node_id, 1) // 2 or 1)
+            if b.in_cycle else (b.total_input_tokens or b.input_tokens)
             for b in breakdown
         ))
         total_output = int(sum(
@@ -860,6 +1249,72 @@ def estimate_workflow(
             total_cost = round(cost_range.avg, 8)
             total_latency = round(latency_range.avg, 3)
 
+    # ── Best / worst case inputs ────────────────────────────────
+    best_costs: Dict[str, float] = {}
+    worst_costs: Dict[str, float] = {}
+    best_latencies: Dict[str, float] = {}
+    worst_latencies: Dict[str, float] = {}
+
+    for node in nodes:
+        est = breakdown_map.get(node.id)
+        if not est:
+            continue
+        calls_multiplier = max(1, node.expected_calls_per_run or 1)
+        base_cost = est.cost / calls_multiplier if calls_multiplier else est.cost
+        base_latency = est.latency / calls_multiplier if calls_multiplier else est.latency
+        retry_multiplier = max(1, node.retry_budget or 1)
+        loop_multiplier = 1
+        if est.in_cycle:
+            loop_multiplier = node.max_steps or _DEFAULT_MAX_STEPS
+            loop_multiplier = min(loop_multiplier, recursion_limit)
+        best_costs[node.id] = round(base_cost, 8)
+        worst_costs[node.id] = round(est.cost * retry_multiplier * loop_multiplier, 8)
+        best_latencies[node.id] = base_latency
+        worst_latencies[node.id] = est.latency * retry_multiplier * loop_multiplier
+
+    critical_path_ms, critical_path_nodes = compute_critical_path(
+        node_ids, successors, best_latencies, graph_topological_order
+    )
+
+    best_case_cost = sum(best_costs.get(nid, 0.0) for nid in node_ids)
+    worst_case_cost = sum(worst_costs.get(nid, 0.0) for nid in node_ids)
+    best_case_latency_ms = critical_path_ms
+    worst_case_latency_ms, _ = compute_critical_path(
+        node_ids, successors, worst_latencies, graph_topological_order
+    )
+
+    if has_branches and branch_paths:
+        best_path_costs: List[float] = []
+        worst_path_costs: List[float] = []
+        best_path_latencies: List[tuple[int, List[str]]] = []
+        worst_path_latencies: List[int] = []
+        for bp in branch_paths:
+            node_set = set(bp.node_ids)
+            best_path_costs.append(sum(best_costs.get(nid, 0.0) for nid in node_set))
+            worst_path_costs.append(sum(worst_costs.get(nid, 0.0) for nid in node_set))
+            path_latency_ms, path_nodes = compute_critical_path(
+                [nid for nid in node_ids if nid in node_set],
+                successors,
+                best_latencies,
+                graph_topological_order,
+            )
+            best_path_latencies.append((path_latency_ms, path_nodes))
+            worst_path_latency_ms, _ = compute_critical_path(
+                [nid for nid in node_ids if nid in node_set],
+                successors,
+                worst_latencies,
+                graph_topological_order,
+            )
+            worst_path_latencies.append(worst_path_latency_ms)
+
+        if best_path_costs:
+            best_case_cost = min(best_path_costs)
+            worst_case_cost = max(worst_path_costs)
+            best_latency_entry = min(best_path_latencies, key=lambda item: item[0])
+            best_case_latency_ms = best_latency_entry[0]
+            critical_path_nodes = best_latency_entry[1]
+            worst_case_latency_ms = max(worst_path_latencies) if worst_path_latencies else best_case_latency_ms
+
     # ── Bottleneck analysis: cost_share, latency_share, severity ──
     _compute_bottleneck_shares(breakdown, total_cost, total_latency)
 
@@ -867,13 +1322,92 @@ def estimate_workflow(
     if detected_cycles:
         _compute_cycle_contributions(detected_cycles, breakdown, total_cost, total_latency)
 
-    # ── Latency-weighted critical path ──────────────────────────
     latency_map: Dict[str, float] = {b.node_id: b.latency for b in breakdown}
-    critical_path = analyzer.weighted_critical_path(latency_map)
-    critical_path_latency = round(sum(latency_map.get(nid, 0.0) for nid in critical_path), 4)
+
+    # ── Parallel branch latency report ──────────────────────────
+    parallel_branches: List[ParallelBranchReport] = []
+    for fork_id, targets in graph_forks.items():
+        branch_latencies_ms, effective_latency_ms = compute_parallel_branch_latency(
+            fork_id,
+            targets,
+            successors,
+            best_latencies,
+            graph_topological_order,
+        )
+        parallel_branches.append(ParallelBranchReport(
+            fork_node=fork_id,
+            branches=targets,
+            branch_latencies_ms=branch_latencies_ms,
+            effective_latency_ms=effective_latency_ms,
+            note="Parallel — slowest branch determines latency",
+        ))
+
+    # Keep the summary aligned with the frontend prompt 01 label set.
+    workflow_nodes = [n for n in nodes if n.type not in {"blankBoxNode", "textNode"}]
+    non_terminal_nodes = [n for n in workflow_nodes if n.type not in {"startNode", "finishNode"}]
+    node_count = len(non_terminal_nodes)
+    depth = _compute_graph_depth(graph_topological_order, successors, node_map)
+    branch_count = sum(1 for n in workflow_nodes if n.type == "conditionNode")
+    loop_count = len(graph_cycles)
+    has_parallel_fork = len(graph_forks) > 0
+
+    complexity_score = 0
+    if node_count > 5:
+        complexity_score += 1
+    if node_count > 10:
+        complexity_score += 1
+    if depth > 4:
+        complexity_score += 1
+    if loop_count >= 1:
+        complexity_score += 1
+    if loop_count > 3:
+        complexity_score += 1
+    if branch_count >= 2:
+        complexity_score += 1
+    if has_parallel_fork:
+        complexity_score += 1
+
+    if complexity_score >= 6:
+        complexity_label = "Very High"
+    elif complexity_score >= 4:
+        complexity_label = "High"
+    elif complexity_score >= 2:
+        complexity_label = "Medium"
+    else:
+        complexity_label = "Low"
+
+    if has_branches:
+        critical_path_ms = best_case_latency_ms
+
+    cost_report = CostReport(
+        best_case_usd=round(best_case_cost, 8),
+        worst_case_usd=round(worst_case_cost, 8),
+        breakdown=breakdown,
+    )
+    latency_report = LatencyReport(
+        critical_path_ms=critical_path_ms,
+        critical_path_nodes=critical_path_nodes,
+        parallel_branches=parallel_branches,
+        worst_case_latency_ms=worst_case_latency_ms,
+    )
+    summary_report = EstimationSummary(
+        total_nodes=node_count,
+        agent_nodes=sum(1 for n in workflow_nodes if n.type == "agentNode"),
+        tool_nodes=sum(1 for n in workflow_nodes if n.type == "toolNode"),
+        condition_nodes=sum(1 for n in workflow_nodes if n.type == "conditionNode"),
+        loops_detected=loop_count,
+        parallel_forks_detected=len(graph_forks),
+        graph_depth=depth,
+        complexity_score=complexity_score,
+        complexity_label=complexity_label,
+    )
+
+    critical_path = critical_path_nodes
+    critical_path_latency = round(critical_path_ms / 1000.0, 4)
+    best_case_latency = round(best_case_latency_ms / 1000.0, 4)
+    worst_case_latency = round(worst_case_latency_ms / 1000.0, 4)
 
     # ── Parallelism analysis ────────────────────────────────────
-    breakdown_map: Dict[str, NodeEstimation] = {b.node_id: b for b in breakdown}
     raw_steps = analyzer.compute_parallel_steps()
     parallel_steps: List[ParallelStep] = []
     for step_idx, step_node_ids in enumerate(raw_steps):
@@ -942,7 +1476,9 @@ def estimate_workflow(
         total_latency=total_latency,
         total_tool_latency=total_tool_latency,
         graph_type=analyzer.classify(),
+        graph=graph_summary,
         breakdown=breakdown,
+        context_accumulation=context_accumulation,
         critical_path=critical_path,
         detected_cycles=detected_cycles,
         token_range=token_range,
@@ -951,7 +1487,66 @@ def estimate_workflow(
         recursion_limit=recursion_limit,
         parallel_steps=parallel_steps,
         critical_path_latency=critical_path_latency,
+        best_case_cost=best_case_cost,
+        best_case_latency=best_case_latency,
+        worst_case_cost=worst_case_cost,
+        worst_case_latency=worst_case_latency,
+        complexity_score=complexity_score,
+        complexity_label=complexity_label,
+        cost=cost_report,
+        latency=latency_report,
+        summary=summary_report,
         scaling_projection=scaling_projection,
         sensitivity=sensitivity,
         health=health,
     )
+
+def compute_graph_complexity(nodes: List[NodeConfig], edges: List[EdgeConfig]) -> dict:
+    """Compute the graph complexity score for real-time frontend feedback."""
+    node_map, successors, predecessors = build_graph(nodes, edges)
+    back_edges, _ = detect_cycles(node_map, successors)
+    graph_topological_order = topological_sort(node_map, successors, back_edges)
+    graph_forks = detect_forks(node_map, successors)
+
+    workflow_nodes = [n for n in nodes if n.type not in {"blankBoxNode", "textNode"}]
+    non_terminal_nodes = [n for n in workflow_nodes if n.type not in {"startNode", "finishNode"}]
+    node_count = len(non_terminal_nodes)
+    depth = _compute_graph_depth(graph_topological_order, successors, node_map)
+    branch_count = sum(1 for n in workflow_nodes if n.type == "conditionNode")
+    loop_count = len(back_edges)
+    has_parallel_fork = len(graph_forks) > 0
+
+    complexity_score = 0
+    if node_count > 5:
+        complexity_score += 1
+    if node_count > 10:
+        complexity_score += 1
+    if depth > 4:
+        complexity_score += 1
+    if loop_count >= 1:
+        complexity_score += 1
+    if loop_count > 3:
+        complexity_score += 1
+    if branch_count >= 2:
+        complexity_score += 1
+    if has_parallel_fork:
+        complexity_score += 1
+
+    if complexity_score >= 6:
+        complexity_label = "Very High"
+    elif complexity_score >= 4:
+        complexity_label = "High"
+    elif complexity_score >= 2:
+        complexity_label = "Medium"
+    else:
+        complexity_label = "Low"
+
+    return {
+        "nodes": node_count,
+        "depth": depth,
+        "loops": loop_count,
+        "branches": branch_count,
+        "score": complexity_score,
+        "label": complexity_label
+    }
+
