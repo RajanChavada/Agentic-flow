@@ -666,7 +666,7 @@ export default function HeaderBar() {
         <button
           onClick={handleSave}
           disabled={nodes.length === 0 || isSaving}
-          className={`rounded-md border px-2 sm:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center ${isDark
+          className={`rounded-md border px-2 sm:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center shrink-0 whitespace-nowrap ${isDark
             ? "border-emerald-700 text-emerald-300 hover:bg-emerald-800/40"
             : "border-emerald-300 text-emerald-700 hover:bg-emerald-50"
             }`}
@@ -681,7 +681,7 @@ export default function HeaderBar() {
           <button
             onClick={() => setIsShareOpen(true)}
             disabled={nodes.length === 0}
-            className={`rounded-md border px-2 sm:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 ${isDark
+            className={`rounded-md border px-2 sm:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
               ? "border-sky-700 text-sky-300 hover:bg-sky-800/40"
               : "border-sky-300 text-sky-700 hover:bg-sky-50"
               }`}
@@ -696,7 +696,7 @@ export default function HeaderBar() {
         <button
           onClick={handleEstimate}
           disabled={loading}
-          className="rounded-md bg-blue-600 px-2 sm:px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition"
+          className="rounded-md bg-blue-600 px-2 sm:px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition shrink-0 whitespace-nowrap"
         >
           {loading ? "Running\u2026" : (
             <>

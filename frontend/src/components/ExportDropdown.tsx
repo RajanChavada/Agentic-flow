@@ -989,7 +989,7 @@ export default function ExportDropdown({ isDark }: Props) {
     <div ref={dropdownRef} className="relative">
       <button
         onClick={handleToggle}
-        className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${isDark
+        className={`rounded-md border px-3 py-1.5 text-sm font-medium transition shrink-0 whitespace-nowrap ${isDark
           ? "border-amber-700 text-amber-300 hover:bg-amber-800/40"
           : "border-amber-300 text-amber-700 hover:bg-amber-50"
           }`}
