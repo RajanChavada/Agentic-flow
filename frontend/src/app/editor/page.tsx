@@ -9,23 +9,27 @@ export default function EditorRedirectPage() {
 
   useEffect(() => {
     async function redirect() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error || !user) {
+          router.replace("/editor/guest");
+          return;
+        }
+
+        const { data: canvases } = await supabase
+          .from("canvases")
+          .select("id")
+          .eq("user_id", user.id)
+          .order("updated_at", { ascending: false })
+          .limit(1);
+
+        if (canvases?.length) {
+          router.replace(`/editor/${canvases[0].id}`);
+        } else {
+          router.replace("/canvases");
+        }
+      } catch (err) {
         router.replace("/editor/guest");
-        return;
-      }
-
-      const { data: canvases } = await supabase
-        .from("canvases")
-        .select("id")
-        .eq("user_id", user.id)
-        .order("updated_at", { ascending: false })
-        .limit(1);
-
-      if (canvases?.length) {
-        router.replace(`/editor/${canvases[0].id}`);
-      } else {
-        router.replace("/canvases");
       }
     }
 

@@ -415,11 +415,11 @@ export default function HeaderBar() {
       </div>
 
       {/* ── Right side: action buttons ── */}
-      <div className="flex items-center justify-end gap-1 sm:gap-2 overflow-x-auto flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {/* Sidebar toggle (visible below lg) */}
+      <div className="flex items-center justify-end gap-1 sm:gap-1.5 min-w-0 flex-1">
+        {/* Sidebar toggle (mobile only) */}
         <button
           onClick={() => useWorkflowStore.getState().toggleSidebar()}
-          className={`lg:hidden rounded-md border p-1.5 transition ${isDark
+          className={`lg:hidden rounded-md border p-1.5 transition shrink-0 ${isDark
             ? "border-slate-600 text-slate-300 hover:bg-slate-700"
             : "border-gray-300 text-gray-600 hover:bg-gray-100"
             }`}
@@ -428,58 +428,54 @@ export default function HeaderBar() {
           <PanelLeft className="h-4 w-4" />
         </button>
 
-        {/* ── Desktop/Tablet actions (hidden on mobile) ── */}
-        <div className="hidden lg:contents">
+        {/* ── Desktop actions — FIXED: flex instead of contents ── */}
+        <div className="hidden lg:flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {/* Help */}
           <button
             onClick={openTutorial}
-            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${isDark
+            className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
               ? "border-sky-600 text-sky-400 hover:bg-sky-900/40"
               : "border-sky-500 text-sky-600 hover:bg-sky-50"
               }`}
-            title="Canvas tutorial"
           >
             <HelpCircle className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline ml-1">Help</span>
+            <span>Help</span>
           </button>
 
-          {/* Theme toggle */}
+          {/* Theme */}
           <button
             onClick={toggleTheme}
-            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${isDark
+            className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
               ? "border-slate-600 text-slate-300 hover:bg-slate-700"
               : "border-gray-300 text-gray-600 hover:bg-gray-100"
               }`}
-            title={isDark ? "Switch to light mode" : "Switch to dark mode"}
           >
             {isDark ? <Sun className="w-3.5 h-3.5" /> : <MoonStar className="w-3.5 h-3.5" />}
-            <span className="hidden lg:inline ml-1">{isDark ? "Light" : "Dark"}</span>
+            <span>{isDark ? "Light" : "Dark"}</span>
           </button>
 
           {/* Templates */}
           <button
             onClick={openTemplateLibrary}
-            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${isDark
+            className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
               ? "border-slate-600 text-slate-300 hover:bg-slate-700"
               : "border-gray-300 text-gray-600 hover:bg-gray-100"
               }`}
-            title="Browse workflow templates"
           >
             <LayoutTemplate className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline ml-1">Templates</span>
+            <span>Templates</span>
           </button>
 
-          {/* New Workflow */}
+          {/* New */}
           <button
             onClick={handleNew}
-            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${isDark
+            className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
               ? "border-slate-600 text-slate-300 hover:bg-slate-700"
               : "border-gray-300 text-gray-600 hover:bg-gray-100"
               }`}
-            title="New blank workflow"
           >
             <FilePlus className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline ml-1">New</span>
+            <span>New</span>
           </button>
 
           {/* Publish */}
@@ -487,14 +483,13 @@ export default function HeaderBar() {
             <button
               onClick={() => setIsPublishOpen(true)}
               disabled={nodes.length === 0}
-              className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center ${isDark
+              className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
                 ? "border-amber-700 text-amber-300 hover:bg-amber-800/40"
                 : "border-amber-300 text-amber-700 hover:bg-amber-50"
                 }`}
-              title="Publish this workflow to the marketplace"
             >
               <UploadCloud className="w-3.5 h-3.5" />
-              <span className="hidden lg:inline ml-1">Publish</span>
+              <span>Publish</span>
             </button>
           )}
 
@@ -503,57 +498,53 @@ export default function HeaderBar() {
             <button
               onClick={handleSaveAs}
               disabled={nodes.length === 0 || isSaving}
-              className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center ${isDark
+              className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
                 ? "border-teal-700 text-teal-300 hover:bg-teal-800/40"
                 : "border-teal-300 text-teal-700 hover:bg-teal-50"
                 }`}
-              title="Save a copy as a new workflow"
             >
               <SaveAll className="w-3.5 h-3.5" />
-              <span className="hidden lg:inline ml-1">Save As</span>
+              <span>Save As</span>
             </button>
           )}
 
           {/* Import */}
           <button
             onClick={handleImport}
-            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${isDark
+            className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
               ? "border-violet-700 text-violet-300 hover:bg-violet-800/40"
               : "border-violet-300 text-violet-700 hover:bg-violet-50"
               }`}
-            title="Import a workflow from JSON (Generic / LangGraph)"
           >
             <Download className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline ml-1">Import</span>
+            <span>Import</span>
           </button>
 
-          {/* Pull from canvas */}
+          {/* Pull */}
           {activeCanvasId && user && (
             <button
               onClick={() => setIsPullOpen(true)}
-              className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition inline-flex items-center ${isDark
+              className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
                 ? "border-violet-700 text-violet-300 hover:bg-violet-800/40"
                 : "border-violet-300 text-violet-700 hover:bg-violet-50"
                 }`}
-              title="Pull workflows from another canvas"
             >
               <GitBranch className="w-3.5 h-3.5" />
-              <span className="hidden lg:inline ml-1">Pull</span>
+              <span>Pull</span>
             </button>
           )}
 
-          {/* Auto-layout */}
+          {/* Layout */}
           <button
             onClick={() => autoLayout()}
             disabled={nodes.length === 0}
-            className={`rounded-md border px-2 lg:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center ${isDark
+            className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
               ? "border-cyan-700 text-cyan-300 hover:bg-cyan-800/40"
               : "border-cyan-300 text-cyan-700 hover:bg-cyan-50"
               }`}
-            title="Auto-arrange nodes using dagre layout"
           >
             <LayoutDashboard className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline ml-1">Layout</span>
+            <span>Layout</span>
           </button>
 
           {/* Export */}
@@ -561,7 +552,7 @@ export default function HeaderBar() {
         </div>
 
         {/* ── Mobile overflow menu (below md) ── */}
-        <div className="md:hidden relative" ref={overflowRef}>
+        <div className="lg:hidden relative" ref={overflowRef}>
           <button
             onClick={() => setOverflowOpen((v) => !v)}
             className={`rounded-md border p-1.5 transition ${isDark
@@ -666,52 +657,47 @@ export default function HeaderBar() {
         <button
           onClick={handleSave}
           disabled={nodes.length === 0 || isSaving}
-          className={`rounded-md border px-2 sm:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center shrink-0 whitespace-nowrap ${isDark
+          className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
             ? "border-emerald-700 text-emerald-300 hover:bg-emerald-800/40"
             : "border-emerald-300 text-emerald-700 hover:bg-emerald-50"
             }`}
-          title={currentWorkflowId ? "Save changes to current workflow" : "Save as new workflow"}
         >
           <Save className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline ml-1">{isSaving ? "Saving\u2026" : "Save"}</span>
+          <span className="hidden sm:inline">{isSaving ? "Saving…" : "Save"}</span>
         </button>
 
-        {/* Share canvas */}
+        {/* Share — always visible when canvas + user */}
         {activeCanvasId && user && (
           <button
             onClick={() => setIsShareOpen(true)}
             disabled={nodes.length === 0}
-            className={`rounded-md border px-2 sm:px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
+            className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
               ? "border-sky-700 text-sky-300 hover:bg-sky-800/40"
               : "border-sky-300 text-sky-700 hover:bg-sky-50"
               }`}
-            title="Share this canvas"
           >
             <Share2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline ml-1">Share</span>
+            <span className="hidden sm:inline">Share</span>
           </button>
         )}
 
-        {/* Estimate — always visible, responsive text */}
+        {/* Estimate — always visible */}
         <button
           onClick={handleEstimate}
           disabled={loading}
-          className="rounded-md bg-blue-600 px-2 sm:px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition shrink-0 whitespace-nowrap"
+          className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition shrink-0 whitespace-nowrap"
         >
-          {loading ? "Running\u2026" : (
+          {loading ? "Running…" : (
             <>
-              <span className="hidden lg:inline">Run Workflow & Gen Estimate</span>
-              <span className="hidden md:inline lg:hidden">Estimate</span>
-              <span className="md:hidden">Run</span>
+              <span className="hidden xl:inline">Run Workflow & Gen Estimate</span>
+              <span className="hidden lg:inline xl:hidden">Run Estimate</span>
+              <span className="lg:hidden">Run</span>
             </>
           )}
         </button>
 
-        {/* ── Auth controls ── */}
-        <div
-          className={`ml-1 sm:ml-2 pl-1 sm:pl-2 border-l flex items-center ${isDark ? "border-slate-700" : "border-gray-200"
-            }`}
-        >
+        {/* Auth */}
+        <div className={`ml-1 pl-2 border-l flex items-center shrink-0 ${isDark ? "border-slate-700" : "border-gray-200"}`}>
           <NavProfile />
         </div>
       </div>

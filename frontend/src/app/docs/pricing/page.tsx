@@ -11,7 +11,7 @@ import {
 
 /* ── Provider links ──────────────────────────────────────── */
 const providers = [
-    { name: "OpenAI", url: "https://openai.com/api/pricing/", models: "GPT-4, GPT-4o, GPT-4o mini, o3, o4 mini, GPT-5.1 + more" },
+    { name: "OpenAI", url: "https://openai.com/api/pricing/", models: "GPT-4, GPT-4o, GPT-4o mini, o3, o4 mini + more" },
     { name: "Anthropic", url: "https://www.anthropic.com/pricing", models: "Claude 3.5 Sonnet/Haiku, Claude 4 Sonnet/Opus + more" },
     { name: "Google", url: "https://ai.google.dev/pricing", models: "Gemini 1.5 Pro/Flash, Gemini 2.0/2.5 + more" },
     { name: "Meta", url: "https://ai.meta.com/llama/", models: "Llama 3.1/3.3, Llama 4 Scout/Maverick" },
@@ -25,12 +25,7 @@ export default function PricingPage() {
         <article>
             {/* ── Header ───────────────────────────────────────── */}
             <header className="mb-12">
-                <div className="mb-3 flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-yellow-500/40 bg-yellow-500/10 px-3 py-0.5 text-[11px] font-medium text-yellow-700 dark:text-yellow-400">
-                        <AlertTriangle className="h-3 w-3" />
-                        Draft
-                    </span>
-                </div>
+
                 <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
                     Pricing & Latency
                 </h1>

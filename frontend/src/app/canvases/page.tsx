@@ -272,7 +272,7 @@ export default function CanvasesPage() {
               </button>
             </div>
             <Link
-              href="/editor"
+              href="/editor/guest"
               className="mt-6 inline-block text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"
             >
               Continue to editor without signing in

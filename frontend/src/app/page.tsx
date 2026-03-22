@@ -33,32 +33,14 @@ function Counter({
   suffix = "",
   label,
 }: {
-  value: number;
+  value: string | number;
   suffix?: string;
   label: string;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true });
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    if (!inView) return;
-    const dur = 1000;
-    const start = performance.now();
-    let raf: number;
-    function tick(now: number) {
-      const p = Math.min((now - start) / dur, 1);
-      setCount(Math.round((1 - Math.pow(1 - p, 3)) * value));
-      if (p < 1) raf = requestAnimationFrame(tick);
-    }
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [inView, value]);
-
   return (
-    <div ref={ref} className="text-center">
+    <div className="text-center">
       <span className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl md:text-6xl">
-        {count}
+        {value}
         {suffix}
       </span>
       <p className="mt-2 text-sm font-medium uppercase tracking-widest text-muted-foreground sm:text-base">
@@ -258,10 +240,10 @@ export default function LandingPage() {
       {/* ── Stats ──────────────────────────────────────── */}
       <section className="border-y border-border/60">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-12 px-4 py-14 sm:gap-20 sm:py-16">
-          <Counter value={38} suffix="+" label="Models" />
-          <Counter value={7} label="Providers" />
-          <Counter value={4} label="Node Types" />
-          <Counter value={10} suffix="ms" label="Avg Estimate" />
+          <Counter value="38+" label="Models" />
+          <Counter value="7" label="Providers" />
+          <Counter value="5" label="Node Types" />
+          <Counter value="<10" suffix="ms" label="Avg Estimate" />
         </div>
       </section>
 
