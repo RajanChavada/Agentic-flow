@@ -72,7 +72,9 @@ function FitViewEffect() {
   return null;
 }
 
-export default function ViewCanvasPage() {
+import { Suspense } from "react";
+
+function ViewCanvasContent() {
   const params = useParams();
   const canvasId = params?.uuid as string | undefined;
   const searchParams = useSearchParams();
@@ -234,4 +236,16 @@ export default function ViewCanvasPage() {
 
     <AuthModal />
   </main>;
+}
+
+export default function ViewCanvasPage() {
+  return (
+    <Suspense fallback={
+      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </main>
+    }>
+      <ViewCanvasContent />
+    </Suspense>
+  );
 }

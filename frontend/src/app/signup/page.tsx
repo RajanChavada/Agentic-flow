@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import AuthModal from "@/components/AuthModal";
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") ?? "/canvases";
+  const next = params?.get("next") ?? "/canvases";
 
   useEffect(() => {
     const unsubscribe = useAuthStore.getState().init();
@@ -23,7 +23,7 @@ export default function SignupPage() {
   }, [router, next]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background text-foreground p-4">
+    <>
       <div className="w-full max-w-md rounded-xl border bg-card p-6 shadow-sm">
         <h1 className="text-2xl font-semibold tracking-tight">Sign up</h1>
         <p className="mt-2 text-sm text-muted-foreground">Create an account to fork shared workflows and save them to your canvas.</p>
@@ -33,6 +33,21 @@ export default function SignupPage() {
         </div>
       </div>
       <AuthModal />
+    </>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-background text-foreground p-4">
+      <Suspense fallback={
+        <div className="w-full max-w-md rounded-xl border bg-card p-6 shadow-sm">
+          <p className="text-muted-foreground text-center">Loading...</p>
+        </div>
+      }>
+        <SignupForm />
+      </Suspense>
     </main>
   );
 }
+
