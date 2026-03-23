@@ -63,11 +63,11 @@ export default function MiniWorkflowPreview({ nodes, edges, isDark, className }:
       }
       
       const w = rawW / scale + PADDING * 2;
-      const h = rawH / scale + PADDING * 2;
+      const h = Math.max(rawH / scale, 20) + PADDING * 2;
       return {
         positions,
         bounds: { w, h },
-        offset: { x: -PADDING, y: -PADDING },
+        offset: { x: -PADDING, y: -(h - rawH / scale) / 2 },
       };
     }
 
