@@ -42,22 +42,32 @@ export default function MiniWorkflowPreview({ nodes, edges, isDark, className }:
       const positions = new Map<string, { x: number; y: number }>();
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       
-      for (const n of flowNodes) {
-        const x = n.position!.x;
-        const y = n.position!.y;
-        positions.set(n.id, { x, y });
+      const rawPos: [string, number, number][] = flowNodes.map(n => [n.id, n.position!.x, n.position!.y]);
+      for (const [_, x, y] of rawPos) {
         minX = Math.min(minX, x);
         minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x + NODE_SIZE);
-        maxY = Math.max(maxY, y + NODE_SIZE);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+
+      // Normalization factor: map largest dimension to ~120px to keep NODE_SIZE 12 looking good
+      const rawW = Math.max(1, maxX - minX);
+      const rawH = Math.max(1, maxY - minY);
+      const scale = Math.max(rawW / 120, rawH / 60, 1.0);
+
+      for (const [id, x, y] of rawPos) {
+        positions.set(id, { 
+          x: (x - minX) / scale, 
+          y: (y - minY) / scale 
+        });
       }
       
-      const w = Math.max(1, maxX - minX + PADDING * 2);
-      const h = Math.max(1, maxY - minY + PADDING * 2);
+      const w = rawW / scale + PADDING * 2;
+      const h = rawH / scale + PADDING * 2;
       return {
         positions,
         bounds: { w, h },
-        offset: { x: minX - PADDING, y: minY - PADDING },
+        offset: { x: -PADDING, y: -PADDING },
       };
     }
 
