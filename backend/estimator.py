@@ -40,19 +40,18 @@ import math
 from collections import defaultdict
 from typing import Dict, List, Optional, Set, cast
 
-try:
-    import tiktoken
-except ModuleNotFoundError:  # pragma: no cover - fallback for test environments
-    class _FallbackEncoding:
-        def encode(self, text: str) -> List[str]:
-            return text.split() if text else []
+# fall back to pure-Python word count to save memory on Render
+class _FallbackEncoding:
+    def encode(self, text: str) -> List[str]:
+        # Return a list of 'tokens' (words) to approximate length
+        return text.split() if text else []
 
-    class _FallbackTikToken:
-        @staticmethod
-        def get_encoding(_name: str) -> _FallbackEncoding:
-            return _FallbackEncoding()
+class _FallbackTikToken:
+    @staticmethod
+    def get_encoding(_name: str) -> _FallbackEncoding:
+        return _FallbackEncoding()
 
-    tiktoken = _FallbackTikToken()  # type: ignore[assignment]
+tiktoken = _FallbackTikToken()
 
 from models import (
     NodeConfig,
@@ -145,8 +144,12 @@ _DEFAULT_MAX_STEPS = 10
 
 
 def count_tokens(text: str) -> int:
-    """Count tokens using tiktoken's cl100k_base encoding."""
-    return len(_DEFAULT_ENCODING.encode(text)) if text else 0
+    """Count tokens using simple word-count approximation (1.35x words)."""
+    if not text:
+        return 0
+    words = text.split()
+    # 1.35 is a standard heuristic for tokens-per-word for general English
+    return int(len(words) * 1.35)
 
 
 def build_graph(
