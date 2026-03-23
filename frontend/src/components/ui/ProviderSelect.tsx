@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ChevronDown, AlertTriangle } from "lucide-react";
+import { ProviderIcon } from "@/lib/providerIcons";
 
 export interface ProviderItem {
   id: string;
@@ -88,11 +89,14 @@ export function ProviderSelect({
           {isLoading ? (
             "Loading providers…"
           ) : selectedProvider ? (
-            <span className="flex items-center gap-1.5">
-              {isProviderPricingStale(selectedProvider.last_updated) && (
-                <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" />
-              )}
-              {selectedProvider.name}
+            <span className="flex items-center gap-2">
+              <ProviderIcon provider={selectedProvider.id} size={16} className="shrink-0" />
+              <div className="flex items-center gap-1.5 truncate">
+                {isProviderPricingStale(selectedProvider.last_updated) && (
+                  <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" />
+                )}
+                {selectedProvider.name}
+              </div>
             </span>
           ) : (
             "— select provider —"
@@ -122,12 +126,17 @@ export function ProviderSelect({
                     isDark ? "hover:bg-slate-700 text-slate-200" : "hover:bg-gray-100 text-gray-800"
                   } ${value === p.id ? (isDark ? "bg-slate-700" : "bg-gray-100") : ""}`}
                 >
-                  <div className="flex items-center gap-1.5">
-                    {stale && <AlertTriangle className="w-3.5 h-3.5 text-yellow-500 shrink-0" />}
-                    <span className="font-medium">{p.name}</span>
-                  </div>
-                  <div className={`text-[10px] mt-0.5 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
-                    {p.modelsCount ?? 0} models · updated {fmtProviderUpdated(p.last_updated)}
+                  <div className="flex items-center gap-2">
+                    <ProviderIcon provider={p.id} size={18} className="shrink-0" />
+                    <div className="flex flex-col min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        {stale && <AlertTriangle className="w-3.5 h-3.5 text-yellow-500 shrink-0" />}
+                        <span className="font-medium truncate">{p.name}</span>
+                      </div>
+                      <div className={`text-[10px] mt-0.5 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
+                        {p.modelsCount ?? 0} models · updated {fmtProviderUpdated(p.last_updated)}
+                      </div>
+                    </div>
                   </div>
                 </li>
               );
@@ -166,12 +175,17 @@ export function ProviderSelect({
                         isDark ? "hover:bg-slate-700 text-slate-200" : "hover:bg-gray-100 text-gray-800"
                       } ${value === p.id ? (isDark ? "bg-slate-700" : "bg-gray-100") : ""}`}
                     >
-                      <div className="flex items-center gap-1.5">
-                        {stale && <AlertTriangle className="w-3.5 h-3.5 text-yellow-500 shrink-0" />}
-                        <span className="font-medium">{p.name}</span>
-                      </div>
-                      <div className={`text-[10px] mt-0.5 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
-                        {p.modelsCount ?? 0} models · updated {fmtProviderUpdated(p.last_updated)}
+                      <div className="flex items-center gap-2">
+                        <ProviderIcon provider={p.id} size={16} className="shrink-0" />
+                        <div className="flex flex-col min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            {stale && <AlertTriangle className="w-3.5 h-3.5 text-yellow-500 shrink-0" />}
+                            <span className="font-medium truncate">{p.name}</span>
+                          </div>
+                          <div className={`text-[10px] mt-0.5 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
+                            {p.modelsCount ?? 0} models · updated {fmtProviderUpdated(p.last_updated)}
+                          </div>
+                        </div>
                       </div>
                     </li>
                   );

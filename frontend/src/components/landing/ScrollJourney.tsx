@@ -3,7 +3,6 @@
 import React from "react";
 import { motion, useInView } from "framer-motion";
 import {
-  AlertTriangle,
   ArrowRight,
   Brain,
   ChevronRight,
@@ -18,6 +17,7 @@ import {
   Zap,
   Lock,
 } from "lucide-react";
+import { ProviderIcon } from "@/lib/providerIcons";
 
 /* ═══════════════════════════════════════════════════════════
    Helpers
@@ -53,11 +53,6 @@ export function ProblemStatement() {
   return (
     <section className="border-b border-border/60">
       <div className="mx-auto max-w-5xl px-4 py-24 sm:px-6 sm:py-32 lg:py-40">
-        <FadeIn>
-          <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-200 bg-amber-50">
-            <AlertTriangle className="h-7 w-7 text-amber-600" />
-          </div>
-        </FadeIn>
 
         <FadeIn delay={0.1}>
           <h2 className="text-center text-3xl font-semibold leading-tight tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
@@ -419,7 +414,7 @@ function VisualMultiProvider() {
           viewport={{ once: true }}
           transition={{ duration: 0.2, delay: 0.05 + i * 0.04 }}
         >
-          <Cpu className="h-3.5 w-3.5 text-muted-foreground" />
+          <ProviderIcon provider={m.provider} size={14} className="shrink-0 text-muted-foreground" />
           <div>
             <p className="text-sm font-bold leading-tight">{m.name}</p>
             <p className="text-[11px] text-muted-foreground leading-tight">
@@ -485,7 +480,7 @@ export function FeatureJourney() {
       <FeatureBlock
         eyebrow="Token & Cost Estimation"
         title="See exactly what it costs. Before you ship."
-        description="Our engine uses tiktoken and real provider pricing to calculate exact token counts, costs, and latency for every node in your graph — in under 10ms."
+        description="Our engine uses real-time provider pricing and optimized token logic to calculate exact counts, costs, and latency for every node in your graph — in under 10ms."
         flip
       >
         <VisualCostBreakdown />
@@ -579,9 +574,7 @@ export function ProvidersStrip() {
                 viewport={{ once: true }}
                 transition={{ delay: 0.3 + i * 0.06 }}
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary text-xs font-bold text-muted-foreground">
-                  {p[0]}
-                </div>
+                <ProviderIcon provider={p} size={32} className="shrink-0" />
                 <span className="text-sm font-semibold">{p}</span>
               </motion.div>
             ))}

@@ -494,112 +494,116 @@ export default function HeaderBar() {
           <PanelLeft className="h-4 w-4" />
         </button>
 
-        {/* ── Desktop actions — FIXED: flex instead of contents ── */}
-        <div className="hidden lg:flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {/* Help */}
-          <button
-            onClick={openTutorial}
-            className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
-              ? "border-sky-600 text-sky-400 hover:bg-sky-900/40"
-              : "border-sky-500 text-sky-600 hover:bg-sky-50"
-              }`}
-          >
-            <HelpCircle className="w-3.5 h-3.5" />
-            <span>Help</span>
-          </button>
-
-          {/* Theme */}
-          <button
-            onClick={toggleTheme}
-            className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
-              ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-              : "border-gray-300 text-gray-600 hover:bg-gray-100"
-              }`}
-          >
-            {isDark ? <Sun className="w-3.5 h-3.5" /> : <MoonStar className="w-3.5 h-3.5" />}
-            <span>{isDark ? "Light" : "Dark"}</span>
-          </button>
-
-          {/* Templates */}
-          <button
-            onClick={openTemplateLibrary}
-            className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
-              ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-              : "border-gray-300 text-gray-600 hover:bg-gray-100"
-              }`}
-          >
-            <LayoutTemplate className="w-3.5 h-3.5" />
-            <span>Templates</span>
-          </button>
-
-          {/* New */}
-          <button
-            onClick={handleNew}
-            className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
-              ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-              : "border-gray-300 text-gray-600 hover:bg-gray-100"
-              }`}
-          >
-            <FilePlus className="w-3.5 h-3.5" />
-            <span>New</span>
-          </button>
-
-          {/* Publish */}
-          {currentWorkflowId && user && (
+        {/* ── Desktop actions ── */}
+        <div className="relative hidden lg:flex min-w-0 flex-1 overflow-hidden">
+          {/* Right fade hint */}
+          <div className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-white dark:from-slate-900 to-transparent z-10" />
+          
+          <div className="flex items-center gap-1 overflow-x-auto pr-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {/* Help */}
             <button
-              onClick={() => setIsPublishOpen(true)}
-              disabled={nodes.length === 0}
-              className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
-                ? "border-amber-700 text-amber-300 hover:bg-amber-800/40"
-                : "border-amber-300 text-amber-700 hover:bg-amber-50"
+              onClick={openTutorial}
+              className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
+                ? "border-sky-600 text-sky-400 hover:bg-sky-900/40"
+                : "border-sky-500 text-sky-600 hover:bg-sky-50"
                 }`}
             >
-              <UploadCloud className="w-3.5 h-3.5" />
-              <span>Publish</span>
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span>Help</span>
             </button>
-          )}
 
-          {/* Save As */}
-          {currentWorkflowId && (
+            {/* Theme */}
             <button
-              onClick={handleSaveAs}
-              disabled={nodes.length === 0 || isSaving}
-              className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
-                ? "border-teal-700 text-teal-300 hover:bg-teal-800/40"
-                : "border-teal-300 text-teal-700 hover:bg-teal-50"
+              onClick={toggleTheme}
+              className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
+                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                : "border-gray-300 text-gray-600 hover:bg-gray-100"
                 }`}
             >
-              <SaveAll className="w-3.5 h-3.5" />
-              <span>Save As</span>
+              {isDark ? <Sun className="w-3.5 h-3.5" /> : <MoonStar className="w-3.5 h-3.5" />}
+              <span>{isDark ? "Light" : "Dark"}</span>
             </button>
-          )}
 
-          {/* Import */}
-          <button
-            onClick={handleImport}
-            className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
-              ? "border-violet-700 text-violet-300 hover:bg-violet-800/40"
-              : "border-violet-300 text-violet-700 hover:bg-violet-50"
-              }`}
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Import</span>
-          </button>
-
-          {/* Pull */}
-          {activeCanvasId && user && (
+            {/* Templates */}
             <button
-              onClick={() => setIsPullOpen(true)}
+              onClick={openTemplateLibrary}
+              className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
+                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                }`}
+            >
+              <LayoutTemplate className="w-3.5 h-3.5" />
+              <span>Templates</span>
+            </button>
+
+            {/* New */}
+            <button
+              onClick={handleNew}
+              className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
+                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                }`}
+            >
+              <FilePlus className="w-3.5 h-3.5" />
+              <span>New</span>
+            </button>
+
+            {/* Publish */}
+            {currentWorkflowId && user && (
+              <button
+                onClick={() => setIsPublishOpen(true)}
+                disabled={nodes.length === 0}
+                className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
+                  ? "border-amber-700 text-amber-300 hover:bg-amber-800/40"
+                  : "border-amber-300 text-amber-700 hover:bg-amber-50"
+                  }`}
+              >
+                <UploadCloud className="w-3.5 h-3.5" />
+                <span>Publish</span>
+              </button>
+            )}
+
+            {/* Save As */}
+            {currentWorkflowId && (
+              <button
+                onClick={handleSaveAs}
+                disabled={nodes.length === 0 || isSaving}
+                className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
+                  ? "border-teal-700 text-teal-300 hover:bg-teal-800/40"
+                  : "border-teal-300 text-teal-700 hover:bg-teal-50"
+                  }`}
+              >
+                <SaveAll className="w-3.5 h-3.5" />
+                <span>Save As</span>
+              </button>
+            )}
+
+            {/* Import */}
+            <button
+              onClick={handleImport}
               className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
                 ? "border-violet-700 text-violet-300 hover:bg-violet-800/40"
                 : "border-violet-300 text-violet-700 hover:bg-violet-50"
                 }`}
             >
-              <GitBranch className="w-3.5 h-3.5" />
-              <span>Pull</span>
+              <Download className="w-3.5 h-3.5" />
+              <span>Import</span>
             </button>
-          )}
 
+            {/* Pull */}
+            {activeCanvasId && user && (
+              <button
+                onClick={() => setIsPullOpen(true)}
+                className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
+                  ? "border-violet-700 text-violet-300 hover:bg-violet-800/40"
+                  : "border-violet-300 text-violet-700 hover:bg-violet-50"
+                  }`}
+              >
+                <GitBranch className="w-3.5 h-3.5" />
+                <span>Pull</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ── Mobile overflow menu (below md) ── */}

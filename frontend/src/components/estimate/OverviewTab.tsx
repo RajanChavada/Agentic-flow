@@ -5,6 +5,7 @@ import type { BreakdownWithType } from "./types";
 import { BrainCircuit, Wrench, Info } from "lucide-react";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import { WaterfallTimeline } from "./WaterfallTimeline";
+import { ProviderIcon } from "@/lib/providerIcons";
 
 interface OverviewTabProps {
     estimation: WorkflowEstimation;
@@ -253,7 +254,8 @@ export function OverviewTab({
                                         <div key={m.name} className="flex items-center gap-2">
                                             <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: PIE_COLOURS[i % PIE_COLOURS.length] }} />
                                             <div className="flex-1 min-w-0">
-                                                <div className={`text-[10px] font-medium truncate ${isDark ? "text-slate-200" : "text-gray-700"}`}>
+                                                <div className={`text-[10px] font-medium truncate flex items-center gap-1.5 ${isDark ? "text-slate-200" : "text-gray-700"}`}>
+                                                    <ProviderIcon provider={m.name.split(" / ")[0]} size={12} className="shrink-0" />
                                                     {m.name}
                                                     <span className={`ml-1 ${isDark ? "text-slate-500" : "text-gray-400"}`}>
                                                         ({m.count})

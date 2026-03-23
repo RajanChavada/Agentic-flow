@@ -13,6 +13,7 @@ import {
   Info,
   X
 } from "lucide-react";
+import type { WorkflowEstimation } from "@/types/workflow";
 import {
   useEstimation,
   useUIState,
@@ -81,9 +82,19 @@ function saveSectionState(state: Record<SectionId, boolean>) {
   }
 }
 
-export default function EstimatePanel() {
-  const estimation = useEstimation();
-  const { isEstimatePanelOpen, theme } = useUIState();
+export default function EstimatePanel({ 
+  estimation: propEstimation, 
+  readOnly = false 
+}: { 
+  estimation?: WorkflowEstimation | null;
+  readOnly?: boolean;
+}) {
+  const storeEstimation = useEstimation();
+  const estimation = propEstimation ?? storeEstimation;
+  
+  const { isEstimatePanelOpen: storeIsEstimatePanelOpen, theme } = useUIState();
+  const isEstimatePanelOpen = readOnly ? true : storeIsEstimatePanelOpen;
+
   const toggleEstimatePanel = useWorkflowStore((s) => s.toggleEstimatePanel);
   const nodes = useWorkflowStore((s) => s.nodes);
   const edges = useWorkflowStore((s) => s.edges);
@@ -223,14 +234,14 @@ export default function EstimatePanel() {
   }, [width]);
 
   /* ── Derived data ───────────────────────────────────────── */
-  const breakdownWithType = (estimation?.breakdown ?? []).map((b) => {
+  const breakdownWithType = (estimation?.breakdown ?? []).map((b: any) => {
     const matchedNode = nodes.find((n) => n.id === b.node_id);
     return { ...b, nodeType: matchedNode?.type ?? "agentNode" };
   });
 
-  const activeBreakdown = breakdownWithType.filter((b) => b.tokens > 0);
+  const activeBreakdown = breakdownWithType.filter((b: any) => b.tokens > 0);
 
-  const chartData = activeBreakdown.map((b) => ({
+  const chartData = activeBreakdown.map((b: any) => ({
     name: b.node_name,
     tokens: b.tokens,
     cost: Number(b.cost.toFixed(6)),
@@ -321,14 +332,14 @@ export default function EstimatePanel() {
                     <span>{estimation.graph_type}</span>
                   </div>
 
-                  {breakdownWithType.filter(b => b.bottleneck_severity === "high").length > 0 && (
+                  {breakdownWithType.filter((b: any) => b.bottleneck_severity === "high").length > 0 && (
                     <button
                       onClick={() => scrollToSection("health", "overview")}
                       className="flex items-center gap-1 text-[10px] sm:text-xs text-rose-500 font-semibold hover:bg-rose-50 px-1 rounded transition-colors"
                     >
                       <AlertTriangle className="w-3 h-3" />
                       <span className="underline decoration-dotted underline-offset-2">
-                        {breakdownWithType.filter(b => b.bottleneck_severity === "high").length} Bottlenecks
+                        {breakdownWithType.filter((b: any) => b.bottleneck_severity === "high").length} Bottlenecks
                       </span>
                     </button>
                   )}

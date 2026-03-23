@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useReactFlow } from "@xyflow/react";
-import { Info } from "lucide-react";
+import { Info, Database, Server, Globe, Terminal, Search, HelpCircle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -336,6 +336,17 @@ export default function NodeConfigModal() {
   const cycleNodeIds = useMemo(() => getNodeIdsInCycles(nodes, edges), [nodes, edges]);
   const isCurrentAgentInCycle = isAgentNode && node ? cycleNodeIds.has(node.id) : false;
   const isModelTabMissingRequired = isAgentNode && (!provider || !model);
+  
+  const getToolCategoryIcon = (categoryId: string) => {
+    switch (categoryId) {
+      case "database": return <Database className="w-3.5 h-3.5" />;
+      case "mcp_server": return <Server className="w-3.5 h-3.5" />;
+      case "api": return <Globe className="w-3.5 h-3.5" />;
+      case "code_execution": return <Terminal className="w-3.5 h-3.5" />;
+      case "retrieval": return <Search className="w-3.5 h-3.5" />;
+      default: return <HelpCircle className="w-3.5 h-3.5" />;
+    }
+  };
 
   // Calculate position next to the selected node (keep full modal within viewport)
   useEffect(() => {
@@ -1243,7 +1254,8 @@ export default function NodeConfigModal() {
                                 key={category.id}
                                 className={`rounded-lg border ${isDark ? "border-slate-700 bg-slate-800/40" : "border-gray-200 bg-white"}`}
                               >
-                                <div className={`border-b px-3 py-2 text-[11px] font-semibold uppercase tracking-wide ${isDark ? "border-slate-700 text-slate-400" : "border-gray-100 text-gray-500"}`}>
+                                <div className={`border-b px-3 py-2 text-[11px] font-semibold uppercase tracking-wide flex items-center gap-2 ${isDark ? "border-slate-700 text-slate-400" : "border-gray-100 text-gray-500"}`}>
+                                  {getToolCategoryIcon(category.id)}
                                   {category.name}
                                 </div>
                                 <div className="divide-y divide-inherit">

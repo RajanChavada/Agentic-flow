@@ -160,7 +160,7 @@ export default function PricingPage() {
                     Supported providers
                 </h2>
                 <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
-                    Neurovn ships with pricing data for 38+ models. Adding a new model
+                    Neurovn ships with pricing data for 50+ models. Adding a new model
                     is a single entry in{" "}
                     <code className="rounded bg-secondary px-1.5 py-0.5 text-xs font-mono">
                         backend/data/model_pricing.json

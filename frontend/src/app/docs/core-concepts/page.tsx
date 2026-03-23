@@ -103,20 +103,20 @@ export default function CoreConceptsPage() {
                 <h2 className="mb-6 text-xl font-semibold tracking-tight">
                     Key Definitions
                 </h2>
-                <div className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                     {concepts.map((c) => (
                         <div
                             key={c.term}
-                            className="rounded-xl border border-border bg-card/50 p-5"
+                            className="rounded-xl border border-border bg-card/50 p-5 flex flex-col"
                         >
                             <div className="mb-2 flex items-center gap-3">
                                 <c.icon className="h-4 w-4 shrink-0 text-muted-foreground" />
                                 <h3 className="text-sm font-semibold">{c.term}</h3>
                             </div>
-                            <p className="mb-2 text-sm leading-relaxed text-foreground">
+                            <p className="mb-2 text-xs leading-relaxed text-foreground">
                                 {c.definition}
                             </p>
-                            <p className="text-sm leading-relaxed text-muted-foreground">
+                            <p className="text-xs leading-relaxed text-muted-foreground mt-auto">
                                 {c.detail}
                             </p>
                         </div>

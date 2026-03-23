@@ -244,14 +244,14 @@ Each phase is independently shippable and builds on the existing codebase withou
 - [x] Workflow Share Links — `.ai/context/features/workflow-share-links.md`
 - [ ] Stripe Integration & Subscription Tiers — `Context/features/stripe-integration-subscription-tiers.md`
 
-### [P2-07] Provider and Tool Icons
+### [P2-07] Provider and Tool Icons [COMPLETED]
 
 Add recognizable brand icons to:
-1. Provider dropdown in agent config panel (OpenAI, Anthropic, Google, Meta, Mistral, DeepSeek, Cohere)
-2. Model cards in the pricing preview (icon next to provider name)
-3. Tool category and tool items in the Tools tab
-4. "Model Providers" section on the landing page (replace letter avatars)
-5. Node card subtitle (small icon before "Anthropic / Claude-3.5-Sonnet")
+1. [x] Provider dropdown in agent config panel (OpenAI, Anthropic, Google, Meta, Mistral, DeepSeek, Cohere)
+2. [x] Model cards in the pricing preview (icon next to provider name)
+3. [x] Tool category and tool items in the Tools tab
+4. [x] "Model Providers" section on the landing page (replace letter avatars)
+5. [x] Node card subtitle (small icon before "Anthropic / Claude-3.5-Sonnet")
 
 Icon source: Simple Icons (simpleicons.org) — MIT licensed, SVG, covers all 7 providers.
 Provider icon mapping:
@@ -264,11 +264,11 @@ Provider icon mapping:
   Cohere     → simple-icons/cohere
 
 Acceptance criteria:
-- [ ] Provider dropdown shows 16x16 icon left of provider name
-- [ ] Icons render in both light and dark mode (use CSS currentColor or explicit fill)
-- [ ] Missing icons (Mistral, DeepSeek) fall back to the current letter avatar
-- [ ] Landing page Model Providers section uses same icons at 32x32
-- [ ] Node card shows provider icon at 12x12 before the provider/model subtitle
+- [x] Provider dropdown shows 16x16 icon left of provider name
+- [x] Icons render in both light and dark mode (use CSS currentColor or explicit fill)
+- [x] Missing icons (Mistral, DeepSeek) fall back to the current letter avatar
+- [x] Landing page Model Providers section uses same icons at 32x32
+- [x] Node card shows provider icon at 12x12 before the provider/model subtitle
 
 ## Workflow Resilience & Error Handling
 

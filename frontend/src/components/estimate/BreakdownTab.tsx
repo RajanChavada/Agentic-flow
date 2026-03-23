@@ -16,6 +16,7 @@ import {
 import type { WorkflowEstimation, NodeEstimation, ActualNodeStats } from "@/types/workflow";
 import type { BreakdownWithType } from "./types";
 import { DOT_COLOURS } from "./types";
+import { ProviderIcon } from "@/lib/providerIcons";
 
 interface BreakdownTabProps {
     estimation: WorkflowEstimation;
@@ -226,7 +227,8 @@ export function BreakdownTab({
                                                         )}
                                                     </div>
                                                     {b.model_provider && b.model_name && (
-                                                        <div className={`text-[10px] mt-0.5 ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+                                                        <div className={`text-[10px] mt-0.5 flex items-center gap-1 ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+                                                            <ProviderIcon provider={b.model_provider} size={10} className="shrink-0" />
                                                             {b.model_provider} / {b.model_name}
                                                         </div>
                                                     )}

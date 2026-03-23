@@ -3,7 +3,6 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import {
-  AlertTriangle,
   ArrowRight,
   Brain,
   ChevronRight,
@@ -333,9 +332,6 @@ export function ProblemBanner() {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-200 bg-amber-50">
-            <AlertTriangle className="h-6 w-6 text-amber-600" />
-          </div>
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             Agentic AI is booming.
             <br />
@@ -456,14 +452,9 @@ export function CauseAndEffect() {
           <div className="grid md:grid-cols-2">
             {/* Left: the pain */}
             <div className="border-b border-border/60 p-6 sm:p-8 md:border-b-0 md:border-r">
-              <div className="mb-4 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-red-100">
-                  <AlertTriangle className="h-3 w-3 text-red-600" />
-                </span>
                 <span className="text-xs font-semibold uppercase tracking-widest text-red-600">
                   The Problem
                 </span>
-              </div>
               <h3 className="text-lg font-semibold leading-snug">{tab.pain}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 {tab.painDesc}

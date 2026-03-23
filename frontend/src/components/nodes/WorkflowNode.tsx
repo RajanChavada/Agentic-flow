@@ -112,8 +112,9 @@ function getToolDisplayName(tool: WorkflowToolBinding | string | Record<string, 
   return "Tool";
 }
 
-function WorkflowNode({ id, data, selected }: NodeProps & { data: WorkflowNodeData }) {
-  const s = STYLE[data.type] ?? STYLE.agentNode;
+function WorkflowNode({ id, data, selected, type: flowType }: NodeProps & { data: WorkflowNodeData }) {
+  const nodeType = data.type || (flowType as string);
+  const s = STYLE[nodeType] ?? STYLE.agentNode;
   const estimation = useEstimation();
   const edges = useWorkflowEdges();
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);

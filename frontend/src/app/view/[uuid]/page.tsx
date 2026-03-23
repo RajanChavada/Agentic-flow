@@ -24,6 +24,7 @@ import { edgeTypes } from "@/components/edges";
 import type { Node, Edge } from "@xyflow/react";
 import type { WorkflowNodeData, WorkflowEstimation } from "@/types/workflow";
 import { cn } from "@/lib/utils";
+import EstimatePanel from "@/components/estimate/EstimatePanel";
 
 const NODE_WIDTH = 220;
 const NODE_HEIGHT = 100;
@@ -190,9 +191,23 @@ function ViewCanvasContent() {
     </nav>
 
     <div className="mx-auto w-full max-w-[1600px] p-4 sm:p-6 lg:p-8">
-      <div className={cn("relative h-[70vh] overflow-hidden rounded-xl border", isDark ? "border-slate-700 bg-slate-900" : "border-gray-200 bg-gray-50/50") }>
+      <div className={cn("relative h-[70vh] overflow-hidden rounded-xl border border-dashed", isDark ? "border-slate-800 bg-slate-900/50" : "border-gray-200 bg-gray-50/50") }>
         <ReactFlowProvider>
-          <ReactFlow nodes={preview.nodes as Node[]} edges={preview.edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} defaultEdgeOptions={defaultEdgeOptions} nodesDraggable={false} nodesConnectable={false} elementsSelectable={false} panOnDrag zoomOnScroll fitView fitViewOptions={{ padding: 0.2 }} proOptions={{ hideAttribution: true }}>
+          <ReactFlow 
+            nodes={preview.nodes as Node[]} 
+            edges={preview.edges} 
+            nodeTypes={nodeTypes} 
+            edgeTypes={edgeTypes} 
+            defaultEdgeOptions={defaultEdgeOptions} 
+            nodesDraggable={false} 
+            nodesConnectable={false} 
+            elementsSelectable={false} 
+            panOnDrag 
+            zoomOnScroll 
+            fitView 
+            fitViewOptions={{ padding: 0.2 }} 
+            proOptions={{ hideAttribution: true }}
+          >
             <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
             <Controls className={isDark ? "bg-slate-800 border-slate-700 fill-slate-300" : ""} />
             <FitViewEffect />
@@ -200,31 +215,48 @@ function ViewCanvasContent() {
         </ReactFlowProvider>
       </div>
 
-      {(estimation || workflows.some((w) => w.last_estimate)) && (
-        <section className="mt-6 rounded-xl border bg-card p-4 shadow-sm">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold"><Sparkles className="h-4 w-4" /> Estimation report</div>
-          {estimation && (
-            <div className="mb-3 rounded-lg border p-3">
-              <div className="text-sm font-medium">Latest canvas estimate</div>
-              <div className="mt-2 grid gap-2 sm:grid-cols-3 text-xs text-muted-foreground">
-                <div>Cost: ${(estimation.total_cost ?? 0).toFixed(3)}</div>
-                <div>Latency: {(estimation.total_latency ?? 0).toFixed(2)}s</div>
-                <div>Tokens: {estimation.total_tokens ?? 0}</div>
+      <div className="mt-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="lg:col-span-3">
+          <EstimatePanel readOnly estimation={estimation} />
+        </div>
+        
+        <div className="space-y-6">
+          <div className={cn("p-6 rounded-2xl border bg-gradient-to-br transition-all", isDark ? "from-blue-900/20 to-indigo-900/20 border-blue-800/50" : "from-blue-50 to-indigo-50 border-blue-100")}>
+            <h3 className="text-lg font-bold mb-2 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-blue-500" />
+              Build like this
+            </h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              Neurovn lets you architect, estimate, and export agentic workflows in minutes.
+            </p>
+            <Link 
+              href={`/signup?next=${encodeURIComponent(`/view/${canvasId}?fork=1`)}`}
+              className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-lg shadow-blue-500/25 active:scale-[0.98]"
+            >
+              Open in Neurovn to edit →
+            </Link>
+          </div>
+          
+          {workflows.length > 1 && (
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Other workflows in this canvas</h4>
+              <div className="grid gap-2">
+                {workflows.slice(1).map((w) => (
+                  <div key={w.id} className={cn("p-3 rounded-xl border text-sm transition-colors", isDark ? "bg-slate-900 border-slate-800 hover:border-slate-700" : "bg-white border-gray-100 hover:border-gray-200")}>
+                    <div className="font-medium truncate">{w.name}</div>
+                    {w.last_estimate && (
+                      <div className="mt-1 text-[10px] text-muted-foreground flex gap-3">
+                        <span>${w.last_estimate.total_cost.toFixed(3)}</span>
+                        <span>{(w.last_estimate.total_latency).toFixed(1)}s</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {workflows.filter((w) => w.last_estimate).map((w) => (
-              <div key={w.id} className="rounded-lg border p-3">
-                <div className="text-sm font-medium">{w.name}</div>
-                <div className="mt-2 text-xs text-muted-foreground">Cost: ${(w.last_estimate?.total_cost ?? 0).toFixed(3)}</div>
-                <div className="text-xs text-muted-foreground">Latency: {(w.last_estimate?.total_latency ?? 0).toFixed(2)}s</div>
-                <div className="text-xs text-muted-foreground">Tokens: {w.last_estimate?.total_tokens ?? 0}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+        </div>
+      </div>
     </div>
 
     <AuthModal />
