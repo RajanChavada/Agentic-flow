@@ -59,16 +59,24 @@ async def health():
 
 # ── Estimation ──────────────────────────────────────────────────
 
+import logging
+logger = logging.getLogger("uvicorn.error")
+
 @app.post("/api/estimate", response_model=WorkflowEstimation)
 async def estimate(request: WorkflowRequest):
     """Accept a workflow graph and return token/cost/latency estimates."""
-    return estimate_workflow(
-        request.nodes,
-        request.edges,
-        recursion_limit=request.recursion_limit or 25,
-        runs_per_day=request.runs_per_day,
-        loop_intensity=request.loop_intensity,
-    )
+    logger.info(f"Received estimation request with {len(request.nodes)} nodes and {len(request.edges)} edges.")
+    try:
+        return estimate_workflow(
+            request.nodes,
+            request.edges,
+            recursion_limit=request.recursion_limit or 25,
+            runs_per_day=request.runs_per_day,
+            loop_intensity=request.loop_intensity,
+        )
+    except Exception as e:
+        logger.error(f"Error in /api/estimate: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/estimate/batch", response_model=BatchEstimateResponse)
