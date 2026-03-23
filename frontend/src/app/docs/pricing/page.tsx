@@ -12,12 +12,12 @@ import {
 /* ── Provider links ──────────────────────────────────────── */
 const providers = [
     { name: "OpenAI", url: "https://openai.com/api/pricing/", models: "GPT-4, GPT-4o, GPT-4o mini, o3, o4 mini + more" },
-    { name: "Anthropic", url: "https://www.anthropic.com/pricing", models: "Claude 3.5 Sonnet/Haiku, Claude 4 Sonnet/Opus + more" },
-    { name: "Google", url: "https://ai.google.dev/pricing", models: "Gemini 1.5 Pro/Flash, Gemini 2.0/2.5 + more" },
-    { name: "Meta", url: "https://ai.meta.com/llama/", models: "Llama 3.1/3.3, Llama 4 Scout/Maverick" },
+    { name: "Anthropic", url: "https://www.anthropic.com/pricing", models: "Claude 3.5 Sonnet/Haiku, Claude 3 Opus, Claude 3.7 Sonnet + more" },
+    { name: "Google", url: "https://ai.google.dev/pricing", models: "Gemini 1.5 Pro/Flash, Gemini 2.0 Pro/Flash, Gemini Exp-1206 + more" },
+    { name: "Meta", url: "https://ai.meta.com/llama/", models: "Llama 3.1 (405B/70B/8B), Llama 3.2, Llama 3.3" },
     { name: "Mistral", url: "https://mistral.ai/products/", models: "Mistral Large/Medium/Small, Codestral" },
     { name: "DeepSeek", url: "https://platform.deepseek.com/", models: "DeepSeek-V3, DeepSeek-R1" },
-    { name: "Cohere", url: "https://cohere.com/pricing", models: "Command R, Command R+" },
+    { name: "Cohere", url: "https://cohere.com/pricing", models: "Command R, Command R+, Command Nightly" },
 ];
 
 export default function PricingPage() {
@@ -43,7 +43,7 @@ export default function PricingPage() {
                 <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
                     <p>
                         Neurovn maintains a local <strong>pricing registry</strong> — a
-                        JSON file with per-model rates for 38+ models across 7 providers.
+                        JSON file with per-model rates for 50+ models across 7 providers.
                         When you assign a model to an Agent node, the estimator looks up
                         that model&apos;s input and output token rates.
                     </p>
@@ -85,7 +85,7 @@ export default function PricingPage() {
                         </div>
                         <p className="mt-3 text-sm text-muted-foreground">
                             Input tokens are counted from the system prompt + context using
-                            tiktoken. Output tokens are estimated via a task-type multiplier.
+                            native tokenization. Output tokens are estimated via a task-type multiplier.
                         </p>
                     </div>
 

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { useParams } from "next/navigation";
-import { ReactFlowProvider } from "@xyflow/react";
+import { useParams, useSearchParams } from "next/navigation";
+import { ReactFlowProvider, type Node, type Edge } from "@xyflow/react";
 import { toPng } from "html-to-image";
 import Sidebar from "@/components/Sidebar";
 import Canvas from "@/components/Canvas";
@@ -23,9 +23,12 @@ import { useWorkflowStore } from "@/store/useWorkflowStore";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useAutoLayout } from "@/hooks/useAutoLayout";
 import { supabase } from "@/lib/supabase";
+import { SAMPLE_RAG_PIPELINE } from "@/lib/sampleWorkflows";
+import type { WorkflowNodeData } from "@/types/workflow";
 
 function EditorContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const canvasId = params?.canvasId as string | undefined;
   const user = useUser();
   const applyLayout = useAutoLayout();
@@ -44,7 +47,22 @@ function EditorContent() {
   }, [canvasId]);
 
   useEffect(() => {
-    if (!user || !canvasId || canvasId === "guest") return;
+    if (!user || !canvasId || canvasId === "guest") {
+      // Handle ?template= for guest mode
+      if (canvasId === "guest") {
+        const template = searchParams.get("template");
+        if (template === "sample-rag-pipeline") {
+          const s = useWorkflowStore.getState();
+          if (s.nodes.length === 0) {
+            s.setNodes(SAMPLE_RAG_PIPELINE.nodes as Node<WorkflowNodeData>[]);
+            s.setEdges(SAMPLE_RAG_PIPELINE.edges);
+            s.setCurrentWorkflow("sample-rag", "Sample RAG Pipeline");
+            requestAnimationFrame(() => applyLayout());
+          }
+        }
+      }
+      return;
+    }
     const store = useWorkflowStore.getState();
     store.loadWorkflowsFromSupabase(canvasId).then(() => {
       const s = useWorkflowStore.getState();

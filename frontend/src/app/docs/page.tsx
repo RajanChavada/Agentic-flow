@@ -120,8 +120,8 @@ export default function DocsOverview() {
                 <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
                     The frontend (Next.js + React Flow + Zustand) communicates with a
                     lightweight FastAPI backend for estimation. The estimation engine is
-                    pure computation — tiktoken for token counting, a JSON pricing
-                    registry for 38+ models, and graph analysis (Tarjan SCC, topological
+                    pure computation — native tokenization for token counting, a JSON pricing
+                    registry for 50+ models, and graph analysis (Tarjan SCC, topological
                     sort, critical path).
                 </p>
                 <div className="mt-8">

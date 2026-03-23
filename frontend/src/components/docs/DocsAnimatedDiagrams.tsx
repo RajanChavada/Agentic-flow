@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
     Brain,
@@ -167,8 +168,8 @@ export function AnimatedWorkflowAnatomy() {
 
     return (
         <FadeIn delay={0.1}>
-            <div className="overflow-x-auto rounded-xl border border-border bg-card p-6 shadow-sm">
-                <div className="flex min-w-max items-center justify-center gap-2 py-4 sm:gap-4">
+            <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm overflow-hidden">
+                <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-4 py-4 sm:gap-x-3">
                     {nodes.map((n, i) => (
                         <React.Fragment key={n.label + i}>
                             <motion.div
@@ -179,7 +180,7 @@ export function AnimatedWorkflowAnatomy() {
                                 transition={{ duration: 0.3, delay: i * 0.15 }}
                             >
                                 <div
-                                    className={`flex h-11 min-w-[5rem] items-center justify-center gap-1.5 rounded-lg border-2 px-3 text-xs font-bold shadow-sm sm:h-12 sm:min-w-[6rem] sm:text-sm ${n.c}`}
+                                    className={`flex h-10 min-w-[4.5rem] items-center justify-center gap-1 rounded-lg border-2 px-2 text-[10px] font-bold shadow-sm sm:h-12 sm:min-w-[6rem] sm:px-3 sm:text-sm ${n.c}`}
                                 >
                                     <n.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                     {n.label}
@@ -189,16 +190,16 @@ export function AnimatedWorkflowAnatomy() {
                                 </span>
                             </motion.div>
 
-                            {i < nodes.length - 1 && (
+                             {i < nodes.length - 1 && (
                                 <motion.div
-                                    className="flex shrink-0 -translate-y-[10px] items-center text-muted-foreground/40 sm:-translate-y-[12px]"
+                                    className="flex shrink-0 -translate-y-[10px] items-center text-muted-foreground/30 sm:-translate-y-[12px]"
                                     initial={{ opacity: 0, scaleX: 0 }}
                                     whileInView={{ opacity: 1, scaleX: 1 }}
                                     viewport={{ once: true }}
                                     transition={{ duration: 0.2, delay: 0.1 + i * 0.15 }}
                                 >
-                                    <div className="h-px w-4 bg-border sm:w-6" />
-                                    <ChevronRight className="-ml-1.5 h-4 w-4" />
+                                    <div className="h-px w-2 bg-border sm:w-4" />
+                                    <ChevronRight className="-ml-1 h-3 w-3 sm:h-4 sm:w-4" />
                                 </motion.div>
                             )}
                         </React.Fragment>
@@ -280,11 +281,20 @@ export function AnimatedSampleWorkflow() {
                     </div>
                 </div>
 
-                <p className="mt-8 text-center text-sm text-muted-foreground sm:text-left">
-                    This pipeline uses two different LLMs and a tool call. Running the
-                    estimate will show you exactly how cost and latency distribute
-                    across each step.
-                </p>
+                <div className="mt-8 flex flex-col items-center justify-between gap-4 sm:flex-row">
+                    <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+                        This pipeline uses two different LLMs and a tool call. Running the
+                        estimate will show you exactly how cost and latency distribute
+                        across each step.
+                    </p>
+                    <Link
+                        href="/editor/guest?template=sample-rag-pipeline"
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-foreground px-5 text-sm font-semibold text-background transition hover:opacity-90 active:scale-95"
+                    >
+                        Try this workflow
+                        <ArrowRight className="h-4 w-4" />
+                    </Link>
+                </div>
             </div>
         </FadeIn>
     );

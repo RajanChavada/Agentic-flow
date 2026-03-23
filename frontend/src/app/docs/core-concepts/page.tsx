@@ -67,7 +67,7 @@ const concepts = [
 
 export default function CoreConceptsPage() {
     return (
-        <article>
+        <article className="max-w-3xl mx-auto">
             {/* ── Header ───────────────────────────────────────── */}
             <header className="mb-12">
                 <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-3 py-0.5 text-[11px] font-medium text-muted-foreground">
