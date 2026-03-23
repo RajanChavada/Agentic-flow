@@ -272,7 +272,7 @@ def compute_critical_path(
             if succ not in dist:
                 continue
             new_dist = dist[nid] + node_latencies.get(nid, 0.0)
-            if new_dist >= dist[succ]:
+            if new_dist > dist[succ]:
                 dist[succ] = new_dist
                 parent[succ] = nid
 
@@ -282,8 +282,12 @@ def compute_critical_path(
 
     path: List[str] = [end_node]
     current = end_node
+    visited_path: Set[str] = {end_node}
     while parent[current] is not None:
         current = parent[current]  # type: ignore[assignment]
+        if current in visited_path:
+            break
+        visited_path.add(current)
         path.append(current)
     path.reverse()
 
