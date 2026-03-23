@@ -1019,12 +1019,18 @@ def estimate_workflow(
       • Total min/avg/max are computed by multiplying cycle-zone costs
         by iteration counts
     """
+    print(f"DEBUG: Starting estimate_workflow with {len(nodes)} nodes, {len(edges)} edges")
     node_map, successors, predecessors = build_graph(nodes, edges)
+    print("DEBUG: build_graph completed")
     node_ids = [n.id for n in nodes]
     analyzer = GraphAnalyzer(node_ids, edges)
-    graph_cycles, back_edges = detect_cycles(node_map, successors)  # DFS back-edge detection
+    print("DEBUG: GraphAnalyzer initialized")
+    graph_cycles, back_edges = detect_cycles(node_map, successors)
+    print(f"DEBUG: detect_cycles completed, found {len(graph_cycles)} cycles")
     graph_forks = detect_forks(node_map, successors)
+    print(f"DEBUG: detect_forks completed, found {len(graph_forks)} forks")
     graph_topological_order = topological_sort(node_map, successors, back_edges)
+    print(f"DEBUG: topological_sort completed, order length {len(graph_topological_order)}")
     graph_summary = GraphPreprocessing(
         forks=graph_forks,
         cycles=[list(edge) for edge in graph_cycles],
