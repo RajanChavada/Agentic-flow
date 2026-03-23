@@ -50,6 +50,8 @@ import ShareWorkflowModal from "./ShareWorkflowModal";
 import { useAutoLayout } from "@/hooks/useAutoLayout";
 import { openTutorial } from "@/hooks/useTutorial";
 import { nodesToPayload, edgesToPayload } from "@/store/utils";
+import { supabase } from "@/lib/supabase";
+import { toPng } from "html-to-image";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -120,6 +122,70 @@ export default function HeaderBar() {
       savedTimerRef.current = setTimeout(() => setShowSaved(false), 1500);
     }
   }, [lastSavedAt, isSaving]);
+
+  // Thumbnail generation mechanism
+  const thumbnailCaptureRequested = useWorkflowStore((s) => s.thumbnailCaptureRequested);
+  const clearThumbnailCaptureRequest = useWorkflowStore((s) => s.clearThumbnailCaptureRequest);
+
+  useEffect(() => {
+    if (!thumbnailCaptureRequested || !user) return;
+    
+    // Asynchronous capture so it doesn't block the UI
+    const captureAndUpload = async () => {
+      try {
+        const flowEl = document.querySelector<HTMLElement>(".react-flow");
+        if (!flowEl) return;
+        
+        // Wait briefly for UI to settle
+        await new Promise(r => setTimeout(r, 600));
+        
+        const dataUrl = await toPng(flowEl, {
+          backgroundColor: isDark ? "#0f172a" : "#ffffff",
+          width: 800,
+          height: 600,
+          style: { transform: "scale(1)" },
+          filter: (node) => {
+            if (node.classList?.contains("react-flow__minimap") ||
+                node.classList?.contains("react-flow__controls")) {
+              return false;
+            }
+            return true;
+          }
+        });
+        
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        const fileName = `${user.id}/${thumbnailCaptureRequested}-${Date.now()}.png`;
+        
+        const { error: uploadErr } = await supabase.storage
+          .from("thumbnails")
+          .upload(fileName, blob, { upsert: true, contentType: "image/png" });
+          
+        if (uploadErr) {
+          console.error("Thumbnail upload error:", uploadErr);
+          return;
+        }
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from("thumbnails")
+          .getPublicUrl(fileName);
+          
+        const { error: updateErr } = await supabase
+          .from("canvases")
+          .update({ thumbnail_url: publicUrl })
+          .eq("id", thumbnailCaptureRequested)
+          .eq("user_id", user.id);
+          
+        if (updateErr) console.error("Canvas thumbnail update error:", updateErr);
+      } catch (err) {
+        console.error("Failed to capture thumbnail:", err);
+      } finally {
+        clearThumbnailCaptureRequest();
+      }
+    };
+    
+    captureAndUpload();
+  }, [thumbnailCaptureRequested, user, isDark, clearThumbnailCaptureRequest]);
 
   // ── Save (PATCH existing or POST new) ──────────────────────
   const handleSave = async () => {

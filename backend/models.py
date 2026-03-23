@@ -497,3 +497,13 @@ class LangGraphExportResponse(BaseModel):
     requirements_txt: str = Field(..., description="requirements.txt content")
     env_example: str = Field(..., description=".env.example content")
     filename: str = Field(..., description="Suggested filename: {workflow_name}_langgraph.py")
+
+
+# ── Model Request models ──────────────────────────────────────────────────────
+
+class ModelRequestPayload(BaseModel):
+    """POST /api/model-request payload."""
+    provider: str
+    model_name: str
+    pricing: Optional[str] = None
+    notes: Optional[str] = None

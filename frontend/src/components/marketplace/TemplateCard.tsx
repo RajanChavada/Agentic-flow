@@ -46,15 +46,41 @@ export default function TemplateCard({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-lg border p-4 transition-shadow hover:shadow-md",
+        "group relative flex flex-col overflow-hidden rounded-lg border p-4 transition-all hover:shadow-xl hover:-translate-y-0.5",
         isDark
-          ? "border-gray-700 bg-gray-800/50 hover:bg-gray-800/70"
-          : "border-gray-200 bg-white hover:bg-gray-50"
+          ? "border-gray-700 bg-gray-800/50"
+          : "border-gray-200 bg-white"
       )}
     >
+      {/* Hover Overlay */}
+      <div
+        className={cn(
+          "absolute inset-0 z-10 flex items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100 backdrop-blur-[2px]",
+          isDark ? "bg-slate-900/60" : "bg-white/60"
+        )}
+      >
+        <button
+          onClick={handleUseClick}
+          disabled={isUsing}
+          className={cn(
+            "inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold shadow-xl transition-all hover:scale-105 disabled:opacity-50 disabled:hover:scale-100",
+            isDark
+              ? "bg-blue-500 text-white hover:bg-blue-400"
+              : "bg-blue-600 text-white hover:bg-blue-700"
+          )}
+        >
+          {isUsing ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Copy className="h-4 w-4" />
+          )}
+          Use this template &rarr;
+        </button>
+      </div>
+
       <div className="mb-3 flex items-start justify-between gap-2">
         <h3 className="font-semibold text-foreground line-clamp-1">{template.name}</h3>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="relative z-20 flex shrink-0 items-center gap-1">
           {isOwnedByCurrentUser && onDelete && (
             <button
               onClick={(e) => {
@@ -123,23 +149,6 @@ export default function TemplateCard({
             {nodeCount} nodes
           </span>
         </div>
-        <button
-          onClick={handleUseClick}
-          disabled={isUsing}
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-70 disabled:cursor-wait",
-            isDark
-              ? "bg-primary text-primary-foreground hover:bg-primary/90"
-              : "bg-primary text-primary-foreground hover:bg-primary/90"
-          )}
-        >
-          {isUsing ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Copy className="w-3.5 h-3.5" />
-          )}
-          Use template
-        </button>
       </div>
     </div>
   );

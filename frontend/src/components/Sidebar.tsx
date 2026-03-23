@@ -399,17 +399,17 @@ export default function Sidebar() {
             </p>
           )}
 
-          <div className="flex flex-col gap-1.5">
+          <div className="grid grid-cols-2 gap-2">
             {scenarioList.map((sc) => {
               const isSelected = selectedIds.includes(sc.id);
               const isActive = sc.id === currentWorkflowId;
               return (
                 <div
                   key={sc.id}
-                  className={`rounded-md border px-2 py-1.5 text-xs transition ${isActive
+                  className={`rounded-md flex flex-col justify-between border px-2 py-2 text-xs transition shadow-sm hover:shadow-md ${isActive
                     ? isDark
-                      ? "border-l-2 border-l-blue-400 border-blue-500 bg-blue-900/30"
-                      : "border-l-2 border-l-blue-500 border-blue-400 bg-blue-50"
+                      ? "border-blue-400 bg-blue-900/30"
+                      : "border-blue-500 bg-blue-50"
                     : isSelected
                       ? isDark
                         ? "border-blue-500 bg-blue-900/30"
@@ -420,12 +420,12 @@ export default function Sidebar() {
                     }`}
                 >
                   {/* Row 1: checkbox + name */}
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-start gap-1.5 mb-2">
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => toggleComparisonSelection(sc.id)}
-                      className="accent-blue-500 rounded shrink-0"
+                      className="accent-blue-500 mt-0.5 rounded shrink-0 cursor-pointer"
                       title="Select for comparison"
                     />
                     {editingWorkflowId === sc.id ? (

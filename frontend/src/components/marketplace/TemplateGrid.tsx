@@ -31,6 +31,7 @@ export default function TemplateGrid({ onUseTemplate, loadingId, currentUserId }
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState<TemplateCategory>("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [previewTemplate, setPreviewTemplate] = useState<WorkflowTemplate | null>(null);
 
   useEffect(() => {
@@ -42,6 +43,11 @@ export default function TemplateGrid({ onUseTemplate, loadingId, currentUserId }
       setLoading(false);
     });
   }, [category]);
+
+  const filteredTemplates = templates.filter(t => 
+    t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (t.description && t.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   if (loading) {
     return (
@@ -67,25 +73,36 @@ export default function TemplateGrid({ onUseTemplate, loadingId, currentUserId }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-2">
-        {CATEGORIES.map((c) => (
-          <button
-            key={c.id || "all"}
-            onClick={() => setCategory(c.id)}
-            className={cn(
-              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              category === c.id
-                ? isDark
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-primary text-primary-foreground"
-                : isDark
-                  ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            )}
-          >
-            {c.label}
-          </button>
-        ))}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+        <div className="flex flex-wrap gap-2">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c.id || "all"}
+              onClick={() => setCategory(c.id)}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                category === c.id
+                  ? isDark
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-primary text-primary-foreground"
+                  : isDark
+                    ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              )}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+        <input
+          type="text"
+          placeholder="Search templates..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className={`w-full sm:w-64 px-3 py-1.5 rounded-md border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDark 
+            ? "bg-slate-800 border-slate-700 text-slate-100" 
+            : "bg-white border-gray-300 text-gray-900"}`}
+        />
       </div>
 
       {loadError ? (
@@ -101,13 +118,13 @@ export default function TemplateGrid({ onUseTemplate, loadingId, currentUserId }
             Ensure Supabase is configured and run migration 003_workflow_templates.sql if needed.
           </p>
         </div>
-      ) : templates.length === 0 ? (
+      ) : filteredTemplates.length === 0 ? (
         <p className={cn("py-12 text-center", isDark ? "text-gray-400" : "text-gray-600")}>
           No templates found. Publish your first workflow to the marketplace.
         </p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {templates.map((t) => (
+          {filteredTemplates.map((t) => (
             <TemplateCard
               key={t.id}
               template={t}

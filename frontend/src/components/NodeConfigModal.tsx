@@ -20,6 +20,9 @@ import {
 } from "@/store/useWorkflowStore";
 import type { ModelInfo, ToolInfoType, WorkflowToolBinding } from "@/types/workflow";
 import { useIsMobile } from "@/hooks/useBreakpoint";
+import { ProviderSelect } from "@/components/ui/ProviderSelect";
+import { ModelSelect } from "@/components/ui/ModelSelect";
+import { ModelRequestModal } from "@/components/ModelRequestModal";
 
 const MODAL_WIDTH = 370;
 const MODAL_PADDING = 16;
@@ -246,6 +249,7 @@ export default function NodeConfigModal() {
     (node?.data?.retryBudget as number | undefined) ?? 1
   );
   const [activeTab, setActiveTab] = useState<AgentTab>("model");
+  const [isModelRequestOpen, setIsModelRequestOpen] = useState(false);
 
   // ── Tool node state ──────────────────────────────────────
   const [toolCategory, setToolCategory] = useState(node?.data?.toolCategory ?? "");
@@ -546,7 +550,8 @@ export default function NodeConfigModal() {
   }`;
 
   return (
-    <TooltipProvider delayDuration={100}>
+    <>
+    <TooltipProvider delayDuration={300}>
       <div className="fixed inset-0 z-50 pointer-events-none">
         <div
           ref={modalRef}
@@ -883,31 +888,23 @@ export default function NodeConfigModal() {
                           >
                             Model Provider
                           </label>
-                          <select
+                          <ProviderSelect
+                            providers={providers.map(p => ({
+                              id: p.id,
+                              name: p.name,
+                              last_updated: p.last_updated,
+                              modelsCount: p.models.length
+                            }))}
                             value={provider}
-                            onChange={(e) => {
-                              setProvider(e.target.value);
+                            onChange={(val) => {
+                              setProvider(val);
                               setModel("");
                             }}
-                            className={`w-full rounded border px-3 py-2 text-sm ${isDark
-                              ? "bg-slate-700 border-slate-500 text-slate-100"
-                              : "bg-white border-gray-300 text-gray-800"
-                              }`}
                             disabled={registryLoading}
-                          >
-                            <option value="">
-                              {registryLoading ? "Loading providers…" : "— select provider —"}
-                            </option>
-                            {providers.map((p) => (
-                              <option
-                                key={p.id}
-                                value={p.id}
-                                title={isProviderPricingStale(p.last_updated) ? "Pricing data may be outdated" : undefined}
-                              >
-                                {`${isProviderPricingStale(p.last_updated) ? "⚠ " : ""}${p.name} (${p.models.length} models · updated ${fmtProviderUpdated(p.last_updated)})`}
-                              </option>
-                            ))}
-                          </select>
+                            isLoading={registryLoading}
+                            isDark={isDark}
+                            onRequestModel={() => setIsModelRequestOpen(true)}
+                          />
                         </div>
 
                         {/* Model */}
@@ -918,22 +915,13 @@ export default function NodeConfigModal() {
                           >
                             Model Name
                           </label>
-                          <select
+                          <ModelSelect
+                            models={modelsForProvider}
                             value={model}
-                            onChange={(e) => setModel(e.target.value)}
-                            className={`w-full rounded border px-3 py-2 text-sm ${isDark
-                              ? "bg-slate-700 border-slate-500 text-slate-100"
-                              : "bg-white border-gray-300 text-gray-800"
-                              }`}
+                            onChange={(val) => setModel(val)}
                             disabled={!provider}
-                          >
-                            <option value="">— select model —</option>
-                            {modelsForProvider.map((m) => (
-                              <option key={m.id} value={m.id}>
-                                {m.display_name}
-                              </option>
-                            ))}
-                          </select>
+                            isDark={isDark}
+                          />
                         </div>
 
                         {/* Pricing info card (shown when a model is selected) */}
@@ -1331,5 +1319,13 @@ export default function NodeConfigModal() {
         </div>
       </div>
     </TooltipProvider>
+
+      {isModelRequestOpen && (
+        <ModelRequestModal
+          onClose={() => setIsModelRequestOpen(false)}
+          isDark={isDark}
+        />
+      )}
+    </>
   );
 }
