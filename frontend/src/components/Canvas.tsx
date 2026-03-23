@@ -18,10 +18,8 @@ import "@xyflow/react/dist/style.css";
 import { v4 as uuid } from "uuid";
 import { useIsMobile } from "@/hooks/useBreakpoint";
 
-import WorkflowNode from "@/components/nodes/WorkflowNode";
-import BlankBoxNode from "@/components/nodes/BlankBoxNode";
-import TextNode from "@/components/nodes/TextNode";
-import ConditionNode from "@/components/nodes/ConditionNode";
+import { nodeTypes } from "@/components/nodes";
+import { edgeTypes } from "@/components/edges";
 import AnnotationEdge from "@/components/edges/AnnotationEdge";
 import { CanvasMetadataOverlay } from "@/components/CanvasMetadataOverlay";
 import BlankCanvasOverlay from "@/components/BlankCanvasOverlay";
@@ -35,21 +33,6 @@ import {
 } from "@/store/useWorkflowStore";
 import type { WorkflowNodeData, WorkflowNodeType } from "@/types/workflow";
 
-/** Register all custom node types once. */
-const nodeTypes = {
-  startNode: WorkflowNode,
-  agentNode: WorkflowNode,
-  toolNode: WorkflowNode,
-  finishNode: WorkflowNode,
-  conditionNode: ConditionNode,
-  blankBoxNode: BlankBoxNode,
-  textNode: TextNode,
-};
-
-/** Register custom edge types once. */
-const edgeTypes = {
-  annotationEdge: AnnotationEdge,
-};
 
 /** Default edge options — animated with arrow marker, uses AnnotationEdge */
 const defaultEdgeOptions = {

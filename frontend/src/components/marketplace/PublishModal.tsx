@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, Check } from "lucide-react";
 import { useUser } from "@/store/useAuthStore";
 import { useWorkflowStore, useUIState } from "@/store/useWorkflowStore";
 import { publishTemplate } from "@/lib/marketplacePersistence";
@@ -30,7 +30,7 @@ export default function PublishModal({ isOpen, onClose, onPublished }: Props) {
   const [name, setName] = useState(currentWorkflowName || "Untitled Workflow");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("custom");
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,6 +39,7 @@ export default function PublishModal({ isOpen, onClose, onPublished }: Props) {
       setDescription("");
       setCategory("custom");
       setError(null);
+      setStatus("idle");
     }
   }, [isOpen, currentWorkflowName]);
 
@@ -50,15 +51,25 @@ export default function PublishModal({ isOpen, onClose, onPublished }: Props) {
       setError("You must be signed in and have a saved workflow to publish.");
       return;
     }
-    setLoading(true);
+    setStatus("loading");
     setError(null);
-    const id = await publishTemplate(user.id, currentWorkflowId, name, description, category);
-    setLoading(false);
-    if (id) {
-      onPublished?.();
-      onClose();
-    } else {
-      setError("Failed to publish. Please try again.");
+    try {
+      const id = await publishTemplate(user.id, currentWorkflowId, name, description, category);
+      if (id) {
+        setStatus("success");
+        onPublished?.();
+        // auto-close after 2s
+        setTimeout(() => {
+          onClose();
+          setStatus("idle");
+        }, 2000);
+      } else {
+        setStatus("error");
+        setError("Failed to publish. Please try again.");
+      }
+    } catch (e) {
+      setStatus("error");
+      setError("An unexpected error occurred. Please try again.");
     }
   };
 
@@ -138,23 +149,31 @@ export default function PublishModal({ isOpen, onClose, onPublished }: Props) {
             <p className="text-sm text-red-500">{error}</p>
           )}
           <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className={cn(
-                "rounded-md px-4 py-2 text-sm font-medium",
-                isDark ? "text-gray-300 hover:bg-gray-800" : "text-gray-700 hover:bg-gray-100"
-              )}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-            >
-              {loading ? "Publishing…" : "Publish"}
-            </button>
+            {status === "success" ? (
+              <div className="flex items-center gap-2 text-green-600 font-medium py-2">
+                <Check className="w-4 h-4" /> Published successfully!
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className={cn(
+                    "rounded-md px-4 py-2 text-sm font-medium",
+                    isDark ? "text-gray-300 hover:bg-gray-800" : "text-gray-700 hover:bg-gray-100"
+                  )}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={status === "loading"}
+                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {status === "loading" ? "Publishing…" : "Publish"}
+                </button>
+              </>
+            )}
           </div>
         </form>
       </div>

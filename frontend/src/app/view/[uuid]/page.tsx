@@ -17,13 +17,10 @@ import dagre from "@dagrejs/dagre";
 import { Loader2, Copy, LogIn, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore, useUser } from "@/store/useAuthStore";
-import { useUIState } from "@/store/useWorkflowStore";
+import { useWorkflowStore, useUIState } from "@/store/useWorkflowStore";
 import AuthModal from "@/components/AuthModal";
-import WorkflowNode from "@/components/nodes/WorkflowNode";
-import BlankBoxNode from "@/components/nodes/BlankBoxNode";
-import TextNode from "@/components/nodes/TextNode";
-import ConditionNode from "@/components/nodes/ConditionNode";
-import AnnotationEdge from "@/components/edges/AnnotationEdge";
+import { nodeTypes } from "@/components/nodes";
+import { edgeTypes } from "@/components/edges";
 import type { Node, Edge } from "@xyflow/react";
 import type { WorkflowNodeData, WorkflowEstimation } from "@/types/workflow";
 import { cn } from "@/lib/utils";
@@ -31,17 +28,6 @@ import { cn } from "@/lib/utils";
 const NODE_WIDTH = 220;
 const NODE_HEIGHT = 100;
 
-const nodeTypes = {
-  startNode: WorkflowNode,
-  agentNode: WorkflowNode,
-  toolNode: WorkflowNode,
-  finishNode: WorkflowNode,
-  conditionNode: ConditionNode,
-  blankBoxNode: BlankBoxNode,
-  textNode: TextNode,
-};
-
-const edgeTypes = { annotationEdge: AnnotationEdge };
 
 const defaultEdgeOptions = {
   type: "annotationEdge" as const,
@@ -108,8 +94,15 @@ function ViewCanvasContent() {
       }
       const canvas = await canvasRes.json();
       setCanvasName(canvas?.name ?? "Shared Canvas");
-      setEstimation((canvas?.lastEstimationReport as WorkflowEstimation | null) ?? null);
+      const est = (canvas?.lastEstimationReport as WorkflowEstimation | null) ?? null;
+      setEstimation(est);
       setWorkflows((canvas?.workflows ?? []) as any);
+
+      // Fix: Populate the store's estimation so WorkflowNode can show metrics/badges
+      if (est) {
+        useWorkflowStore.setState({ estimation: est });
+      }
+      
       setLoading(false);
     })();
   }, [canvasId]);
