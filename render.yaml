@@ -1,14 +1,13 @@
 services:
   - type: web
     name: neurovn-api
-    runtime: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port 10000 --workers 1
     plan: starter
-    region: oregon
+    rootDir: backend
     envVars:
       - key: FRONTEND_ORIGINS
         value: http://localhost:3000,https://neurovn.vercel.app,https://neurovn-alpha.vercel.app
       - key: PORT
-        value: "8000"
-    healthCheckPath: /health
+        value: "10000"

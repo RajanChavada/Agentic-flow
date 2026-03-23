@@ -1,6 +1,7 @@
 """FastAPI application – Neurovn backend."""
 
 import os
+import resource
 from typing import Optional
 
 import httpx
@@ -48,6 +49,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def limit_memory(request, call_next):
+    # Soft limit 450MB — leaves headroom on Render's 512MB plan
+    soft = 450 * 1024 * 1024
+    try:
+        resource.setrlimit(resource.RLIMIT_AS, (soft, resource.RLIM_INFINITY))
+    except Exception:
+        pass
+    return await call_next(request)
 
 
 # ── Health ──────────────────────────────────────────────────────
