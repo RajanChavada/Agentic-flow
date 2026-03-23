@@ -207,7 +207,7 @@ export default function EstimatePanel({
   }, [scalingParams.runsPerDay, scalingParams.loopIntensity]);
 
   /* ── Resizable width state ──────────────────────────────── */
-  const [width, setWidth] = useState(Math.max(PANEL_MIN_WIDTH, 420));
+  const [width, setWidth] = useState(readOnly ? PANEL_MAX_WIDTH : Math.max(PANEL_MIN_WIDTH, 420));
   const isResizing = useRef(false);
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
@@ -257,26 +257,24 @@ export default function EstimatePanel({
   return (
     <>
       {/* Backdrop overlay (subtle) */}
-      {isEstimatePanelOpen && (
+      {isEstimatePanelOpen && !readOnly && (
         <div
           className={`fixed inset-0 z-40 transition-opacity ${isFullscreen ? "bg-black/40" : "bg-black/10"}`}
           onClick={isFullscreen ? undefined : toggleEstimatePanel}
         />
       )}
 
-      {/* Sliding drawer / fullscreen overlay */}
+      {/* Sliding drawer / fullscreen overlay (Drawer) OR Static Block (Shared View) */}
       <div
-        className={`
-          fixed z-50 flex transition-all duration-300 ease-in-out
-          ${isFullscreen
-            ? "inset-0"
-            : `top-0 right-0 h-full ${isEstimatePanelOpen ? "translate-x-0" : "translate-x-full"}`
-          }
-        `}
-        style={isFullscreen ? undefined : { width }}
+        className={
+          readOnly 
+            ? `relative w-full h-full border rounded-2xl shadow-sm ${isDark ? "border-slate-800 bg-slate-900/50" : "border-gray-100 bg-white"}` 
+            : `fixed z-50 flex transition-all duration-300 ease-in-out ${isFullscreen ? "inset-0" : `top-0 right-0 h-full ${isEstimatePanelOpen ? "translate-x-0" : "translate-x-full"}`}`
+        }
+        style={(!isFullscreen && !readOnly) ? { width } : undefined}
       >
         {/* Resize handle (only in sidebar mode) */}
-        {!isFullscreen && (
+        {!isFullscreen && !readOnly && (
           <div
             onMouseDown={onMouseDown}
             className={`
@@ -290,9 +288,10 @@ export default function EstimatePanel({
         {/* Panel content */}
         <div
           className={`
-            flex-1 flex flex-col overflow-hidden shadow-2xl
+            flex-1 flex flex-col overflow-hidden
+            ${!readOnly ? "shadow-2xl" : ""}
             ${isDark ? "bg-slate-900 text-slate-100" : "bg-white text-gray-900"}
-            ${isFullscreen ? "rounded-none" : ""}
+            ${(isFullscreen || readOnly) ? "rounded-none" : "rounded-l-2xl"}
           `}
         >
           {/* ── Header ────────────────────────────────────── */}
@@ -383,37 +382,41 @@ export default function EstimatePanel({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {/* Fullscreen toggle */}
-              <button
-                onClick={() => setIsFullscreen((v) => !v)}
-                className={`
-                  rounded-md p-1.5 transition-colors
-                  ${isDark ? "hover:bg-slate-800 text-slate-400" : "hover:bg-gray-100 text-gray-400"}
-                `}
-                title={isFullscreen ? "Exit fullscreen" : "Expand to dashboard"}
-              >
-                {isFullscreen ? (
+              {/* Fullscreen toggle (only in editor mode) */}
+              {!readOnly && (
+                <button
+                  onClick={() => setIsFullscreen((v) => !v)}
+                  className={`
+                    rounded-md p-1.5 transition-colors
+                    ${isDark ? "hover:bg-slate-800 text-slate-400" : "hover:bg-gray-100 text-gray-400"}
+                  `}
+                  title={isFullscreen ? "Exit fullscreen" : "Expand to dashboard"}
+                >
+                  {isFullscreen ? (
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M6 2v4H2M10 14v-4h4M10 2v4h4M6 14v-4H2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M2 6V2h4M14 10v4h-4M14 6V2h-4M2 10v4h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </button>
+              )}
+              {/* Close (only in editor mode) */}
+              {!readOnly && (
+                <button
+                  onClick={() => { setIsFullscreen(false); toggleEstimatePanel(); }}
+                  className={`
+                    rounded-md p-1.5 transition-colors
+                    ${isDark ? "hover:bg-slate-800 text-slate-400" : "hover:bg-gray-100 text-gray-400"}
+                  `}
+                >
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M6 2v4H2M10 14v-4h4M10 2v4h4M6 14v-4H2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                   </svg>
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M2 6V2h4M14 10v4h-4M14 6V2h-4M2 10v4h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </button>
-              {/* Close */}
-              <button
-                onClick={() => { setIsFullscreen(false); toggleEstimatePanel(); }}
-                className={`
-                  rounded-md p-1.5 transition-colors
-                  ${isDark ? "hover:bg-slate-800 text-slate-400" : "hover:bg-gray-100 text-gray-400"}
-                `}
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              </button>
+                </button>
+              )}
             </div>
           </div>
 
