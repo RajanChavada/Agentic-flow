@@ -36,9 +36,38 @@ export default function MiniWorkflowPreview({ nodes, edges, isDark, className }:
       };
     }
 
+    // 1. Try to use actual positions if ALL nodes have them
+    const allHavePos = flowNodes.every(n => n.position && typeof n.position.x === 'number');
+    if (allHavePos) {
+      const positions = new Map<string, { x: number; y: number }>();
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      
+      for (const n of flowNodes) {
+        const x = n.position!.x;
+        const y = n.position!.y;
+        positions.set(n.id, { x, y });
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x + NODE_SIZE);
+        maxY = Math.max(maxY, y + NODE_SIZE);
+      }
+      
+      const w = Math.max(1, maxX - minX + PADDING * 2);
+      const h = Math.max(1, maxY - minY + PADDING * 2);
+      return {
+        positions,
+        bounds: { w, h },
+        offset: { x: minX - PADDING, y: minY - PADDING },
+      };
+    }
+
+    // 2. Fallback to Dagre with variety
     const g = new dagre.graphlib.Graph();
     g.setDefaultEdgeLabel(() => ({}));
-    g.setGraph({ rankdir: "TB", nodesep: 16, ranksep: 20 });
+    
+    // Simple heuristic: alternate layout based on node count to create variety
+    const rankdir = flowNodes.length % 2 === 0 ? "TB" : "LR";
+    g.setGraph({ rankdir, nodesep: 16, ranksep: 20 });
 
     for (const n of flowNodes) {
       g.setNode(n.id, { width: NODE_SIZE, height: NODE_SIZE });

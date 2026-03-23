@@ -108,6 +108,8 @@ export interface NodeConfigPayload {
   /** Condition node fields. */
   condition_expression?: string | null;
   probability?: number | null;
+  /** Visual position of the node on the canvas. */
+  position?: { x: number; y: number } | null;
 }
 
 /** Shape of an edge sent to the backend. */
