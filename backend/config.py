@@ -9,7 +9,7 @@ load_dotenv()
 # CORS origins for the Next.js frontend.
 # Supports multiple origins separated by commas for local + production.
 # Example: "http://localhost:3000,https://neurovn.vercel.app"
-_raw_origins = os.getenv("FRONTEND_ORIGINS", os.getenv("FRONTEND_ORIGIN", "http://localhost:3000"))
+_raw_origins = os.getenv("FRONTEND_ORIGINS", os.getenv("FRONTEND_ORIGIN", "http://localhost:3000,https://neurovn.vercel.app,https://neurovn-alpha.vercel.app"))
 FRONTEND_ORIGINS: list[str] = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
 # Uvicorn defaults
