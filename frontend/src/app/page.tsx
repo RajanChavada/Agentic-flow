@@ -84,6 +84,9 @@ export default function LandingPage() {
             <a href="/docs" className="hidden text-muted-foreground transition hover:text-foreground sm:inline">
               Docs
             </a>
+            <a href="/pricing" className="hidden text-muted-foreground transition hover:text-foreground sm:inline">
+              Pricing
+            </a>
             <a
               href="https://github.com/RajanChavada/Neurovn-Alpha"
               target="_blank"
@@ -134,6 +137,13 @@ export default function LandingPage() {
                 className="rounded-md px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
               >
                 Docs
+              </a>
+              <a
+                href="/pricing"
+                onClick={() => setMobileNavOpen(false)}
+                className="rounded-md px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              >
+                Pricing
               </a>
               <a
                 href="https://github.com/RajanChavada/Neurovn-Alpha"

@@ -335,6 +335,16 @@ export const createWorkflowSlice: StateCreator<CombinedState, [], [], WorkflowSl
   },
 
   addNode: (node) => {
+    const state = get();
+    const user = (state as any).user; // Hacky way to get user if it's in the combined state, or use auth store
+    // Better to check auth store directly or pass user
+    
+    // For now, let's limit guest nodes
+    if (!state.activeCanvasId && state.nodes.length >= 10) {
+      (state as any).setErrorBanner?.("Guest limit reached: 10 nodes. Sign in to create larger workflows.");
+      return;
+    }
+
     const command = createAddNodeCommand(node);
     set((state) => ({
       ...command.do(state),

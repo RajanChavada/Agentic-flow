@@ -2,15 +2,20 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { LogIn, User, LogOut, ChevronDown } from "lucide-react";
+import { LogIn, User, LogOut, ChevronDown, CreditCard } from "lucide-react";
 import { useAuthStore, useUser } from "@/store/useAuthStore";
 import { useProfile } from "@/store/useProfileStore";
+import { useSubscriptionStore } from "@/store/useSubscriptionStore";
 
 export default function NavProfile() {
   const user = useUser();
   const profile = useProfile();
+  const { stripeCustomerId } = useSubscriptionStore();
   const [open, setOpen] = useState(false);
+  const [managingSubscription, setManagingSubscription] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -21,6 +26,28 @@ export default function NavProfile() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  const handleManageSubscription = async () => {
+    if (!stripeCustomerId) {
+      setOpen(false);
+      return;
+    }
+
+    setManagingSubscription(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/stripe/create-portal-session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stripeCustomerId }),
+      });
+      const { url } = await res.json();
+      window.location.href = url;
+    } catch (error) {
+      console.error("Failed to create portal session:", error);
+      setManagingSubscription(false);
+      setOpen(false);
+    }
+  };
 
   if (!user) {
     return (
@@ -69,6 +96,20 @@ export default function NavProfile() {
           className="absolute right-0 top-full mt-1 min-w-[180px] rounded-lg border border-border bg-background py-1 shadow-lg z-50"
           role="menu"
         >
+          {stripeCustomerId && (
+            <button
+              onClick={() => {
+                setOpen(false);
+                handleManageSubscription();
+              }}
+              disabled={managingSubscription}
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-left outline-none transition hover:bg-muted/50 disabled:opacity-50"
+              role="menuitem"
+            >
+              <CreditCard className="h-4 w-4" />
+              {managingSubscription ? "Opening…" : "Manage subscription"}
+            </button>
+          )}
           <Link
             href="/settings/profile"
             onClick={() => setOpen(false)}

@@ -9,6 +9,8 @@ import CanvasesInfoModal from "@/components/CanvasesInfoModal";
 import ShareWorkflowModal from "@/components/ShareWorkflowModal";
 import NavProfile from "@/components/NavProfile";
 import { supabase } from "@/lib/supabase";
+import { useSubscriptionStore } from "@/store/useSubscriptionStore";
+import { useIsAtCanvasLimit, useGate } from "@/hooks/useGate";
 import type { Canvas } from "@/types/workflow";
 
 function formatRelativeTime(dateStr: string): string {
@@ -28,6 +30,9 @@ function formatRelativeTime(dateStr: string): string {
 
 export default function CanvasesPage() {
   const user = useUser();
+  const { fetchSubscription } = useSubscriptionStore();
+  const { isGated: shareGated } = useGate("share_links");
+
   const [canvases, setCanvases] = useState<Canvas[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -37,10 +42,19 @@ export default function CanvasesPage() {
   const [deletingCanvasId, setDeletingCanvasId] = useState<string | null>(null);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [shareCanvas, setShareCanvas] = useState<Canvas | null>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [upgradeTrigger, setUpgradeTrigger] = useState<"canvas_limit" | "share_links">("canvas_limit");
 
   useEffect(() => {
     useAuthStore.getState().init();
   }, []);
+
+  // Load subscription when user is available
+  useEffect(() => {
+    if (user) {
+      fetchSubscription(user.id);
+    }
+  }, [user, fetchSubscription]);
 
   useEffect(() => {
     if (!user) {
@@ -128,7 +142,6 @@ export default function CanvasesPage() {
 
       setDeletingCanvasId(canvas.id);
 
-      // Delete workflows in this canvas first (otherwise they become orphaned)
       const { error: workflowsError } = await supabase
         .from("workflows")
         .delete()
@@ -159,6 +172,15 @@ export default function CanvasesPage() {
 
   const handleCreateCanvas = async () => {
     if (!user) return;
+
+    // Check canvas limit before creating
+    const currentCount = canvases.length;
+    if (useSubscriptionStore.getState().isAtCanvasLimit(currentCount)) {
+      setUpgradeTrigger("canvas_limit");
+      setShowUpgrade(true);
+      return;
+    }
+
     setCreating(true);
     const name = newName.trim() || "Untitled Canvas";
 
@@ -177,6 +199,15 @@ export default function CanvasesPage() {
     setNewName("");
     setCreating(false);
     window.location.href = `/editor/${data.id}`;
+  };
+
+  const handleShareClick = (canvas: Canvas) => {
+    if (shareGated) {
+      setUpgradeTrigger("share_links");
+      setShowUpgrade(true);
+      return;
+    }
+    setShareCanvas(canvas);
   };
 
   return (
@@ -351,7 +382,7 @@ export default function CanvasesPage() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setShareCanvas(canvas);
+                        handleShareClick(canvas);
                       }}
                       title="Share canvas"
                       className="rounded p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
@@ -401,13 +432,38 @@ export default function CanvasesPage() {
           </div>
         )}
         <CanvasesInfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
-        {user && (
-          <ShareWorkflowModal
-            isOpen={!!shareCanvas}
-            onClose={() => setShareCanvas(null)}
-            canvasId={shareCanvas?.id}
-            canvasName={shareCanvas?.name}
-          />
+        <ShareWorkflowModal
+          isOpen={!!shareCanvas}
+          onClose={() => setShareCanvas(null)}
+          canvasId={shareCanvas?.id}
+          canvasName={shareCanvas?.name}
+        />
+        {/* Upgrade Modal */}
+        {showUpgrade && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+              <h2 className="text-lg font-semibold text-gray-900 mb-1">{upgradeTrigger === "canvas_limit" ? "Canvas limit reached" : "Upgrade required"}</h2>
+              <p className="text-sm text-gray-500 mb-6">
+                {upgradeTrigger === "canvas_limit"
+                  ? `You've reached your maximum number of saved canvases. Upgrade to create more workflows.`
+                  : "This feature requires a paid subscription. Upgrade to unlock."}
+              </p>
+              <div className="flex flex-col gap-3">
+                <a
+                  href="/pricing"
+                  className="w-full rounded-md bg-blue-600 px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-700 transition"
+                >
+                  View Pricing
+                </a>
+                <button
+                  onClick={() => setShowUpgrade(false)}
+                  className="text-sm text-gray-400 hover:text-gray-600 transition"
+                >
+                  Maybe later
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </main>

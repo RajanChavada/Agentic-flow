@@ -34,6 +34,7 @@ from quick_estimate import quick_estimate
 from pricing_registry import registry
 from tool_registry import tool_registry
 from import_adapters import get_adapter
+from routes.stripe import router as stripe_router
 
 app = FastAPI(
     title="Neurovn",
@@ -49,6 +50,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Stripe Routes ───────────────────────────────────────────────
+app.include_router(stripe_router)
 
 @app.middleware("http")
 async def limit_memory(request, call_next):

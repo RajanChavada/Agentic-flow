@@ -21,6 +21,7 @@ import {
   useEstimation,
 } from "@/store/useWorkflowStore";
 import { useUser, useAuthStore } from "@/store/useAuthStore";
+import { useGate } from "@/hooks/useGate";
 import type {
   WorkflowEstimation,
   NodeEstimation,
@@ -767,6 +768,11 @@ export default function ExportDropdown({ isDark }: Props) {
   const user = useUser();
   const { openAuthModal } = useAuthStore();
 
+  // Paywall gate for advanced exports
+  const { isGated: exportAdvancedGated } = useGate("export_advanced");
+  // Paywall gate for code export (LangGraph)
+  const { isGated: exportCodeGated } = useGate("export_code");
+
   const handleToggle = () => {
     if (!user) {
       openAuthModal({
@@ -1020,9 +1026,9 @@ export default function ExportDropdown({ isDark }: Props) {
             {/* LangGraph Python Export */}
             <button
               onClick={handleLangGraphClick}
-              disabled={nodes.length === 0 || exporting === "langgraph"}
+              disabled={nodes.length === 0 || exporting === "langgraph" || exportCodeGated}
               className={`${btnBase} disabled:opacity-40`}
-              title={nodes.length === 0 ? "Add nodes to the canvas first" : "Export as a LangGraph Python scaffold"}
+              title={nodes.length === 0 ? "Add nodes to the canvas first" : exportCodeGated ? "Upgrade to Pro for code export" : "Export as a LangGraph Python scaffold"}
             >
               {exporting === "langgraph"
                 ? "Generating…"
@@ -1036,15 +1042,17 @@ export default function ExportDropdown({ isDark }: Props) {
             </p>
             <button
               onClick={exportPNG}
-              disabled={nodes.length === 0 || exporting === "png"}
+              disabled={nodes.length === 0 || exporting === "png" || exportAdvancedGated}
               className={`${btnBase} disabled:opacity-40`}
+              title={exportAdvancedGated ? "Upgrade to Pro for image exports" : ""}
             >
               {exporting === "png" ? "Exporting…" : <><Image className="inline w-3.5 h-3.5 mr-1" /> Canvas as PNG</>}
             </button>
             <button
               onClick={exportSVG}
-              disabled={nodes.length === 0 || exporting === "svg"}
+              disabled={nodes.length === 0 || exporting === "svg" || exportAdvancedGated}
               className={`${btnBase} disabled:opacity-40`}
+              title={exportAdvancedGated ? "Upgrade to Pro for image exports" : ""}
             >
               {exporting === "svg" ? "Exporting…" : <><Palette className="inline w-3.5 h-3.5 mr-1" /> Canvas as SVG</>}
             </button>
@@ -1056,9 +1064,9 @@ export default function ExportDropdown({ isDark }: Props) {
             </p>
             <button
               onClick={exportDashboardPNG}
-              disabled={!hasEstimation || exporting === "dashboard-png"}
+              disabled={!hasEstimation || exporting === "dashboard-png" || exportAdvancedGated}
               className={`${btnBase} disabled:opacity-40`}
-              title={!hasEstimation ? "Run an estimation and open the dashboard first" : "Captures the full dashboard as a high-res image"}
+              title={exportAdvancedGated ? "Upgrade to Pro for dashboard exports" : (!hasEstimation ? "Run an estimation and open the dashboard first" : "Captures the full dashboard as a high-res image")}
             >
               {exporting === "dashboard-png" ? "Capturing…" : <><Camera className="inline w-3.5 h-3.5 mr-1" /> Dashboard as PNG</>}
             </button>
@@ -1070,17 +1078,17 @@ export default function ExportDropdown({ isDark }: Props) {
             </p>
             <button
               onClick={exportPDF}
-              disabled={!hasEstimation || exporting === "pdf"}
+              disabled={!hasEstimation || exporting === "pdf" || exportAdvancedGated}
               className={`${btnBase} disabled:opacity-40`}
-              title={!hasEstimation ? "Run an estimation first" : "Professional PDF with tables and sections"}
+              title={exportAdvancedGated ? "Upgrade to Pro for PDF reports" : (!hasEstimation ? "Run an estimation first" : "Professional PDF with tables and sections")}
             >
               {exporting === "pdf" ? "Generating…" : <><FileText className="inline w-3.5 h-3.5 mr-1" /> Report as PDF</>}
             </button>
             <button
               onClick={exportCSV}
-              disabled={!hasEstimation}
+              disabled={!hasEstimation || exportAdvancedGated}
               className={`${btnBase} disabled:opacity-40`}
-              title={!hasEstimation ? "Run an estimation first" : "Node breakdown table — open in Excel / Google Sheets"}
+              title={exportAdvancedGated ? "Upgrade to Pro for CSV export" : (!hasEstimation ? "Run an estimation first" : "Node breakdown table — open in Excel / Google Sheets")}
             >
               <Table2 className="inline w-3.5 h-3.5 mr-1" /> Breakdown as CSV
             </button>
@@ -1094,9 +1102,9 @@ export default function ExportDropdown({ isDark }: Props) {
             </button>
             <button
               onClick={exportMarkdown}
-              disabled={!hasEstimation}
+              disabled={!hasEstimation || exportAdvancedGated}
               className={`${btnBase} disabled:opacity-40`}
-              title={!hasEstimation ? "Run an estimation first" : ""}
+              title={exportAdvancedGated ? "Upgrade to Pro for Markdown reports" : (!hasEstimation ? "Run an estimation first" : "")}
             >
               <FileCode className="inline w-3.5 h-3.5 mr-1" /> Report as Markdown
             </button>

@@ -174,7 +174,7 @@ export default function ComparisonDrawer() {
                           }`}
                         >
                           {m.format(val)}
-                          {isBest && <Trophy className="inline w-3.5 h-3.5 ml-1 text-amber-500" />}
+                          {isBest && <Trophy className="inline w-3.5 h-3.5 ml-1 text-primary" />}
                         </td>
                       );
                     })}
@@ -216,7 +216,7 @@ export default function ComparisonDrawer() {
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="latency" fill="#f59e0b" name="Latency (s)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="latency" fill="var(--primary)" name="Latency (s)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

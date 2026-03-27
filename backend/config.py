@@ -20,3 +20,20 @@ PORT: int = int(os.getenv("PORT", "8000"))
 OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
 SCHEMA_GEN_MODEL: str = os.getenv("SCHEMA_GEN_MODEL", "gpt-4o-mini")
 SCAFFOLD_MODEL: str = os.getenv("SCAFFOLD_MODEL", "gpt-4o-mini")
+
+# ── Stripe configuration ─────────────────────────────────────────────
+STRIPE_SECRET_KEY: Optional[str] = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET: Optional[str] = os.getenv("STRIPE_WEBHOOK_SECRET")
+STRIPE_STARTER_PRICE_ID: Optional[str] = os.getenv("STRIPE_STARTER_PRICE_ID")
+STRIPE_PRO_PRICE_ID: Optional[str] = os.getenv("STRIPE_PRO_PRICE_ID")
+STRIPE_CUSTOMER_PORTAL_ID: Optional[str] = os.getenv("STRIPE_CUSTOMER_PORTAL_ID")
+
+# Supabase
+SUPABASE_SERVICE_ROLE_KEY: Optional[str] = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+SUPABASE_URL: str = os.getenv("SUPABASE_URL", "https://your-project.supabase.co")
+
+# Frontend URL (for Stripe redirects)
+FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+# Frontend URL for Stripe redirects
+FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")

@@ -21,6 +21,7 @@ import {
   useScalingParams,
   useActualStats,
 } from "@/store/useWorkflowStore";
+import { useGate } from "@/hooks/useGate";
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { OverviewTab } from "./OverviewTab";
@@ -106,6 +107,10 @@ export default function EstimatePanel({
   const setActualStats = useWorkflowStore((s) => s.setActualStats);
   const clearActualStats = useWorkflowStore((s) => s.clearActualStats);
   const isDark = theme === "dark";
+
+  const { isGated: scalingGated } = useGate("scaling_analysis");
+  const { isGated: breakdownGated } = useGate("export_advanced"); // detailed breakdown is a pro feature
+  const { isGated: fullDashboardGated } = useGate("full_dashboard");
 
   /* ── Fullscreen/Tab State ─────────────────────────────── */
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -430,7 +435,9 @@ export default function EstimatePanel({
                 <TabsList className={`flex min-w-[400px] w-full justify-start p-1.5 rounded-xl border ${isDark ? "bg-slate-900 border-slate-700" : "bg-[#f5eeea] border-gray-200"}`}>
                   <TabsTrigger value="overview" className="text-xs sm:text-sm h-full flex-1">Overview</TabsTrigger>
                   <TabsTrigger value="breakdown" className="text-xs sm:text-sm h-full flex-1">Detailed Breakdown</TabsTrigger>
-                  <TabsTrigger value="scaling" className="text-xs sm:text-sm h-full flex-1">Scaling & Sensitivity</TabsTrigger>
+                  {!scalingGated && (
+                    <TabsTrigger value="scaling" className="text-xs sm:text-sm h-full flex-1">Scaling & Sensitivity</TabsTrigger>
+                  )}
                 </TabsList>
               </div>
 
@@ -442,17 +449,20 @@ export default function EstimatePanel({
                   isFullscreen={isFullscreen}
                   heroTextClass={heroTextClass}
                   onShowInfo={setInfoModal}
+                  fullDashboardGated={fullDashboardGated}
                 />
-                <HealthSection
-                  estimation={estimation}
-                  breakdownWithType={breakdownWithType}
-                  nodes={nodes}
-                  isDark={isDark}
-                  collapsed={sectionCollapsed.health}
-                  onToggle={() => toggleSection("health")}
-                  onShowInfo={setInfoModal}
-                />
-                {estimation.detected_cycles && estimation.detected_cycles.length > 0 && (
+                {!fullDashboardGated && (
+                  <HealthSection
+                    estimation={estimation}
+                    breakdownWithType={breakdownWithType}
+                    nodes={nodes}
+                    isDark={isDark}
+                    collapsed={sectionCollapsed.health}
+                    onToggle={() => toggleSection("health")}
+                    onShowInfo={setInfoModal}
+                  />
+                )}
+                {!fullDashboardGated && estimation.detected_cycles && estimation.detected_cycles.length > 0 && (
                   <CyclesSection
                     estimation={estimation}
                     isDark={isDark}
@@ -460,17 +470,25 @@ export default function EstimatePanel({
                     onToggle={() => toggleSection("cycles")}
                   />
                 )}
-                <ObservabilitySection
-                  estimation={estimation}
-                  actualStats={actualStats}
-                  setActualStats={setActualStats}
-                  clearActualStats={clearActualStats}
-                  chartData={chartData}
-                  activeBreakdown={activeBreakdown}
-                  isDark={isDark}
-                  collapsed={sectionCollapsed.observability}
-                  onToggle={() => toggleSection("observability")}
-                />
+                {!breakdownGated && !fullDashboardGated && (
+                  <ObservabilitySection
+                    estimation={estimation}
+                    actualStats={actualStats}
+                    setActualStats={setActualStats}
+                    clearActualStats={clearActualStats}
+                    chartData={chartData}
+                    activeBreakdown={activeBreakdown}
+                    isDark={isDark}
+                    collapsed={sectionCollapsed.observability}
+                    onToggle={() => toggleSection("observability")}
+                  />
+                )}
+                {fullDashboardGated && (
+                  <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center">
+                    <p className="text-gray-500">Full dashboard features require a paid subscription.</p>
+                    <a href="/pricing" className="mt-2 inline-block text-blue-600 hover:underline">View pricing</a>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="breakdown" className="space-y-6 outline-none focus:outline-none focus:ring-0">
@@ -486,30 +504,32 @@ export default function EstimatePanel({
                 />
               </TabsContent>
 
-              <TabsContent value="scaling" className="space-y-8 outline-none focus:outline-none focus:ring-0">
-                <ScalingTab
-                  estimation={estimation}
-                  scalingParams={scalingParams}
-                  setRunsPerDay={setRunsPerDay}
-                  setLoopIntensity={setLoopIntensity}
-                  scalingLoading={scalingLoading}
-                  isDark={isDark}
-                  onShowInfo={setInfoModal}
-                />
-                <div className={`pt-6 border-t ${isDark ? "border-slate-800" : "border-gray-200"}`}>
-                  <ObservabilitySection
+              {!scalingGated && (
+                <TabsContent value="scaling" className="space-y-8 outline-none focus:outline-none focus:ring-0">
+                  <ScalingTab
                     estimation={estimation}
-                    actualStats={actualStats}
-                    setActualStats={setActualStats}
-                    clearActualStats={clearActualStats}
-                    chartData={chartData}
-                    activeBreakdown={activeBreakdown}
+                    scalingParams={scalingParams}
+                    setRunsPerDay={setRunsPerDay}
+                    setLoopIntensity={setLoopIntensity}
+                    scalingLoading={scalingLoading}
                     isDark={isDark}
-                    collapsed={false}
-                    onToggle={() => { }}
+                    onShowInfo={setInfoModal}
                   />
-                </div>
-              </TabsContent>
+                  <div className={`pt-6 border-t ${isDark ? "border-slate-800" : "border-gray-200"}`}>
+                    <ObservabilitySection
+                      estimation={estimation}
+                      actualStats={actualStats}
+                      setActualStats={setActualStats}
+                      clearActualStats={clearActualStats}
+                      chartData={chartData}
+                      activeBreakdown={activeBreakdown}
+                      isDark={isDark}
+                      collapsed={false}
+                      onToggle={() => { }}
+                    />
+                  </div>
+                </TabsContent>
+              )}
             </Tabs>
           </div>{/* end scrollable body */}
         </div>
