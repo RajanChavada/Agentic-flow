@@ -135,9 +135,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       }
 
-      // When user signs out, close auth modal so we don't prompt re-sign-in
-      if (!session?.user) {
-        set({ authModalOpen: false, authModalReason: null, authModalCallback: null });
+      // Only close the modal on transition to a user session (meaning success)
+      if (session?.user && prev.authModalOpen) {
+        set({ authModalOpen: false, authModalReason: null });
       }
     });
 

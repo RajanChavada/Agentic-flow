@@ -17,6 +17,7 @@ import {
     TrendingUp
 } from "lucide-react";
 import type { WorkflowEstimation, ScalingProjection } from '@/types/workflow';
+import { useGate } from "@/hooks/useGate";
 import {
     ResponsiveContainer,
     PieChart,
@@ -57,6 +58,9 @@ export function ScalingTab({
         loopIntensity: number;
         projection: ScalingProjection;
     } | null>(null);
+
+    // Paywall gate for scenario comparison (Pro feature)
+    const { isGated: scenarioGated } = useGate("scenario_comparison");
 
     const saveBaseline = () => {
         if (estimation.scaling_projection && scalingParams.runsPerDay) {
@@ -303,7 +307,7 @@ export function ScalingTab({
                             <Rocket className="w-4 h-4 text-blue-500" /> Scenario Comparison
                         </h3>
                         <div className="flex items-center gap-2">
-                            {estimation.scaling_projection && (
+                            {estimation.scaling_projection && !scenarioGated && (
                                 <button
                                     onClick={baseline ? clearBaseline : saveBaseline}
                                     className={`text-[10px] px-2.5 py-1 rounded font-medium flex items-center gap-1 transition-colors ${baseline
@@ -359,7 +363,7 @@ export function ScalingTab({
                                     <div className={`text-2xl font-black font-mono ${isDark ? "text-white" : "text-slate-900"}`}>
                                         ${estimation.scaling_projection.monthly_cost.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                                     </div>
-                                    {baseline && (
+                                    {baseline && !scenarioGated && (
                                         <div className={`text-xs font-bold flex items-center gap-1 mt-2 px-2 py-1 rounded w-max ${estimation.scaling_projection.monthly_cost > baseline.projection.monthly_cost ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"}`}>
                                             {estimation.scaling_projection.monthly_cost > baseline.projection.monthly_cost ? <TrendingUp className="w-3 h-3" /> : <Rocket className="w-3 h-3" />}
                                             {estimation.scaling_projection.monthly_cost > baseline.projection.monthly_cost ? "+" : ""}
@@ -377,7 +381,7 @@ export function ScalingTab({
                             </div>
 
                             {/* Baseline Reference Row */}
-                            {baseline && (
+                            {baseline && !scenarioGated && (
                                 <div className={`flex items-center justify-between p-2 px-3 rounded text-xs ${isDark ? "bg-indigo-900/20 text-indigo-300" : "bg-indigo-50 text-indigo-700"}`}>
                                     <div className="font-semibold">Baseline config:</div>
                                     <div className="font-mono">{baseline.runsPerDay} runs/day @ {baseline.loopIntensity}x loops</div>

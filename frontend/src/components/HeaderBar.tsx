@@ -49,6 +49,7 @@ import PublishModal from "./marketplace/PublishModal";
 import ShareWorkflowModal from "./ShareWorkflowModal";
 import { useAutoLayout } from "@/hooks/useAutoLayout";
 import { openTutorial } from "@/hooks/useTutorial";
+import { useGate } from "@/hooks/useGate";
 import { nodesToPayload, edgesToPayload } from "@/store/utils";
 import { supabase } from "@/lib/supabase";
 import { toPng } from "html-to-image";
@@ -74,6 +75,10 @@ export default function HeaderBar() {
   const autoLayout = useAutoLayout();
   const [overflowOpen, setOverflowOpen] = useState(false);
   const overflowRef = useRef<HTMLDivElement>(null);
+
+  // Paywall gates
+  const { isGated: shareGated } = useGate("share_links");
+  const { isGated: marketplaceGated } = useGate("marketplace_publish");
 
 
   // Auth
@@ -357,6 +362,13 @@ export default function HeaderBar() {
   };
 
   const handleEstimate = async () => {
+    if (!user) {
+      openAuthModal({
+        reason: "Sign in to run workflows and generate cost estimates.",
+      });
+      return;
+    }
+
     const hasStart = nodes.some((n) => n.type === "startNode");
     const hasFinish = nodes.some((n) => n.type === "finishNode");
     if (!hasStart || !hasFinish) {
@@ -549,7 +561,7 @@ export default function HeaderBar() {
             </button>
 
             {/* Publish */}
-            {currentWorkflowId && user && (
+            {currentWorkflowId && user && !marketplaceGated && (
               <button
                 onClick={() => setIsPublishOpen(true)}
                 disabled={nodes.length === 0}
@@ -674,7 +686,7 @@ export default function HeaderBar() {
                   <LayoutDashboard className="w-4 h-4 shrink-0" /> Auto-layout
                 </button>
                 <div className={`my-1 border-t ${isDark ? "border-slate-700" : "border-gray-200"}`} />
-                {currentWorkflowId && user && (
+                {currentWorkflowId && user && !marketplaceGated && (
                   <button
                     onClick={() => { setIsPublishOpen(true); setOverflowOpen(false); }}
                     disabled={nodes.length === 0}
@@ -739,12 +751,11 @@ export default function HeaderBar() {
           <span className="hidden sm:inline">{isSaving ? "Saving…" : "Save"}</span>
         </button>
 
-        {/* Share — always visible when canvas + user */}
-        {activeCanvasId && user && (
+        {/* Share — visible when canvas + user + feature unlocked */}
+        {activeCanvasId && user && !shareGated && nodes.length > 0 && (
           <button
             onClick={() => setIsShareOpen(true)}
-            disabled={nodes.length === 0}
-            className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
+            className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
               ? "border-sky-700 text-sky-300 hover:bg-sky-800/40"
               : "border-sky-300 text-sky-700 hover:bg-sky-50"
               }`}

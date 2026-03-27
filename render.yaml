@@ -11,3 +11,19 @@ services:
         value: http://localhost:3000,https://neurovn.vercel.app,https://neurovn-alpha.vercel.app
       - key: PORT
         value: "10000"
+      # Stripe configuration
+      - key: STRIPE_SECRET_KEY
+        fromDatabase: {}  # Set in Render dashboard: Environment → Add Variable
+      - key: STRIPE_WEBHOOK_SECRET
+        fromDatabase: {}  # Set after webhook endpoint creation
+      - key: STRIPE_STARTER_PRICE_ID
+        fromDatabase: {}  # Set after creating Starter product
+      - key: STRIPE_PRO_PRICE_ID
+        fromDatabase: {}  # Set after creating Pro product
+      - key: STRIPE_CUSTOMER_PORTAL_ID
+        fromDatabase: {}  # Optional: configure Customer Portal
+      # Supabase
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        fromDatabase: {}  # From Supabase dashboard → Settings → Service Role
+      - key: SUPABASE_URL
+        value: https://your-project.supabase.co  # Replace with actual URL

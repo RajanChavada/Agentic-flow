@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import SignOutToast from "@/components/SignOutToast";
+import AuthModal from "@/components/AuthModal";
 import ProfileOnboardingGate from "@/components/ProfileOnboardingGate";
 
 const geistSans = Geist({
@@ -30,6 +31,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        <AuthModal />
         <SignOutToast />
         <ProfileOnboardingGate />
       </body>

@@ -14,6 +14,8 @@ interface OverviewTabProps {
     isFullscreen: boolean;
     heroTextClass: string;
     onShowInfo?: (info: { title: string; content: React.ReactNode }) => void;
+    fullDashboardGated?: boolean;
+    onUpgrade?: () => void;
 }
 
 const PIE_COLOURS = ["#3b82f6", "#f59e0b", "#ef4444", "#22c55e", "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16"];

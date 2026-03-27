@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Loader2,
   Github,
+  Check,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore, useAuthModalOpen, useAuthModalReason } from "@/store/useAuthStore";
@@ -164,59 +165,65 @@ export default function AuthModal() {
   );
 
   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div
-        className={`relative w-full max-w-sm rounded-xl border shadow-2xl p-6 max-h-[90vh] overflow-y-auto ${isDark
-          ? "border-slate-700 bg-slate-900 text-slate-100"
-          : "border-gray-200 bg-white text-gray-800"
-          }`}
+        className={`relative w-full max-w-sm rounded-[2rem] border shadow-2xl p-8 max-h-[95vh] overflow-y-auto ${isDark
+          ? "border-slate-800 bg-slate-900/90 text-slate-100"
+          : "border-border/60 bg-white/90 text-foreground"
+          } backdrop-blur-xl transition-all duration-300 scale-100 items-center`}
       >
         {/* Close button */}
         <button
           onClick={closeAuthModal}
-          className={`absolute top-3 right-3 p-1 rounded-md transition ${isDark ? "hover:bg-slate-800 text-slate-400" : "hover:bg-gray-100 text-gray-400"
+          className={`absolute top-6 right-6 p-2 rounded-xl transition ${isDark ? "hover:bg-slate-800 text-slate-400" : "hover:bg-secondary text-muted-foreground"
             }`}
         >
-          <X className="w-4 h-4" />
+          <X className="w-5 h-5" />
         </button>
 
         {/* Header */}
-        <h2 className="text-lg font-bold mb-1">
-          {mode === "signin" ? (
-            <><LogIn className="inline w-5 h-5 mr-1.5 -mt-0.5" />Sign In</>
-          ) : (
-            <><UserPlus className="inline w-5 h-5 mr-1.5 -mt-0.5" />Create Account</>
+        <div className="text-center mb-8">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-primary-foreground shadow-lg mb-4">
+            NV
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight">
+            {mode === "signin" ? "Sign In" : "Join Neurovn"}
+          </h2>
+          {reason && (
+            <p className="mt-2 text-sm text-balance text-muted-foreground px-2">
+              {reason}
+            </p>
           )}
-        </h2>
-
-        {reason && (
-          <p className={`text-xs mb-3 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
-            {reason}
-          </p>
-        )}
+        </div>
 
         {/* Error banner */}
         {error && (
           <div
-            className={`flex items-start gap-2 rounded-md border px-3 py-2 text-xs mb-3 ${isDark
-              ? "border-red-800 bg-red-900/30 text-red-300"
-              : "border-red-200 bg-red-50 text-red-700"
+            className={`flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm mb-6 ${isDark
+              ? "border-red-900/50 bg-red-900/20 text-red-400"
+              : "border-red-100 bg-red-50 text-red-600"
               }`}
           >
-            <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {/* Confirmation sent */}
         {confirmationSent ? (
-          <div className="text-center py-4">
-            <p className={`text-sm ${isDark ? "text-green-400" : "text-green-600"}`}>
-              Check your email for a confirmation link!
+          <div className="text-center py-6">
+            <div className="h-16 w-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
+            </div>
+            <p className={`text-base font-semibold ${isDark ? "text-green-400" : "text-green-700"}`}>
+              Check your inbox!
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              We've sent a confirmation link to your email.
             </p>
             <button
               onClick={() => { setMode("signin"); reset(); }}
-              className="mt-3 text-xs text-blue-500 underline"
+              className="mt-6 text-sm font-bold text-primary hover:underline"
             >
               Back to Sign In
             </button>
@@ -224,81 +231,95 @@ export default function AuthModal() {
         ) : (
           <>
             {/* ── OAuth providers ────────────────────────── */}
-            <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-1 gap-3">
               {OAUTH_PROVIDERS.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => handleOAuth(p.id)}
                   disabled={oauthLoading !== null}
-                  className={`flex items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${isDark
-                    ? "border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700"
-                    : `${p.bgClass} ${p.hoverClass}`
+                  className={`flex items-center justify-center gap-3 rounded-2xl border px-4 py-3 text-sm font-bold transition-all duration-200 disabled:opacity-50 ${isDark
+                    ? "border-slate-700 bg-slate-800 hover:bg-slate-700 text-white"
+                    : "border-border/60 bg-white hover:bg-secondary text-foreground"
                     }`}
                 >
                   {oauthLoading === p.id ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
-                    p.icon
+                    p.id === "google" ? p.icon : <Github className="w-5 h-5" />
                   )}
                   Continue with {p.label}
                 </button>
               ))}
             </div>
 
-            <Divider text="or use email" />
+            <Divider text="or with email" />
 
             {/* ── Email / password form ──────────────────── */}
-            <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-              <label className="flex flex-col gap-1">
-                <span className={`text-xs font-medium ${isDark ? "text-slate-300" : "text-gray-600"}`}>
-                  Email
-                </span>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={`rounded-md border px-3 py-2 text-sm outline-none transition ${isDark
-                    ? "border-slate-600 bg-slate-800 text-slate-100 focus:border-blue-500"
-                    : "border-gray-300 bg-white text-gray-800 focus:border-blue-500"
-                    }`}
-                  placeholder="you@example.com"
-                />
-              </label>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className={`w-full rounded-2xl border px-4 py-3 text-sm outline-none transition-all duration-200 ${isDark
+                      ? "border-slate-700 bg-slate-800/50 focus:border-primary/50 focus:ring-1 focus:ring-primary/50"
+                      : "border-border/60 bg-secondary/30 focus:border-primary/50 focus:ring-1 focus:ring-primary/50"
+                      }`}
+                    placeholder="you@example.com"
+                  />
+                </div>
 
-              <label className="flex flex-col gap-1">
-                <span className={`text-xs font-medium ${isDark ? "text-slate-300" : "text-gray-600"}`}>
-                  Password
-                </span>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={`rounded-md border px-3 py-2 text-sm outline-none transition ${isDark
-                    ? "border-slate-600 bg-slate-800 text-slate-100 focus:border-blue-500"
-                    : "border-gray-300 bg-white text-gray-800 focus:border-blue-500"
-                    }`}
-                  placeholder="Min 6 characters"
-                />
-              </label>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={`w-full rounded-2xl border px-4 py-3 text-sm outline-none transition-all duration-200 ${isDark
+                      ? "border-slate-700 bg-slate-800/50 focus:border-primary/50 focus:ring-1 focus:ring-primary/50"
+                      : "border-border/60 bg-secondary/30 focus:border-primary/50 focus:ring-1 focus:ring-primary/50"
+                      }`}
+                    placeholder="Enter your password"
+                  />
+                </div>
+              </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
+                className="mt-2 relative group overflow-hidden rounded-2xl bg-primary px-4 py-4 text-sm font-bold text-primary-foreground transition-all duration-300 hover:shadow-xl active:scale-95 disabled:opacity-50"
               >
-                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                {mode === "signin" ? "Sign In" : "Create Account"}
+                <div className="flex items-center justify-center gap-2">
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    mode === "signin" ? <LogIn className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />
+                  )}
+                  <span>{mode === "signin" ? "Sign In" : "Start Designing"}</span>
+                </div>
               </button>
 
-              <p className={`text-xs text-center ${isDark ? "text-slate-400" : "text-gray-500"}`}>
-                {mode === "signin" ? "Don't have an account?" : "Already have an account?"}{" "}
-                <button type="button" onClick={switchMode} className="text-blue-500 underline">
-                  {mode === "signin" ? "Sign Up" : "Sign In"}
-                </button>
-              </p>
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">
+                  {mode === "signin" ? "New to Neurovn?" : "Already have an account?"}{" "}
+                  <button 
+                    type="button" 
+                    onClick={switchMode} 
+                    className="font-bold text-primary hover:underline transition-all"
+                  >
+                    {mode === "signin" ? "Sign Up" : "Sign In"}
+                  </button>
+                </p>
+              </div>
             </form>
           </>
         )}
