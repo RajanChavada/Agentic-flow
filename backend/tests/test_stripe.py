@@ -44,6 +44,9 @@ def client(monkeypatch, set_env):
         if mod.startswith("routes.stripe") or mod == "main":
             del sys.modules[mod]
 
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from main import app
     return TestClient(app)
 
