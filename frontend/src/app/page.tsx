@@ -18,7 +18,6 @@ import {
   ProvidersStrip,
 } from "@/components/landing/ScrollJourney";
 import { useAuthStore } from "@/store/useAuthStore";
-import AuthModal from "@/components/AuthModal";
 import NavProfile from "@/components/NavProfile";
 import { FooterSection } from "@/components/ui/footer-section";
 
@@ -290,8 +289,6 @@ export default function LandingPage() {
 
       {/* ── Footer ─────────────────────────────────────── */}
       <FooterSection />
-
-      <AuthModal />
     </main>
   );
 }

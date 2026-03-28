@@ -18,7 +18,6 @@ import { Copy, Loader2, LogIn, Sun, MoonStar } from "lucide-react";
 import { getShareByToken, copyWorkflowToCanvas, type ShareSnapshot, type CanvasShareSnapshot } from "@/lib/shareWorkflows";
 import { useAuthStore, useUser } from "@/store/useAuthStore";
 import { useWorkflowStore, useUIState } from "@/store/useWorkflowStore";
-import AuthModal from "@/components/AuthModal";
 import WorkflowNode from "@/components/nodes/WorkflowNode";
 import BlankBoxNode from "@/components/nodes/BlankBoxNode";
 import TextNode from "@/components/nodes/TextNode";
@@ -307,8 +306,7 @@ function SharePageContent() {
         </div>
       </div>
 
-      <AuthModal />
-    </main>
+        </main>
   );
 }
 

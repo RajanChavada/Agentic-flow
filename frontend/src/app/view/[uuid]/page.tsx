@@ -18,7 +18,6 @@ import { Loader2, Copy, LogIn, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore, useUser } from "@/store/useAuthStore";
 import { useWorkflowStore, useUIState } from "@/store/useWorkflowStore";
-import AuthModal from "@/components/AuthModal";
 import { nodeTypes } from "@/components/nodes";
 import { edgeTypes } from "@/components/edges";
 import type { Node, Edge } from "@xyflow/react";
@@ -259,8 +258,7 @@ function ViewCanvasContent() {
       </div>
     </div>
 
-    <AuthModal />
-  </main>;
+    </main>;
 }
 
 export default function ViewCanvasPage() {

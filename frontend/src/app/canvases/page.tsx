@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Plus, LayoutGrid, Loader2, LogIn, UserPlus, Trash2, Info, Share2 } from "lucide-react";
 import { useAuthStore, useUser } from "@/store/useAuthStore";
-import AuthModal from "@/components/AuthModal";
 import CanvasesInfoModal from "@/components/CanvasesInfoModal";
 import ShareWorkflowModal from "@/components/ShareWorkflowModal";
 import NavProfile from "@/components/NavProfile";
@@ -308,8 +307,7 @@ export default function CanvasesPage() {
             >
               Continue to editor without signing in
             </Link>
-            <AuthModal />
-          </div>
+            </div>
         ) : loading ? (
           <div className="mt-12 flex justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

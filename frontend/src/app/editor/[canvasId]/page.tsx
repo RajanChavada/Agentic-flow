@@ -13,7 +13,6 @@ import NodeConfigModal from "@/components/NodeConfigModal";
 import ErrorBanner from "@/components/ErrorBanner";
 import SuccessBanner from "@/components/SuccessBanner";
 import ComparisonDrawer from "@/components/ComparisonDrawer";
-import AuthModal from "@/components/AuthModal";
 import NameWorkflowModal from "@/components/NameWorkflowModal";
 import CanvasTutorialModal from "@/components/tutorial/CanvasTutorialModal";
 import TemplateLibraryOverlay from "@/components/marketplace/TemplateLibraryOverlay";
@@ -161,8 +160,7 @@ function EditorContent() {
       <EstimatePanel />
       <NodeConfigModal />
       <ComparisonDrawer />
-      <AuthModal />
-      <NameWorkflowModal />
+        <NameWorkflowModal />
       <CanvasTutorialModal />
       <TemplateLibraryOverlay />
     </div>

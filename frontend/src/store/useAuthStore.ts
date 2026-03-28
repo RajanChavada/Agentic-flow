@@ -137,7 +137,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Only close the modal on transition to a user session (meaning success)
       if (session?.user && prev.authModalOpen) {
-        set({ authModalOpen: false, authModalReason: null });
+        set({ authModalOpen: false, authModalReason: null, authModalCallback: null, postAuthAction: null });
       }
     });
 

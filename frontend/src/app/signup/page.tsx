@@ -4,7 +4,6 @@ import { useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
-import AuthModal from "@/components/AuthModal";
 import { Sparkles } from "lucide-react";
 
 function SignupForm() {

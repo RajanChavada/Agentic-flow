@@ -22,7 +22,6 @@ import type { UserMetrics } from "@/types/profile";
 import AvatarPicker from "@/components/profile/AvatarPicker";
 import MetricGauge from "@/components/profile/MetricGauge";
 import ActivityDonutChart from "@/components/profile/ActivityDonutChart";
-import AuthModal from "@/components/AuthModal";
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,30}$/;
 
@@ -184,8 +183,7 @@ export default function ProfileSettingsPage() {
   if (!user) {
     return (
       <main className="min-h-screen bg-background text-foreground">
-        <AuthModal />
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+          <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
           <p className="text-muted-foreground">Sign in to view your profile.</p>
           <button
             onClick={() =>
