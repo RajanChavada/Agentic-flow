@@ -248,7 +248,7 @@ export default function ProfileDashboardView({
                 </article>
               ))}
               {isOwner && pinned.length < 6 ? (
-                <div className="flex min-h-[170px] items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
+                <div className="flex min-h-[170px] items-center justify-center rounded-lg border border-dashed border-border p-4 text-center text-sm leading-relaxed text-muted-foreground">
                   Pin up to {6 - pinned.length} more canvases from My Canvases.
                 </div>
               ) : null}

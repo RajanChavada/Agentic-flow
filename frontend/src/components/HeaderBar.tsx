@@ -45,12 +45,12 @@ import ImportWorkflowModal from "./ImportWorkflowModal";
 import PullFromCanvasModal from "./PullFromCanvasModal";
 import ConfirmModal from "./ConfirmModal";
 import ExportDropdown from "./ExportDropdown";
+import MoreDropdown, { type MoreDropdownItem } from "./MoreDropdown";
 import PublishModal from "./marketplace/PublishModal";
 import ShareWorkflowModal from "./ShareWorkflowModal";
 import { useAutoLayout } from "@/hooks/useAutoLayout";
 import { openTutorial } from "@/hooks/useTutorial";
 import { useGate } from "@/hooks/useGate";
-import { nodesToPayload, edgesToPayload } from "@/store/utils";
 import { supabase } from "@/lib/supabase";
 import { recordEstimateRun } from "@/lib/profileInsights";
 import { toPng } from "html-to-image";
@@ -406,6 +406,25 @@ export default function HeaderBar() {
     await runEstimateForGraph(filteredNodes, filteredEdges);
   };
 
+  const desktopMoreItems: MoreDropdownItem[] = [
+    { section: "File operations" },
+    { label: "Import workflow", icon: Download, onClick: handleImport },
+    { label: "Export", component: <ExportDropdown isDark={isDark} /> },
+    ...(activeCanvasId && user
+      ? [{ label: "Pull from canvas", icon: GitBranch, onClick: () => setIsPullOpen(true) }]
+      : []),
+    { section: "Canvas management" },
+    ...(currentWorkflowId
+      ? [{ label: "Save As", icon: SaveAll, onClick: handleSaveAs, disabled: nodes.length === 0 || isSaving }]
+      : []),
+    ...(currentWorkflowId && user && !marketplaceGated
+      ? [{ label: "Publish to marketplace", icon: UploadCloud, onClick: () => setIsPublishOpen(true), disabled: nodes.length === 0 }]
+      : []),
+    { section: "Preferences" },
+    { label: isDark ? "Light mode" : "Dark mode", icon: isDark ? Sun : MoonStar, onClick: toggleTheme },
+    { label: "Help & Tutorial", icon: HelpCircle, onClick: openTutorial },
+  ];
+
   return (
     <header
       className={`flex items-center justify-between gap-4 border-b px-3 sm:px-6 h-14 shrink-0 transition-colors ${isDark
@@ -515,120 +534,99 @@ export default function HeaderBar() {
           <PanelLeft className="h-4 w-4" />
         </button>
 
-        {/* ── Desktop actions ── */}
-        <div className="relative hidden lg:flex min-w-0 flex-1 overflow-hidden">
-          {/* Right fade hint */}
-          <div className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-white dark:from-slate-900 to-transparent z-10" />
-          
-          <div className="flex items-center gap-1 overflow-x-auto pr-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {/* Help */}
-            <button
-              onClick={openTutorial}
-              className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
-                ? "border-sky-600 text-sky-400 hover:bg-sky-900/40"
-                : "border-sky-500 text-sky-600 hover:bg-sky-50"
-                }`}
-            >
-              <HelpCircle className="w-3.5 h-3.5" />
-              <span>Help</span>
-            </button>
-
-            {/* Theme */}
-            <button
-              onClick={toggleTheme}
-              className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
-                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-                : "border-gray-300 text-gray-600 hover:bg-gray-100"
-                }`}
-            >
-              {isDark ? <Sun className="w-3.5 h-3.5" /> : <MoonStar className="w-3.5 h-3.5" />}
-              <span>{isDark ? "Light" : "Dark"}</span>
-            </button>
-
-            {/* Templates */}
+        {/* ── Center: Pill group ── */}
+        <div className="hidden md:flex items-center">
+          <div
+            className={`flex items-center rounded-full border overflow-hidden shadow-sm ${
+              isDark ? "border-slate-700 bg-slate-800" : "border-gray-200 bg-white"
+            }`}
+          >
             <button
               onClick={openTemplateLibrary}
-              className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
-                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-                : "border-gray-300 text-gray-600 hover:bg-gray-100"
-                }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition ${
+                isDark ? "hover:bg-slate-700 text-slate-200" : "hover:bg-gray-50 text-gray-700"
+              }`}
             >
               <LayoutTemplate className="w-3.5 h-3.5" />
-              <span>Templates</span>
+              <span className="hidden lg:inline">Templates</span>
             </button>
-
-            {/* New */}
+            <span className={`w-px h-4 ${isDark ? "bg-slate-700" : "bg-gray-200"}`} />
             <button
               onClick={handleNew}
-              className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
-                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-                : "border-gray-300 text-gray-600 hover:bg-gray-100"
-                }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition ${
+                isDark ? "hover:bg-slate-700 text-slate-200" : "hover:bg-gray-50 text-gray-700"
+              }`}
             >
               <FilePlus className="w-3.5 h-3.5" />
-              <span>New</span>
+              <span className="hidden lg:inline">New</span>
             </button>
-
-            {/* Publish */}
-            {currentWorkflowId && user && !marketplaceGated && (
-              <button
-                onClick={() => setIsPublishOpen(true)}
-                disabled={nodes.length === 0}
-                className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
-                  ? "border-amber-700 text-amber-300 hover:bg-amber-800/40"
-                  : "border-amber-300 text-amber-700 hover:bg-amber-50"
-                  }`}
-              >
-                <UploadCloud className="w-3.5 h-3.5" />
-                <span>Publish</span>
-              </button>
-            )}
-
-            {/* Save As */}
-            {currentWorkflowId && (
-              <button
-                onClick={handleSaveAs}
-                disabled={nodes.length === 0 || isSaving}
-                className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
-                  ? "border-teal-700 text-teal-300 hover:bg-teal-800/40"
-                  : "border-teal-300 text-teal-700 hover:bg-teal-50"
-                  }`}
-              >
-                <SaveAll className="w-3.5 h-3.5" />
-                <span>Save As</span>
-              </button>
-            )}
-
-            {/* Import */}
+            <span className={`w-px h-4 ${isDark ? "bg-slate-700" : "bg-gray-200"}`} />
             <button
-              onClick={handleImport}
-              className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
-                ? "border-violet-700 text-violet-300 hover:bg-violet-800/40"
-                : "border-violet-300 text-violet-700 hover:bg-violet-50"
-                }`}
+              onClick={() => autoLayout()}
+              disabled={nodes.length === 0}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 ${
+                isDark ? "hover:bg-slate-700 text-slate-200" : "hover:bg-gray-50 text-gray-700"
+              }`}
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>Import</span>
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">Layout</span>
             </button>
+          </div>
+        </div>
 
-            {/* Pull */}
-            {activeCanvasId && user && (
-              <button
-                onClick={() => setIsPullOpen(true)}
-                className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
-                  ? "border-violet-700 text-violet-300 hover:bg-violet-800/40"
-                  : "border-violet-300 text-violet-700 hover:bg-violet-50"
-                  }`}
-              >
-                <GitBranch className="w-3.5 h-3.5" />
-                <span>Pull</span>
-              </button>
+        {/* ── Desktop core actions ── */}
+        <div className="ml-auto hidden md:flex items-center gap-1.5">
+          <MoreDropdown isDark={isDark} items={desktopMoreItems} />
+
+          <button
+            onClick={handleSave}
+            disabled={nodes.length === 0 || isSaving}
+            className={`rounded-full border px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1.5 shrink-0 ${
+              isDark
+                ? "border-emerald-700 text-emerald-300 hover:bg-emerald-800/40"
+                : "border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+            }`}
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{isSaving ? "Saving…" : "Save"}</span>
+          </button>
+
+          {activeCanvasId && user && !shareGated && (
+            <button
+              onClick={() => setIsShareOpen(true)}
+              disabled={nodes.length === 0}
+              className={`rounded-full border px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1.5 shrink-0 ${
+                isDark
+                  ? "border-sky-700 text-sky-300 hover:bg-sky-800/40"
+                  : "border-sky-300 text-sky-700 hover:bg-sky-50"
+              }`}
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Share</span>
+            </button>
+          )}
+
+          <button
+            onClick={handleEstimate}
+            disabled={loading}
+            className="rounded-full bg-blue-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition flex items-center gap-1.5 shrink-0"
+          >
+            {loading ? "Running…" : (
+              <>
+                <span className="hidden xl:inline">Run Workflow & Gen Estimate</span>
+                <span className="hidden lg:inline xl:hidden">Run Estimate</span>
+                <span className="lg:hidden">Run</span>
+              </>
             )}
+          </button>
+
+          <div className={`pl-2 border-l ${isDark ? "border-slate-700" : "border-gray-200"}`}>
+            <NavProfile />
           </div>
         </div>
 
         {/* ── Mobile overflow menu (below md) ── */}
-        <div className="lg:hidden relative" ref={overflowRef}>
+        <div className="md:hidden relative ml-auto" ref={overflowRef}>
           <button
             onClick={() => setOverflowOpen((v) => !v)}
             className={`rounded-md border p-1.5 transition ${isDark
@@ -729,69 +727,44 @@ export default function HeaderBar() {
           )}
         </div>
 
-        {/* Layout — moved out of overflow area to remain accessible */}
-        <button
-          onClick={() => autoLayout()}
-          disabled={nodes.length === 0}
-          className={`hidden lg:inline-flex rounded-md border px-2.5 py-1.5 text-sm font-medium transition disabled:opacity-40 items-center gap-1 shrink-0 whitespace-nowrap ${isDark
-            ? "border-cyan-700 text-cyan-300 hover:bg-cyan-800/40"
-            : "border-cyan-300 text-cyan-700 hover:bg-cyan-50"
-            }`}
-        >
-          <LayoutDashboard className="w-3.5 h-3.5" />
-          <span>Layout</span>
-        </button>
-
-        {/* Export — moved out of overflow area to prevent dropdown menu clipping */}
-        <div className="hidden lg:block shrink-0">
-          <ExportDropdown isDark={isDark} />
-        </div>
-
-        {/* Save — always visible */}
-        <button
-          onClick={handleSave}
-          disabled={nodes.length === 0 || isSaving}
-          className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
-            ? "border-emerald-700 text-emerald-300 hover:bg-emerald-800/40"
-            : "border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-            }`}
-        >
-          <Save className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">{isSaving ? "Saving…" : "Save"}</span>
-        </button>
-
-        {/* Share — visible when canvas + user + feature unlocked */}
-        {activeCanvasId && user && !shareGated && nodes.length > 0 && (
+        <div className="md:hidden flex items-center gap-1">
           <button
-            onClick={() => setIsShareOpen(true)}
-            className={`rounded-md border px-2.5 py-1.5 text-sm font-medium transition inline-flex items-center gap-1 shrink-0 whitespace-nowrap ${isDark
-              ? "border-sky-700 text-sky-300 hover:bg-sky-800/40"
-              : "border-sky-300 text-sky-700 hover:bg-sky-50"
-              }`}
+            onClick={handleSave}
+            disabled={nodes.length === 0 || isSaving}
+            className={`rounded-md border px-2 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 shrink-0 ${
+              isDark
+                ? "border-emerald-700 text-emerald-300 hover:bg-emerald-800/40"
+                : "border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+            }`}
           >
-            <Share2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Share</span>
+            <Save className="w-3.5 h-3.5" />
           </button>
-        )}
 
-        {/* Estimate — always visible */}
-        <button
-          onClick={handleEstimate}
-          disabled={loading}
-          className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition shrink-0 whitespace-nowrap"
-        >
-          {loading ? "Running…" : (
-            <>
-              <span className="hidden xl:inline">Run Workflow & Gen Estimate</span>
-              <span className="hidden lg:inline xl:hidden">Run Estimate</span>
-              <span className="lg:hidden">Run</span>
-            </>
+          {activeCanvasId && user && !shareGated && (
+            <button
+              onClick={() => setIsShareOpen(true)}
+              disabled={nodes.length === 0}
+              className={`rounded-md border px-2 py-1.5 text-sm font-medium transition disabled:opacity-40 inline-flex items-center gap-1 shrink-0 ${
+                isDark
+                  ? "border-sky-700 text-sky-300 hover:bg-sky-800/40"
+                  : "border-sky-300 text-sky-700 hover:bg-sky-50"
+              }`}
+            >
+              <Share2 className="w-3.5 h-3.5" />
+            </button>
           )}
-        </button>
 
-        {/* Auth */}
-        <div className={`ml-1 pl-2 border-l flex items-center shrink-0 ${isDark ? "border-slate-700" : "border-gray-200"}`}>
-          <NavProfile />
+          <button
+            onClick={handleEstimate}
+            disabled={loading}
+            className="rounded-md bg-blue-600 px-2.5 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition shrink-0"
+          >
+            {loading ? "…" : "Run"}
+          </button>
+
+          <div className={`pl-1 border-l ${isDark ? "border-slate-700" : "border-gray-200"}`}>
+            <NavProfile />
+          </div>
         </div>
       </div>
 
