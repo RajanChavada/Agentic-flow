@@ -31,6 +31,15 @@ interface ProfileState {
   ) => Promise<void>;
   fetchProfile: (userId: string) => Promise<void>;
   updateUsername: (userId: string, handle: string) => Promise<void>;
+  updateProfileDetails: (
+    userId: string,
+    details: {
+      display_name: string | null;
+      bio: string | null;
+      location: string | null;
+      website: string | null;
+    }
+  ) => Promise<void>;
   updateAvatar: (userId: string, url: string, type: "upload" | "preset") => Promise<void>;
   uploadAvatar: (userId: string, file: File) => Promise<void>;
   checkUsernameAvailable: (handle: string, excludeUserId?: string) => Promise<boolean>;
@@ -113,6 +122,19 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     } catch (err) {
       set({
         error: err instanceof Error ? err.message : "Failed to update avatar",
+      });
+      throw err;
+    }
+  },
+
+  updateProfileDetails: async (userId, details) => {
+    set({ error: null });
+    try {
+      const profile = await upsertProfile(userId, details);
+      set({ profile });
+    } catch (err) {
+      set({
+        error: err instanceof Error ? err.message : "Failed to update profile",
       });
       throw err;
     }

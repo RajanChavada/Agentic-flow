@@ -1,77 +1,51 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import {
-  Loader2,
-  Check,
-  ArrowLeft,
-  Activity,
-} from "lucide-react";
+import { ArrowLeft, Check, Loader2, X } from "lucide-react";
 import { useAuthStore, useUser } from "@/store/useAuthStore";
-import {
-  useProfileStore,
-  useProfile,
-  useProfileLoading,
-  useProfileError,
-} from "@/store/useProfileStore";
-import { useUIState } from "@/store/useWorkflowStore";
-import { fetchUserMetrics } from "@/lib/userMetrics";
-import type { UserMetrics } from "@/types/profile";
+import { useProfile, useProfileLoading, useProfileStore } from "@/store/useProfileStore";
+import { fetchProfileDashboardData, type ProfileDashboardPayload } from "@/lib/profileInsights";
+import ProfileDashboardView from "@/components/profile/ProfileDashboardView";
 import AvatarPicker from "@/components/profile/AvatarPicker";
-import MetricGauge from "@/components/profile/MetricGauge";
-import ActivityDonutChart from "@/components/profile/ActivityDonutChart";
+import type { ProfileCanvasSummary } from "@/types/profile";
+import { supabase } from "@/lib/supabase";
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,30}$/;
 
-function getInitials(handle: string, email?: string): string {
-  if (handle && handle.length >= 2) {
-    return handle.slice(0, 2).toUpperCase();
-  }
-  if (email) {
-    const part = email.split("@")[0];
-    return part.slice(0, 2).toUpperCase();
-  }
-  return "??";
-}
+type EditProfileForm = {
+  displayName: string;
+  handle: string;
+  bio: string;
+  location: string;
+  website: string;
+};
 
-function formatLastActive(iso: string | null): string {
-  if (!iso) return "Never";
-  const date = new Date(iso);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
+function emptyToNull(value: string): string | null {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 export default function ProfileSettingsPage() {
-  const router = useRouter();
   const user = useUser();
   const profile = useProfile();
   const profileLoading = useProfileLoading();
-  const profileError = useProfileError();
-  const { theme } = useUIState();
-  const isDark = theme === "dark";
 
-  const [metrics, setMetrics] = useState<UserMetrics | null>(null);
-  const [metricsLoading, setMetricsLoading] = useState(false);
-  const [editingHandle, setEditingHandle] = useState(false);
-  const [handleValue, setHandleValue] = useState("");
-  const [handleError, setHandleError] = useState<string | null>(null);
-  const [savingHandle, setSavingHandle] = useState(false);
-  const [checkingAvailability, setCheckingAvailability] = useState(false);
-  const [availabilityStatus, setAvailabilityStatus] = useState<"available" | "taken" | null>(null);
+  const [dashboard, setDashboard] = useState<ProfileDashboardPayload | null>(null);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const handleInputRef = useRef<HTMLInputElement>(null);
+  const [form, setForm] = useState<EditProfileForm>({
+    displayName: "",
+    handle: "",
+    bio: "",
+    location: "",
+    website: "",
+  });
 
   useEffect(() => {
     useAuthStore.getState().init();
@@ -82,77 +56,40 @@ export default function ProfileSettingsPage() {
     useProfileStore.getState().hydrate(user.id, user.email ?? undefined);
   }, [user]);
 
-  useEffect(() => {
+  const reloadDashboard = useCallback(async () => {
     if (!user) return;
-    setMetricsLoading(true);
-    fetchUserMetrics(user.id)
-      .then(setMetrics)
-      .finally(() => setMetricsLoading(false));
+    setDashboardLoading(true);
+    setDashboardError(null);
+    try {
+      const next = await fetchProfileDashboardData(user.id);
+      setDashboard(next);
+    } catch (err) {
+      setDashboardError(err instanceof Error ? err.message : "Failed to load profile.");
+    } finally {
+      setDashboardLoading(false);
+    }
   }, [user]);
 
   useEffect(() => {
-    if (profile) setHandleValue(profile.username_handle);
-  }, [profile?.username_handle]);
+    if (!user) return;
+    void reloadDashboard();
+  }, [user, reloadDashboard]);
 
   useEffect(() => {
-    if (editingHandle) handleInputRef.current?.select();
-  }, [editingHandle]);
+    if (!profile) return;
+    setForm({
+      displayName: profile.display_name ?? "",
+      handle: profile.username_handle ?? "",
+      bio: profile.bio ?? "",
+      location: profile.location ?? "",
+      website: profile.website ?? "",
+    });
+  }, [profile]);
 
-  const checkAvailability = useCallback(async (): Promise<boolean> => {
-    const trimmed = handleValue.trim().toLowerCase();
-    if (!trimmed || !user) return false;
-    if (!USERNAME_REGEX.test(trimmed)) {
-      setHandleError("3–30 characters, letters, numbers, and underscores only.");
-      setAvailabilityStatus(null);
-      return false;
-    }
-    setHandleError(null);
-    setCheckingAvailability(true);
-    setAvailabilityStatus(null);
-    try {
-      const available = await useProfileStore.getState().checkUsernameAvailable(
-        trimmed,
-        user.id
-      );
-      setAvailabilityStatus(available ? "available" : "taken");
-      if (!available) setHandleError("This handle is already taken.");
-      return available;
-    } finally {
-      setCheckingAvailability(false);
-    }
-  }, [handleValue, user]);
+  const overallLoading = profileLoading || dashboardLoading;
+  const combinedError = dashboardError;
 
-  const commitHandle = useCallback(async () => {
-    setHandleError(null);
-    setAvailabilityStatus(null);
-    const trimmed = handleValue.trim().toLowerCase();
-    if (!trimmed || !user || !profile) {
-      setEditingHandle(false);
-      return;
-    }
-    if (trimmed === profile.username_handle) {
-      setEditingHandle(false);
-      return;
-    }
-    if (!USERNAME_REGEX.test(trimmed)) {
-      setHandleError("3–30 characters, letters, numbers, and underscores only.");
-      return;
-    }
-    const available = await checkAvailability();
-    if (!available) return;
-    setSavingHandle(true);
-    try {
-      await useProfileStore.getState().updateUsername(user.id, trimmed);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 2000);
-      setEditingHandle(false);
-      setAvailabilityStatus(null);
-    } catch {
-      setHandleError("Failed to update. Please try again.");
-    } finally {
-      setSavingHandle(false);
-    }
-  }, [handleValue, user, profile, checkAvailability]);
+  const showSavedBadge = useMemo(() => saveSuccess && !savingEdit, [saveSuccess, savingEdit]);
 
   const handleAvatarSelect = useCallback(
     async (url: string, type: "upload" | "preset") => {
@@ -160,7 +97,7 @@ export default function ProfileSettingsPage() {
       await useProfileStore.getState().updateAvatar(user.id, url, type);
       setShowAvatarPicker(false);
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 2000);
+      setTimeout(() => setSaveSuccess(false), 1800);
     },
     [user]
   );
@@ -171,19 +108,75 @@ export default function ProfileSettingsPage() {
       await useProfileStore.getState().uploadAvatar(user.id, file);
       setShowAvatarPicker(false);
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 2000);
+      setTimeout(() => setSaveSuccess(false), 1800);
     },
     [user]
   );
 
-  const borderClass = isDark ? "border-slate-700" : "border-gray-200";
-  const bgClass = isDark ? "bg-slate-900" : "bg-white";
-  const cardClass = isDark ? "bg-slate-800/50 border-slate-700" : "bg-white border-gray-200";
+  const handleTogglePin = useCallback(
+    async (canvas: ProfileCanvasSummary) => {
+      if (!user || !dashboard) return;
+      if (!canvas.isPinned && dashboard.pinnedCanvases.length >= 6) return;
+
+      const nextPinned = !canvas.isPinned;
+      const nextOrder = nextPinned ? dashboard.pinnedCanvases.length + 1 : 0;
+      const { error } = await supabase
+        .from("canvases")
+        .update({ is_pinned: nextPinned, pin_order: nextOrder })
+        .eq("id", canvas.id)
+        .eq("user_id", user.id);
+
+      if (error) {
+        setDashboardError("Failed to update pinned canvas.");
+        return;
+      }
+      await reloadDashboard();
+    },
+    [dashboard, user, reloadDashboard]
+  );
+
+  const handleSaveProfile = useCallback(async () => {
+    if (!user || !profile) return;
+    setSavingEdit(true);
+    setEditError(null);
+    const nextHandle = form.handle.trim().toLowerCase();
+    if (!USERNAME_REGEX.test(nextHandle)) {
+      setEditError("Handle must be 3-30 characters (letters, numbers, underscores).");
+      setSavingEdit(false);
+      return;
+    }
+
+    try {
+      if (nextHandle !== profile.username_handle) {
+        const available = await useProfileStore.getState().checkUsernameAvailable(nextHandle, user.id);
+        if (!available) {
+          setEditError("That handle is already taken.");
+          return;
+        }
+        await useProfileStore.getState().updateUsername(user.id, nextHandle);
+      }
+
+      await useProfileStore.getState().updateProfileDetails(user.id, {
+        display_name: emptyToNull(form.displayName),
+        bio: emptyToNull(form.bio)?.slice(0, 160) ?? null,
+        location: emptyToNull(form.location),
+        website: emptyToNull(form.website),
+      });
+
+      setEditOpen(false);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 1800);
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : "Failed to save profile.");
+    } finally {
+      setSavingEdit(false);
+    }
+  }, [form, profile, user]);
 
   if (!user) {
     return (
       <main className="min-h-screen bg-background text-foreground">
-          <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
           <p className="text-muted-foreground">Sign in to view your profile.</p>
           <button
             onClick={() =>
@@ -193,14 +186,8 @@ export default function ProfileSettingsPage() {
             }
             className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90"
           >
-            Sign In
+            Sign in
           </button>
-          <Link
-            href="/canvases"
-            className="text-sm font-medium text-muted-foreground hover:underline"
-          >
-            Back to My Canvases
-          </Link>
         </div>
       </main>
     );
@@ -209,229 +196,146 @@ export default function ProfileSettingsPage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <nav className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-lg">
-        <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4 sm:px-6">
-          <Link
-            href="/canvases"
-            className={`flex items-center gap-2 text-sm font-medium transition ${isDark ? "text-slate-400 hover:text-slate-100" : "text-gray-500 hover:text-gray-900"}`}
-          >
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
+          <Link href="/canvases" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
             Back
           </Link>
-          <span className="text-sm font-semibold">Profile Settings</span>
-          <div className="w-20" />
+          <span className="text-sm font-semibold">Profile</span>
+          <button
+            type="button"
+            onClick={() => setEditOpen(true)}
+            className="text-sm font-medium text-blue-600 hover:underline"
+          >
+            Edit Profile
+          </button>
         </div>
       </nav>
 
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-        {profileLoading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      {profile ? (
+        <ProfileDashboardView
+          profile={profile}
+          data={dashboard}
+          loading={overallLoading}
+          error={combinedError}
+          isOwner
+          onEditProfile={() => setEditOpen(true)}
+          onOpenAvatarPicker={() => setShowAvatarPicker((v) => !v)}
+          onTogglePin={handleTogglePin}
+        />
+      ) : null}
+
+      {showAvatarPicker ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Update avatar</h2>
+              <button type="button" onClick={() => setShowAvatarPicker(false)} className="rounded p-1 hover:bg-muted">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <AvatarPicker
+              currentUrl={profile?.avatar_url ?? null}
+              onSelect={handleAvatarSelect}
+              onUpload={handleAvatarUpload}
+              isDark={false}
+            />
           </div>
-        ) : (
-          <div className="space-y-8">
-            {profileError && (
-              <div
-                className={`rounded-lg border px-4 py-3 text-sm ${isDark ? "border-red-800 bg-red-900/30 text-red-300" : "border-red-200 bg-red-50 text-red-700"}`}
+        </div>
+      ) : null}
+
+      {editOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Edit profile</h2>
+              <button type="button" onClick={() => setEditOpen(false)} className="rounded p-1 hover:bg-muted">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <label className="block text-sm">
+                <span className="mb-1 block text-muted-foreground">Display name</span>
+                <input
+                  type="text"
+                  value={form.displayName}
+                  onChange={(e) => setForm((prev) => ({ ...prev, displayName: e.target.value }))}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block text-muted-foreground">Handle</span>
+                <input
+                  type="text"
+                  value={form.handle}
+                  onChange={(e) => setForm((prev) => ({ ...prev, handle: e.target.value }))}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block text-muted-foreground">Bio (max 160)</span>
+                <textarea
+                  rows={3}
+                  maxLength={160}
+                  value={form.bio}
+                  onChange={(e) => setForm((prev) => ({ ...prev, bio: e.target.value }))}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block text-muted-foreground">Location</span>
+                <input
+                  type="text"
+                  value={form.location}
+                  onChange={(e) => setForm((prev) => ({ ...prev, location: e.target.value }))}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block text-muted-foreground">Website</span>
+                <input
+                  type="url"
+                  value={form.website}
+                  onChange={(e) => setForm((prev) => ({ ...prev, website: e.target.value }))}
+                  placeholder="https://example.com"
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </label>
+            </div>
+            {editError ? <p className="mt-3 text-sm text-red-600">{editError}</p> : null}
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditOpen(false)}
+                className="rounded-lg border border-input px-4 py-2 text-sm hover:bg-muted"
               >
-                {profileError}
-              </div>
-            )}
-
-            {/* Avatar section */}
-            <section className={`rounded-xl border p-6 ${cardClass}`}>
-              <h2 className="text-sm font-semibold mb-4">Avatar</h2>
-              <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
-                <div className="shrink-0">
-                  {profile?.avatar_url ? (
-                    <img
-                      src={profile.avatar_url}
-                      alt="Avatar"
-                      className="h-20 w-20 sm:h-24 sm:w-24 rounded-full object-cover border-2 border-gray-200 dark:border-slate-600"
-                    />
-                  ) : (
-                    <div
-                      className={`flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full border-2 ${borderClass} ${isDark ? "bg-slate-800 text-slate-400" : "bg-gray-100 text-gray-500"}`}
-                    >
-                      <span className="text-2xl font-bold">
-                        {getInitials(
-                          profile?.username_handle ?? "",
-                          user?.email ?? undefined
-                        )}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <button
-                    type="button"
-                    onClick={() => setShowAvatarPicker(!showAvatarPicker)}
-                    className={`text-sm font-medium ${isDark ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-700"}`}
-                  >
-                    {showAvatarPicker ? "Hide options" : "Change avatar"}
-                  </button>
-                  {showAvatarPicker && (
-                    <div className="mt-4">
-                      <AvatarPicker
-                        currentUrl={profile?.avatar_url ?? null}
-                        onSelect={handleAvatarSelect}
-                        onUpload={handleAvatarUpload}
-                        isDark={isDark}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </section>
-
-            {/* Username handle */}
-            <section className={`rounded-xl border p-6 ${cardClass}`}>
-              <h2 className="text-sm font-semibold mb-4">Username handle</h2>
-              {editingHandle ? (
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <input
-                      ref={handleInputRef}
-                      type="text"
-                      value={handleValue}
-                      onChange={(e) => {
-                        setHandleValue(e.target.value);
-                        setAvailabilityStatus(null);
-                        setHandleError(null);
-                      }}
-                      onBlur={() => commitHandle()}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") commitHandle();
-                        if (e.key === "Escape") {
-                          setEditingHandle(false);
-                          setHandleValue(profile?.username_handle ?? "");
-                          setHandleError(null);
-                          setAvailabilityStatus(null);
-                        }
-                      }}
-                      placeholder="username"
-                      className={`flex-1 rounded-lg border px-3 py-2 text-sm outline-none transition ${isDark ? "border-slate-600 bg-slate-800 text-slate-100 focus:border-blue-500" : "border-gray-300 bg-white text-gray-800 focus:border-blue-500"}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={checkAvailability}
-                      disabled={checkingAvailability || !handleValue.trim()}
-                      className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition disabled:opacity-50 ${isDark ? "bg-slate-700 text-slate-200 hover:bg-slate-600" : "bg-gray-200 text-gray-800 hover:bg-gray-300"}`}
-                    >
-                      {checkingAvailability ? "Checking..." : "Check"}
-                    </button>
-                  </div>
-                  {handleError && (
-                    <p className="text-sm text-red-500">{handleError}</p>
-                  )}
-                  {availabilityStatus === "available" && !handleError && (
-                    <p className="text-sm text-green-600 dark:text-green-400">Available</p>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    3–30 characters, letters, numbers, underscores only
-                  </p>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-lg">
-                    @{profile?.username_handle ?? "..."}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setEditingHandle(true)}
-                    disabled={savingHandle}
-                    className={`text-sm ${isDark ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-700"}`}
-                  >
-                    Edit
-                  </button>
-                </div>
-              )}
-            </section>
-
-            {/* Metrics */}
-            <section className={`rounded-xl border p-6 ${cardClass}`}>
-              <h2 className="text-sm font-semibold mb-4">Your activity</h2>
-              {metricsLoading ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : metrics ? (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <MetricGauge
-                      label="Workflows"
-                      value={metrics.workflows_count}
-                      max={50}
-                      isDark={isDark}
-                    />
-                    <MetricGauge
-                      label="Canvases"
-                      value={metrics.canvases_count}
-                      max={50}
-                      isDark={isDark}
-                    />
-                    <MetricGauge
-                      label="Templates"
-                      value={metrics.templates_published}
-                      max={20}
-                      isDark={isDark}
-                    />
-                    <MetricGauge
-                      label="Estimates run"
-                      value={metrics.estimates_run}
-                      max={100}
-                      isDark={isDark}
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2">
-                      <p className={`text-xs font-medium mb-2 ${isDark ? "text-slate-400" : "text-gray-500"}`}>
-                        Content distribution
-                      </p>
-                      <ActivityDonutChart
-                        data={[
-                          { name: "Workflows", value: metrics.workflows_count },
-                          { name: "Canvases", value: metrics.canvases_count },
-                          { name: "Templates", value: metrics.templates_published },
-                        ]}
-                        isDark={isDark}
-                      />
-                    </div>
-                    <div
-                      className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${
-                        isDark ? "border-slate-600 bg-slate-800/60" : "border-gray-200 bg-gray-50"
-                      }`}
-                    >
-                      <Activity className={`h-5 w-5 shrink-0 ${isDark ? "text-slate-400" : "text-gray-500"}`} />
-                      <div>
-                        <p className={`text-xs ${isDark ? "text-slate-400" : "text-gray-500"}`}>
-                          Last active
-                        </p>
-                        <p className={`text-sm font-semibold ${isDark ? "text-slate-200" : "text-gray-800"}`}>
-                          {formatLastActive(metrics.last_active_at)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No activity yet. Create workflows to see your stats.
-                </p>
-              )}
-            </section>
-
-            {saveSuccess && (
-              <div
-                className={`fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-lg px-4 py-2 shadow-lg ${isDark ? "bg-emerald-900/90 text-emerald-100" : "bg-emerald-600 text-white"}`}
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveProfile}
+                disabled={savingEdit}
+                className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
               >
-                <Check className="h-4 w-4" />
-                <span className="text-sm font-medium">Saved</span>
-              </div>
-            )}
+                {savingEdit ? "Saving..." : "Save"}
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      ) : null}
+
+      {showSavedBadge ? (
+        <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-white shadow-lg">
+          <Check className="h-4 w-4" />
+          <span className="text-sm font-medium">Saved</span>
+        </div>
+      ) : null}
+
+      {!profile && overallLoading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
+        </div>
+      ) : null}
     </main>
   );
 }
-

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Plus, LayoutGrid, Loader2, LogIn, UserPlus, Trash2, Info, Share2 } from "lucide-react";
+import { Plus, LayoutGrid, Loader2, LogIn, UserPlus, Trash2, Info, Share2, Pin } from "lucide-react";
 import { useAuthStore, useUser } from "@/store/useAuthStore";
 import CanvasesInfoModal from "@/components/CanvasesInfoModal";
 import ShareWorkflowModal from "@/components/ShareWorkflowModal";
@@ -66,7 +66,7 @@ export default function CanvasesPage() {
       setLoading(true);
       const { data, error } = await supabase
         .from("canvases")
-        .select("id, name, created_at, updated_at, thumbnail_url")
+        .select("id, name, created_at, updated_at, thumbnail_url, is_public, public_uuid, is_pinned, pin_order")
         .eq("user_id", user!.id)
         .order("updated_at", { ascending: false });
 
@@ -85,6 +85,10 @@ export default function CanvasesPage() {
               name: c.name,
               createdAt: c.created_at,
               updatedAt: c.updated_at,
+              isPublic: c.is_public ?? false,
+              publicUuid: c.public_uuid ?? null,
+              isPinned: c.is_pinned ?? false,
+              pinOrder: c.pin_order ?? 0,
               workflowCount: count ?? 0,
               thumbnailUrl: c.thumbnail_url ?? null,
             };
@@ -208,6 +212,35 @@ export default function CanvasesPage() {
     }
     setShareCanvas(canvas);
   };
+
+  const handleTogglePin = useCallback(
+    async (canvas: Canvas) => {
+      if (!user) return;
+      const pinnedCount = canvases.filter((entry) => entry.isPinned).length;
+      if (!canvas.isPinned && pinnedCount >= 6) {
+        return;
+      }
+      const nextPinned = !canvas.isPinned;
+      const nextOrder = nextPinned ? pinnedCount + 1 : 0;
+      const { error } = await supabase
+        .from("canvases")
+        .update({ is_pinned: nextPinned, pin_order: nextOrder })
+        .eq("id", canvas.id)
+        .eq("user_id", user.id);
+      if (error) {
+        console.error("Failed to update pin state:", error);
+        return;
+      }
+      setCanvases((prev) =>
+        prev.map((entry) =>
+          entry.id === canvas.id
+            ? { ...entry, isPinned: nextPinned, pinOrder: nextOrder, updatedAt: new Date().toISOString() }
+            : entry
+        )
+      );
+    },
+    [canvases, user]
+  );
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -376,6 +409,22 @@ export default function CanvasesPage() {
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-0.5">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleTogglePin(canvas);
+                      }}
+                      title={canvas.isPinned ? "Unpin from profile" : "Pin to profile"}
+                      disabled={!canvas.isPinned && canvases.filter((entry) => entry.isPinned).length >= 6}
+                      className={`rounded p-1.5 transition ${
+                        canvas.isPinned
+                          ? "text-amber-600 hover:bg-amber-100"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      } disabled:opacity-40`}
+                    >
+                      <Pin className="h-4 w-4" />
+                    </button>
                     <button
                       onClick={(e) => {
                         e.preventDefault();

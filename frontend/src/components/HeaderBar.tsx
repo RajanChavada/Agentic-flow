@@ -52,6 +52,7 @@ import { openTutorial } from "@/hooks/useTutorial";
 import { useGate } from "@/hooks/useGate";
 import { nodesToPayload, edgesToPayload } from "@/store/utils";
 import { supabase } from "@/lib/supabase";
+import { recordEstimateRun } from "@/lib/profileInsights";
 import { toPng } from "html-to-image";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -341,6 +342,14 @@ export default function HeaderBar() {
 
       const data: WorkflowEstimation = await res.json();
       setEstimation(data);
+      if (user) {
+        await recordEstimateRun({
+          userId: user.id,
+          canvasId: activeCanvasId,
+          nodeCount: estimateNodes.length,
+          totalCost: data.total_cost,
+        });
+      }
     } catch (err: unknown) {
       setErrorBanner(
         err instanceof Error ? err.message : "Failed to fetch estimation"

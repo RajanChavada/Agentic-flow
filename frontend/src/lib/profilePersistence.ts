@@ -29,7 +29,9 @@ export class ProfileError extends Error {
 export async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, username_handle, avatar_url, avatar_type, created_at, updated_at")
+    .select(
+      "id, username_handle, display_name, bio, location, website, avatar_url, avatar_type, created_at, updated_at"
+    )
     .eq("id", userId)
     .single();
 
@@ -44,6 +46,10 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
   return {
     id: data.id,
     username_handle: data.username_handle,
+    display_name: data.display_name ?? null,
+    bio: data.bio ?? null,
+    location: data.location ?? null,
+    website: data.website ?? null,
     avatar_url: data.avatar_url ?? null,
     avatar_type: data.avatar_type as Profile["avatar_type"],
     created_at: data.created_at,
@@ -53,6 +59,10 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
 
 export type UpsertProfileData = {
   username_handle?: string;
+  display_name?: string | null;
+  bio?: string | null;
+  location?: string | null;
+  website?: string | null;
   avatar_url?: string | null;
   avatar_type?: "upload" | "preset" | null;
 };
@@ -79,7 +89,9 @@ export async function upsertProfile(
         },
         { onConflict: "id" }
       )
-      .select("id, username_handle, avatar_url, avatar_type, created_at, updated_at")
+      .select(
+        "id, username_handle, display_name, bio, location, website, avatar_url, avatar_type, created_at, updated_at"
+      )
       .single();
 
     if (error)
@@ -88,6 +100,10 @@ export async function upsertProfile(
     return {
       id: row.id,
       username_handle: row.username_handle,
+      display_name: row.display_name ?? null,
+      bio: row.bio ?? null,
+      location: row.location ?? null,
+      website: row.website ?? null,
       avatar_url: row.avatar_url ?? null,
       avatar_type: row.avatar_type as Profile["avatar_type"],
       created_at: row.created_at,
@@ -97,6 +113,10 @@ export async function upsertProfile(
 
   const existing = await fetchProfile(userId);
   const payload = {
+    display_name: data.display_name,
+    bio: data.bio,
+    location: data.location,
+    website: data.website,
     avatar_url: data.avatar_url,
     avatar_type: data.avatar_type,
     updated_at: new Date().toISOString(),
@@ -107,7 +127,9 @@ export async function upsertProfile(
       .from("profiles")
       .update(payload)
       .eq("id", userId)
-      .select("id, username_handle, avatar_url, avatar_type, created_at, updated_at")
+      .select(
+        "id, username_handle, display_name, bio, location, website, avatar_url, avatar_type, created_at, updated_at"
+      )
       .single();
 
     if (error)
@@ -116,6 +138,10 @@ export async function upsertProfile(
     return {
       id: row.id,
       username_handle: row.username_handle,
+      display_name: row.display_name ?? null,
+      bio: row.bio ?? null,
+      location: row.location ?? null,
+      website: row.website ?? null,
       avatar_url: row.avatar_url ?? null,
       avatar_type: row.avatar_type as Profile["avatar_type"],
       created_at: row.created_at,
@@ -130,7 +156,9 @@ export async function upsertProfile(
       username_handle: defaultHandle(userId),
       ...payload,
     })
-    .select("id, username_handle, avatar_url, avatar_type, created_at, updated_at")
+    .select(
+      "id, username_handle, display_name, bio, location, website, avatar_url, avatar_type, created_at, updated_at"
+    )
     .single();
 
   if (error)
@@ -139,6 +167,10 @@ export async function upsertProfile(
   return {
     id: row.id,
     username_handle: row.username_handle,
+    display_name: row.display_name ?? null,
+    bio: row.bio ?? null,
+    location: row.location ?? null,
+    website: row.website ?? null,
     avatar_url: row.avatar_url ?? null,
     avatar_type: row.avatar_type as Profile["avatar_type"],
     created_at: row.created_at,

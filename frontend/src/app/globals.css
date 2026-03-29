@@ -115,3 +115,38 @@ html.dark .react-flow__edge-path {
 /* ── Scrollbar hide utility ────────────────────────────────── */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Profile activity heatmap ─────────────────────────────── */
+.react-calendar-heatmap text {
+  fill: var(--muted-foreground);
+  font-size: 9px;
+}
+
+.react-calendar-heatmap rect {
+  rx: 2;
+  ry: 2;
+}
+
+.react-calendar-heatmap .color-empty {
+  fill: #e7e5e4;
+}
+
+.react-calendar-heatmap .color-scale-1 {
+  fill: #bfdbfe;
+}
+
+.react-calendar-heatmap .color-scale-2 {
+  fill: #60a5fa;
+}
+
+.react-calendar-heatmap .color-scale-3 {
+  fill: #2563eb;
+}
+
+.react-calendar-heatmap .color-scale-4 {
+  fill: #1e40af;
+}
+
+html.dark .react-calendar-heatmap .color-empty {
+  fill: #292524;
+}

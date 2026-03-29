@@ -402,6 +402,8 @@ export interface Canvas {
   updatedAt: string;
   isPublic?: boolean;
   publicUuid?: string;
+  isPinned?: boolean;
+  pinOrder?: number;
   lastEstimationReport?: WorkflowEstimation | null;
   workflowCount?: number;
   thumbnailUrl?: string | null;
