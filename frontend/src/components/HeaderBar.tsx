@@ -409,7 +409,7 @@ export default function HeaderBar() {
   const desktopMoreItems: MoreDropdownItem[] = [
     { section: "File operations" },
     { label: "Import workflow", icon: Download, onClick: handleImport },
-    { label: "Export", component: <ExportDropdown isDark={isDark} /> },
+    { label: "Export", component: <ExportDropdown isDark={isDark} variant="menuItem" /> },
     ...(activeCanvasId && user
       ? [{ label: "Pull from canvas", icon: GitBranch, onClick: () => setIsPullOpen(true) }]
       : []),

@@ -747,9 +747,10 @@ interface LangGraphExportResponse {
 
 interface Props {
   isDark: boolean;
+  variant?: "default" | "menuItem";
 }
 
-export default function ExportDropdown({ isDark }: Props) {
+export default function ExportDropdown({ isDark, variant = "default" }: Props) {
   const [open, setOpen] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -990,18 +991,34 @@ export default function ExportDropdown({ isDark }: Props) {
   const btnBase = `w-full text-left px-3 py-2 text-sm transition rounded ${isDark ? "hover:bg-slate-600" : "hover:bg-gray-100"
     }`;
 
+  const isMenuItem = variant === "menuItem";
+
   return (
     <>
     <div ref={dropdownRef} className="relative">
       <button
         onClick={handleToggle}
-        className={`rounded-md border px-3 py-1.5 text-sm font-medium transition shrink-0 whitespace-nowrap ${isDark
-          ? "border-amber-700 text-amber-300 hover:bg-amber-800/40"
-          : "border-amber-300 text-amber-700 hover:bg-amber-50"
-          }`}
+        className={
+          isMenuItem
+            ? `w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition ${isDark ? "hover:bg-slate-800 text-slate-200" : "hover:bg-gray-50 text-gray-700"}`
+            : `rounded-md border px-3 py-1.5 text-sm font-medium transition shrink-0 whitespace-nowrap ${
+                isDark
+                  ? "border-amber-700 text-amber-300 hover:bg-amber-800/40"
+                  : "border-amber-300 text-amber-700 hover:bg-amber-50"
+              }`
+        }
         title="Export workflow graph or estimation report"
       >
-        <ChevronDown className="inline w-3.5 h-3.5 ml-1" /> Export
+        {isMenuItem ? (
+          <>
+            <DownloadCloud className="w-4 h-4 shrink-0" />
+            <span>Export</span>
+          </>
+        ) : (
+          <>
+            <ChevronDown className="inline w-3.5 h-3.5 ml-1" /> Export
+          </>
+        )}
       </button>
 
       {open && (
