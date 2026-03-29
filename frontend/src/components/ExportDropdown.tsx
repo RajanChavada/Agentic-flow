@@ -12,8 +12,10 @@ import {
   FileCode,
   ChevronDown,
   DownloadCloud,
+  Upload,
   Code2,
   X,
+  ChevronRight,
 } from "lucide-react";
 import {
   useWorkflowNodes,
@@ -1011,8 +1013,9 @@ export default function ExportDropdown({ isDark, variant = "default" }: Props) {
       >
         {isMenuItem ? (
           <>
-            <DownloadCloud className="w-4 h-4 shrink-0" />
+            <Upload className="w-4 h-4 shrink-0" />
             <span>Export</span>
+            <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-60" />
           </>
         ) : (
           <>
